@@ -24,12 +24,12 @@ export type Einstellungen = {
   abhakAnimation: AbhakAnimation;
 };
 
-export type AbhakAnimation = "kritzeln" | "radieren" | "falten";
+export type AbhakAnimation = "zickzack" | "hin-und-her" | "kringel";
 
 export const ABHAK_ANIMATIONEN: { id: AbhakAnimation; name: string }[] = [
-  { id: "kritzeln", name: "Kritzeln" },
-  { id: "radieren", name: "Radieren" },
-  { id: "falten", name: "Falten" },
+  { id: "zickzack", name: "Zickzack" },
+  { id: "hin-und-her", name: "Hin und her" },
+  { id: "kringel", name: "Kringel" },
 ];
 
 export type Spalten = 1 | 2 | 3;
@@ -133,7 +133,7 @@ const GEDECKT: Record<KategorieSchluessel, string> = {
 const STANDARD: Einstellungen = {
   thema: "frisch",
   spalten: 2,
-  abhakAnimation: "kritzeln",
+  abhakAnimation: "zickzack",
   eigenesThema: {
     akzent: "#15803d",
     hintergrund: "#f7f7f5",

@@ -31,8 +31,8 @@ import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import {
+  ABHAK_KLASSE,
   AbhakVorschau,
-  abhakKlasse,
   KritzelStrich,
   useVerzoegertesAbhaken,
 } from "./Abhaken";
@@ -534,12 +534,12 @@ function Kachel({
           erledigt ? umschalten(eintrag) : abhaken.umschalten(),
         )}
         className={cn(
-          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors select-none active:scale-[0.98]",
+          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-none border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
           erledigt
             ? "border-dashed bg-transparent text-muted-foreground"
             : "bg-card shadow-xs",
-          abhaken.laeuft && abhakKlasse(abhakAnimation),
+          abhaken.laeuft && ABHAK_KLASSE,
         )}
         style={
           erledigt
@@ -550,9 +550,9 @@ function Kachel({
               }
         }
       >
-        {abhaken.laeuft && abhakAnimation === "kritzeln" && (
+        {abhaken.laeuft && (
           <span className="contents" style={{ color: farbe }}>
-            <KritzelStrich />
+            <KritzelStrich form={abhakAnimation} />
           </span>
         )}
         <span
