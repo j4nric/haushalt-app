@@ -123,9 +123,31 @@
     opacity: 0;
   }
 }
+/* Ungleichmäßiges Tempo wie von Hand: Anlauf, schnelle Schübe, kurze Zögerer. */
 @keyframes kritzel-strich {
   0% {
     stroke-dashoffset: 1;
+  }
+  4% {
+    stroke-dashoffset: 0.95;
+  }
+  9% {
+    stroke-dashoffset: 0.72;
+  }
+  13% {
+    stroke-dashoffset: 0.66;
+  }
+  19% {
+    stroke-dashoffset: 0.4;
+  }
+  24% {
+    stroke-dashoffset: 0.34;
+  }
+  29% {
+    stroke-dashoffset: 0.27;
+  }
+  34% {
+    stroke-dashoffset: 0.08;
   }
   40%,
   100% {
