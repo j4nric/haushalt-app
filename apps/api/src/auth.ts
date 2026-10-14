@@ -5,13 +5,13 @@ import { jwt } from "better-auth/plugins";
 
 export function erstelleAuth(
   db: Db,
-  optionen: { secret: string; webUrl: string },
+  optionen: { secret: string; webUrl: string; weitereOrigins?: string[] },
 ) {
   return betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
     secret: optionen.secret,
     baseURL: optionen.webUrl,
-    trustedOrigins: [optionen.webUrl],
+    trustedOrigins: [optionen.webUrl, ...(optionen.weitereOrigins ?? [])],
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 10,

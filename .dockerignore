@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/test-results
+**/playwright-report
+.git
+.env
+.env.*
+!.env.example
+infra/production/.env

@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { EINHEITEN } from "../einheiten";
+import { KATEGORIE_IDS } from "../kategorien";
 import { user } from "./auth";
 
 /**
@@ -98,6 +99,11 @@ export const artikel = pgTable(
     check(
       "artikel_standardeinheit_gueltig",
       sql`${t.standardeinheit} in ('stueck', 'g', 'ml')`,
+    ),
+    // Neue Kategorien in kategorien.ts brauchen eine neue Migration (db:generate).
+    check(
+      "artikel_kategorie_gueltig",
+      sql`${t.kategorie} is null or ${t.kategorie} in (${sql.raw(KATEGORIE_IDS.map((k) => `'${k}'`).join(", "))})`,
     ),
   ],
 );

@@ -19,5 +19,11 @@ export function ladeEnv() {
     authSecret: pflicht("BETTER_AUTH_SECRET"),
     /** Adresse, unter der Browser die App (und über den Vite-Proxy das API) erreichen. */
     webUrl: process.env.WEB_URL ?? "http://localhost:5173",
+    /** Weitere erlaubte Adressen, kommagetrennt (lokal: vite preview für die E2E-Tests). */
+    /** Gebautes Frontend (apps/web/dist); nur in Produktion gesetzt. */
+    frontendVerzeichnis: process.env.FRONTEND_DIR,
+    weitereOrigins: (process.env.TRUSTED_ORIGINS ?? "")
+      .split(",")
+      .filter(Boolean),
   };
 }

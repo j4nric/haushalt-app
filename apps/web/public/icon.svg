@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Haushalt</title>
+  <rect width="512" height="512" rx="96" fill="#15803d"/>
+  <!-- Einkaufskorb -->
+  <path d="M120 210h272l-30 170a24 24 0 0 1-24 20H174a24 24 0 0 1-24-20z" fill="#fff"/>
+  <path d="M176 210l56-90M336 210l-56-90" stroke="#fff" stroke-width="28" stroke-linecap="round" fill="none"/>
+  <!-- Haken -->
+  <path d="M196 300l42 40 82-86" stroke="#15803d" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

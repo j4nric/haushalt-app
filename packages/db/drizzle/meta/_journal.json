@@ -8,6 +8,13 @@
       "when": 1791991431868,
       "tag": "0000_grundschema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791992755038,
+      "tag": "0001_artikel_kategorie",
+      "breakpoints": true
     }
   ]
 }

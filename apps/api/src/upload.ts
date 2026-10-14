@@ -1,4 +1,4 @@
-import { EINHEITEN } from "@haushalt/db";
+import { EINHEITEN, KATEGORIE_IDS } from "@haushalt/db";
 import type postgres from "postgres";
 
 /**
@@ -27,8 +27,15 @@ const text = (spalte: string) => (wert: unknown) => {
   }
   return wert.trim();
 };
-const optionalerText = (wert: unknown) =>
-  wert == null || wert === "" ? null : text("Text")(wert);
+const kategorie = (wert: unknown) => {
+  if (wert == null || wert === "") {
+    return null;
+  }
+  if (!KATEGORIE_IDS.includes(wert as never)) {
+    throw new UngueltigeOperation(`Unbekannte Kategorie: ${String(wert)}`);
+  }
+  return wert as string;
+};
 const uuid = (spalte: string) => (wert: unknown) => {
   if (typeof wert !== "string" || !UUID.test(wert)) {
     throw new UngueltigeOperation(`${spalte} muss eine UUID sein`);
@@ -72,7 +79,7 @@ const ERLAUBT = {
   artikel: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
     name: { umwandeln: text("name") },
-    kategorie: { umwandeln: optionalerText },
+    kategorie: { umwandeln: kategorie },
     standardeinheit: { umwandeln: einheit(true) },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },

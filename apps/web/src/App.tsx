@@ -5,19 +5,20 @@ import { authClient } from "./auth";
 import { Einkaufsliste } from "./Einkaufsliste";
 import { HaushaltEinrichten } from "./HaushaltEinrichten";
 import { HaushaltInfo } from "./HaushaltInfo";
+import { useNutzer, vergessen } from "./nutzer";
 import { trennenUndLeeren, verbinden } from "./powersync";
 import { SyncStatus } from "./SyncStatus";
 
 export function App() {
-  const { data: sitzung, isPending } = authClient.useSession();
+  const { nutzer, laedt } = useNutzer();
 
-  if (isPending) {
+  if (laedt) {
     return <main className="mitte">Lädt …</main>;
   }
-  if (!sitzung) {
+  if (!nutzer) {
     return <Anmeldung />;
   }
-  return <Angemeldet nutzerId={sitzung.user.id} name={sitzung.user.name} />;
+  return <Angemeldet nutzerId={nutzer.id} name={nutzer.name} />;
 }
 
 function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
@@ -34,6 +35,7 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
 
   async function abmelden() {
     await trennenUndLeeren();
+    vergessen();
     await authClient.signOut();
   }
 

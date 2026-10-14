@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Bei PRs alte Läufe abbrechen, auf main nie (sonst bricht ein Deployment mittendrin ab).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -40,29 +41,7 @@ jobs:
       POSTGRES_PORT: 5432
     steps:
       - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-
-      # Die mit Node 24 gelieferte Corepack-Version kann pnpm 12 nicht starten.
-      - name: pnpm über Corepack aktivieren
-        run: |
-          npm install -g corepack@latest
-          corepack enable
-          pnpm --version
-
-      - name: pnpm-Cache-Pfad ermitteln
-        id: pnpm-store
-        run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/cache@v6
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: pnpm-${{ runner.os }}-
-
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/einrichten
 
       - name: Lint (Biome)
         run: pnpm exec biome ci .
@@ -72,3 +51,112 @@ jobs:
 
       - name: Tests
         run: pnpm test
+
+  e2e:
+    name: E2E (Offline-Sync)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/einrichten
+
+      - name: .env mit zufälligen Werten anlegen
+        run: |
+          sed -e "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 16)/" \
+              -e "s/^POWERSYNC_ADMIN_TOKEN=.*/POWERSYNC_ADMIN_TOKEN=$(openssl rand -hex 16)/" \
+              -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(openssl rand -base64 32)|" \
+              .env.example > .env
+
+      - name: Postgres und PowerSync starten
+        run: docker compose up -d --wait
+
+      - name: Playwright-Browser installieren
+        run: pnpm --filter @haushalt/web exec playwright install --with-deps chromium
+
+      - name: E2E-Tests
+        run: pnpm --filter @haushalt/web test:e2e
+
+      - name: Logs bei Fehlern
+        if: failure()
+        run: docker compose logs --tail 200
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-ergebnisse
+          path: apps/web/test-results
+          retention-days: 7
+
+  image:
+    name: Docker-Image bauen
+    needs: [check, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ghcr.io/${{ github.repository }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Auf Server ausrollen
+    needs: image
+    # Erst aktiv, wenn in den Repo-Einstellungen die Variable DEPLOY_HOST gesetzt ist
+    # (Anleitung: docs/betrieb.md).
+    if: vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: produktion
+      url: https://${{ vars.DEPLOY_DOMAIN }}
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: SSH einrichten
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Neue Version starten
+        env:
+          ZIEL: ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}
+          IMAGE: ${{ needs.image.outputs.image }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "$ZIEL" \
+            IMAGE="$IMAGE" REGISTRY_TOKEN="$REGISTRY_TOKEN" REGISTRY_USER="$REGISTRY_USER" \
+            'bash -s' <<'SKRIPT'
+          set -euo pipefail
+          cd ~/haushalt-app
+          git fetch --quiet origin main && git reset --quiet --hard origin/main
+          cd infra/production
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+          APP_IMAGE="$IMAGE" docker compose pull app
+          APP_IMAGE="$IMAGE" docker compose up -d --wait
+          docker logout ghcr.io
+          docker image prune -f
+          SKRIPT

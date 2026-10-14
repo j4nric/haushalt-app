@@ -1,0 +1,1 @@
+ALTER TABLE "artikel" ADD CONSTRAINT "artikel_kategorie_gueltig" CHECK ("artikel"."kategorie" is null or "artikel"."kategorie" in ('obst_gemuese', 'brot_backwaren', 'milch_kaese', 'fleisch_fisch', 'vorrat', 'suesses_snacks', 'getraenke', 'tiefkuehl', 'drogerie', 'haushalt'));
