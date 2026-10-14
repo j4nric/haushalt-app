@@ -3,6 +3,7 @@ import { Check, Copy, LogOut, Share2, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "./auth";
+import { Darstellung } from "./Darstellung";
 import { vergessen } from "./nutzer";
 import { trennenUndLeeren } from "./powersync";
 
@@ -53,6 +54,8 @@ export function Haushalt({
       </section>
 
       <Einladen haushaltId={haushaltId} />
+
+      <Darstellung />
 
       <section>
         <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">

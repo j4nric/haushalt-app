@@ -4,8 +4,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { Toaster } from "./components/ui/sonner";
+import { themaAnwenden } from "./einstellungen";
 import { db } from "./powersync";
 import "./index.css";
+
+// Farbschema aus den gespeicherten Einstellungen sofort anwenden (vor dem ersten Rendern).
+themaAnwenden();
 
 // Service Worker: speichert die App für den Offline-Start und aktualisiert sich selbst.
 registerSW({ immediate: true });

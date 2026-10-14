@@ -5,6 +5,7 @@ import { Minus, PackageOpen, Plus } from "lucide-react";
 import { useState } from "react";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import { Gruppe } from "@/components/Gruppe";
+import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import {
   bestandSetzen,
@@ -94,8 +96,8 @@ export function Vorrat({
         </p>
       )}
 
-      {gruppen.map(([gruppe, artikel]) => (
-        <Gruppe key={gruppe} titel={gruppe}>
+      {gruppen.map(([gruppe, kategorie, artikel]) => (
+        <Gruppe key={gruppe} titel={gruppe} kategorie={kategorie}>
           {artikel.map((zeile) => (
             <VorratsEintrag
               key={zeile.id}
@@ -177,21 +179,24 @@ function VorratsEintrag({
       <button
         type="button"
         onClick={oeffnen}
-        className="flex-1 self-stretch px-4 py-2 text-left"
+        className="flex flex-1 items-center gap-3 self-stretch px-4 py-2 text-left"
       >
-        <span
-          className={cn(
-            "block text-base",
-            knapp && "font-medium text-warning-foreground",
-          )}
-        >
-          {zeile.name}
-        </span>
-        {knapp && (
-          <span className="text-xs text-warning-foreground">
-            knapp{zeile.auf_liste ? ", auf der Liste" : ""}
+        <KategorieSymbol kategorie={zeile.kategorie} />
+        <span className="flex-1">
+          <span
+            className={cn(
+              "block text-base",
+              knapp && "font-medium text-warning-foreground",
+            )}
+          >
+            {zeile.name}
           </span>
-        )}
+          {knapp && (
+            <span className="text-xs text-warning-foreground">
+              knapp{zeile.auf_liste ? ", auf der Liste" : ""}
+            </span>
+          )}
+        </span>
       </button>
       <Button
         variant="outline"
@@ -386,7 +391,7 @@ function NeuerVorratsartikel({
   );
 
   async function eintragen(kategorie: string) {
-    const artikelName = name.trim();
+    const artikelName = ersterBuchstabeGross(name);
     await db.writeTransaction(async (tx) => {
       const vorhanden = await tx.getOptional<{
         id: string;
@@ -459,14 +464,18 @@ function istKnapp(zeile: VorratsZeile) {
   return zeile.mindestbestand != null && zeile.bestand < zeile.mindestbestand;
 }
 
-function gruppieren(zeilen: VorratsZeile[]): [string, VorratsZeile[]][] {
+function gruppieren(
+  zeilen: VorratsZeile[],
+): [string, string | null, VorratsZeile[]][] {
   const sortiert = [...zeilen].sort(
     (a, b) => kategorieRang(a.kategorie) - kategorieRang(b.kategorie),
   );
-  const gruppen = new Map<string, VorratsZeile[]>();
+  const gruppen = new Map<string, [string, string | null, VorratsZeile[]]>();
   for (const zeile of sortiert) {
-    const gruppe = kategorieName(zeile.kategorie);
-    gruppen.set(gruppe, [...(gruppen.get(gruppe) ?? []), zeile]);
+    const name = kategorieName(zeile.kategorie);
+    const gruppe = gruppen.get(name) ?? [name, zeile.kategorie, []];
+    gruppe[2].push(zeile);
+    gruppen.set(name, gruppe);
   }
-  return [...gruppen];
+  return [...gruppen.values()];
 }

@@ -19,6 +19,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import { Gruppe } from "@/components/Gruppe";
+import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { useWischen } from "@/hooks/use-wischen";
+import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
 
@@ -96,7 +98,7 @@ export function Einkaufsliste({
    * hoch statt eine zweite Zeile anzulegen.
    */
   async function hinzufuegen(kategorie: string) {
-    const artikelName = name.trim();
+    const artikelName = ersterBuchstabeGross(name);
     const jetzt = new Date().toISOString();
 
     await db.writeTransaction(async (tx) => {
@@ -219,8 +221,8 @@ export function Einkaufsliste({
 
   return (
     <>
-      {gruppen.map(([gruppe, zeilen]) => (
-        <Gruppe key={gruppe} titel={gruppe}>
+      {gruppen.map(([gruppe, kategorie, zeilen]) => (
+        <Gruppe key={gruppe} titel={gruppe} kategorie={kategorie}>
           {zeilen.map(zeile)}
         </Gruppe>
       ))}
@@ -334,6 +336,7 @@ function Eintrag({
           >
             {erledigt && <Check className="size-4" strokeWidth={3} />}
           </span>
+          <KategorieSymbol kategorie={eintrag.kategorie} />
           <span className={cn("flex-1", erledigt && "text-muted-foreground")}>
             {/* Nur den Namen durchstreichen, nicht „von …“. */}
             <span className={cn("text-base", erledigt && "line-through")}>
@@ -496,14 +499,16 @@ function finde(artikel: Artikel[], name: string) {
 }
 
 /** Gruppiert offene Einträge nach Kategorie, in Supermarkt-Reihenfolge. */
-function nachKategorie(zeilen: Zeile[]): [string, Zeile[]][] {
+function nachKategorie(zeilen: Zeile[]): [string, string | null, Zeile[]][] {
   const sortiert = [...zeilen].sort(
     (a, b) => kategorieRang(a.kategorie) - kategorieRang(b.kategorie),
   );
-  const gruppen = new Map<string, Zeile[]>();
+  const gruppen = new Map<string, [string, string | null, Zeile[]]>();
   for (const zeile of sortiert) {
-    const gruppe = kategorieName(zeile.kategorie);
-    gruppen.set(gruppe, [...(gruppen.get(gruppe) ?? []), zeile]);
+    const name = kategorieName(zeile.kategorie);
+    const gruppe = gruppen.get(name) ?? [name, zeile.kategorie, []];
+    gruppe[2].push(zeile);
+    gruppen.set(name, gruppe);
   }
-  return [...gruppen];
+  return [...gruppen.values()];
 }
