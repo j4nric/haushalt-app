@@ -1,0 +1,18 @@
+# HTTPS-Zertifikat holt Caddy automatisch (Let's Encrypt), sobald DOMAIN per DNS
+# auf diesen Server zeigt.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Sync-Dienst unter /powersync (Präfix wird entfernt). flush_interval -1:
+	# Der Sync-Stream muss sofort weitergereicht werden, nicht gepuffert.
+	handle_path /powersync/* {
+		reverse_proxy powersync:8080 {
+			flush_interval -1
+		}
+	}
+
+	# Alles andere: API und Frontend
+	handle {
+		reverse_proxy app:3000
+	}
+}

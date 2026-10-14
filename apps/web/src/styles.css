@@ -101,3 +101,32 @@ form.stapel label {
   flex-direction: column;
   gap: 0.25rem;
 }
+/* Eingabe: Name über die volle Breite, darunter Menge, Einheit, Kategorie, Knopf. */
+.eingabe {
+  display: grid;
+  grid-template-columns: 5rem auto 1fr auto;
+  gap: 0.5rem;
+}
+.eingabe .name {
+  grid-column: 1 / -1;
+}
+.eingabe .menge {
+  width: 100%;
+  box-sizing: border-box;
+}
+.eingabe .kategorie {
+  min-width: 0;
+}
+.gruppe h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 1.25rem 0 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+.gruppe ul {
+  margin-top: 0.25rem;
+}

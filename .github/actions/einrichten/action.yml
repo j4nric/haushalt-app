@@ -1,0 +1,31 @@
+name: Einrichten
+description: Node, pnpm (über Corepack) und Abhängigkeiten mit Cache installieren
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+
+    # Die mit Node 24 gelieferte Corepack-Version kann pnpm 12 nicht starten.
+    - name: pnpm über Corepack aktivieren
+      shell: bash
+      run: |
+        npm install -g corepack@latest
+        corepack enable
+        pnpm --version
+
+    - name: pnpm-Cache-Pfad ermitteln
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@v6
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-${{ runner.os }}-
+
+    - shell: bash
+      run: pnpm install --frozen-lockfile

@@ -6,7 +6,7 @@ gleicht sich automatisch ab, sobald wieder Netz da ist.
 
 ## Ausbaustufen
 
-1. **Einkaufsliste**: geteilt, offline-fähig, mit Login und Haushalt *(in Arbeit)*
+1. **Einkaufsliste**: geteilt, offline-fähig, mit Login, Haushalt und Kategorien, installierbar als App
 2. **Vorrat**: Mengen pro Artikel, „im Laden abgehakt → Vorrat erhöht“
 3. **Rezepte**: Zutaten verweisen auf dieselben Artikel
 4. **Wochenplanung**
@@ -82,12 +82,13 @@ Das Datenbankschema steht in `packages/db/src/schema/`, die Migrationen in
 | `pnpm infra:logs` | Logs der Dienste live verfolgen |
 | `pnpm infra:reset` | Dienste stoppen **und alle lokalen Daten löschen** |
 | `pnpm dev` | API (Port 3000) und Frontend (http://localhost:5173) starten |
-| `pnpm --filter @haushalt/web test:e2e` | Playwright-Tests, u. a. Offline-Sync (braucht `infra:up`) |
+| `pnpm --filter @haushalt/web test:e2e` | Playwright-Tests gegen den Produktions-Build: Offline-Sync und Offline-Start (braucht `infra:up`) |
 
 Vor dem ersten Playwright-Lauf einmalig den Browser installieren:
 `pnpm --filter @haushalt/web exec playwright install chromium`
 
-Architekturentscheidungen stehen in [`docs/entscheidungen/`](docs/entscheidungen/).
+Architekturentscheidungen stehen in [`docs/entscheidungen/`](docs/entscheidungen/),
+Server und Deployment in [`docs/betrieb.md`](docs/betrieb.md).
 
 ## Arbeitsweise
 

@@ -70,6 +70,15 @@ describe("parseOperationen", () => {
       },
     ],
     [
+      "unbekannte Kategorie",
+      {
+        op: "PATCH",
+        table: "artikel",
+        id: neueId(),
+        opData: { kategorie: "Kram" },
+      },
+    ],
+    [
       "negative Menge",
       {
         op: "PATCH",

@@ -11,9 +11,14 @@ export function erstelleDb(url: string) {
 
 export type Db = ReturnType<typeof erstelleDb>["db"];
 
-/** Spielt alle noch fehlenden Migrationen aus packages/db/drizzle ein. */
+/**
+ * Spielt alle noch fehlenden Migrationen ein. Standard: packages/db/drizzle;
+ * im gebündelten Produktions-Build zeigt MIGRATIONS_DIR auf die kopierten Dateien.
+ */
 export async function migriere(db: Db) {
   await migrate(db, {
-    migrationsFolder: new URL("../drizzle", import.meta.url).pathname,
+    migrationsFolder:
+      process.env.MIGRATIONS_DIR ??
+      new URL("../drizzle", import.meta.url).pathname,
   });
 }

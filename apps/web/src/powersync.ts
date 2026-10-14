@@ -44,8 +44,9 @@ export const schema = new Schema({
   }),
 });
 
+/** PowerSync läuft hinter derselben Adresse wie die App (Vite-Proxy bzw. Caddy). */
 const POWERSYNC_URL =
-  import.meta.env.VITE_POWERSYNC_URL ?? "http://localhost:8080";
+  import.meta.env.VITE_POWERSYNC_URL ?? `${location.origin}/powersync`;
 
 /** Verbindet die lokale Datenbank mit unserem Backend. */
 class Connector implements PowerSyncBackendConnector {
