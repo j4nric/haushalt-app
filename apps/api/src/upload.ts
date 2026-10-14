@@ -100,6 +100,7 @@ const ERLAUBT = {
     kategorie: { umwandeln: kategorie },
     standardeinheit: { umwandeln: einheit(true) },
     im_vorrat: { umwandeln: bool },
+    archiviert: { umwandeln: bool },
     mindestbestand: { umwandeln: menge },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },

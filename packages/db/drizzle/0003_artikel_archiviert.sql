@@ -1,0 +1,1 @@
+ALTER TABLE "artikel" ADD COLUMN "archiviert" boolean DEFAULT false NOT NULL;
