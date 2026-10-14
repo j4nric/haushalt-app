@@ -201,7 +201,13 @@ function laden(): Einstellungen {
     const spalten = SPALTEN.some((o) => o.id === roh.spalten)
       ? roh.spalten
       : STANDARD.spalten;
-    return { thema, palette, eigenesThema, eigenePalette, spalten };
+    return {
+      thema,
+      palette,
+      eigenesThema,
+      eigenePalette,
+      spalten,
+    };
   } catch {
     return STANDARD;
   }

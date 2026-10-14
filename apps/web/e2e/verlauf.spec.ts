@@ -51,6 +51,7 @@ test("Schnell-Hinzufügen aus dem Verlauf einer Kategorie", async ({
     for (const name of ["Bananen", "Äpfel", "Milch"]) {
       await hinzufuegen(page, name);
       await eintrag(page, name).getByRole("checkbox").click();
+      await expect(eintrag(page, name).getByRole("checkbox")).toBeChecked();
     }
     await page.getByRole("button", { name: "Leeren" }).click();
     await expect(page.getByText("Die Liste ist leer.")).toBeVisible();

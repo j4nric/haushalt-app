@@ -63,7 +63,9 @@ test("Haushalt teilen und offline einkaufen", async ({
     await expect(fremd.page.getByTestId("sync-status")).toHaveText(
       /Online · synchron/,
     );
-    await expect(fremd.page.getByRole("listitem")).toHaveCount(0);
+    await expect(
+      fremd.page.getByRole("main").getByRole("checkbox"),
+    ).toHaveCount(0);
     await expect(fremd.page.getByText("Die Liste ist leer.")).toBeVisible();
   } finally {
     await anna.schliessen();
