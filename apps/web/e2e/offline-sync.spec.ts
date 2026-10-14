@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { eintrag, geraet, haushaltAnlegen, hinzufuegen } from "./hilfen";
+import {
+  einladen,
+  eintrag,
+  geraet,
+  haushaltAnlegen,
+  hinzufuegen,
+} from "./hilfen";
 
 /**
  * Kernszenario: Zwei Mitglieder eines Haushalts teilen eine Liste. Eins verliert
@@ -24,14 +30,7 @@ test("Haushalt teilen und offline einkaufen", async ({
   try {
     // 1. Anna legt den Haushalt an und lädt Ben ein.
     await haushaltAnlegen(anna.page, `Haushalt ${lauf}`);
-    await anna.page.getByRole("button", { name: "Jemanden einladen" }).click();
-    const code =
-      (await anna.page.getByTestId("einladungscode").textContent()) ?? "";
-    await ben.page.getByLabel("Einladungscode").fill(code);
-    await ben.page.getByRole("button", { name: "Beitreten" }).click();
-    await expect(
-      ben.page.getByRole("heading", { name: `Haushalt ${lauf}` }),
-    ).toBeVisible();
+    await einladen(anna.page, ben.page, `Haushalt ${lauf}`);
     await expect(anna.page.getByText("Anna, Ben")).toBeVisible();
 
     // Ein fremder Haushalt daneben.

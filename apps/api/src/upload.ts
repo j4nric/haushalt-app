@@ -60,6 +60,24 @@ const menge = (wert: unknown) => {
   }
   return wert;
 };
+/** Vorratsbuchung: positiv (Zugang) oder negativ (Abgang), aber nie 0. */
+const buchungsmenge = (wert: unknown) => {
+  if (typeof wert !== "number" || !Number.isFinite(wert) || wert === 0) {
+    throw new UngueltigeOperation(
+      "Buchungsmenge muss eine Zahl ungleich 0 sein",
+    );
+  }
+  return wert;
+};
+const GRUENDE = ["einkauf", "verbrauch", "korrektur"];
+const grund = (wert: unknown) => {
+  if (!GRUENDE.includes(wert as string)) {
+    throw new UngueltigeOperation(`Unbekannter Buchungsgrund: ${String(wert)}`);
+  }
+  return wert as string;
+};
+const optionaleUuid = (spalte: string) => (wert: unknown) =>
+  wert == null ? null : uuid(spalte)(wert);
 // SQLite kennt keine Booleans: PowerSync liefert 0/1.
 const bool = (wert: unknown) => wert === 1 || wert === true;
 const zeitpunkt = (wert: unknown) => {
@@ -81,7 +99,22 @@ const ERLAUBT = {
     name: { umwandeln: text("name") },
     kategorie: { umwandeln: kategorie },
     standardeinheit: { umwandeln: einheit(true) },
+    im_vorrat: { umwandeln: bool },
+    mindestbestand: { umwandeln: menge },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
+  },
+  // Buchungen sind unveränderlich: alle Spalten `fest`, also nur PUT und DELETE.
+  vorratsbuchungen: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
+    menge: { umwandeln: buchungsmenge, fest: true },
+    grund: { umwandeln: grund, fest: true },
+    listeneintrag_id: {
+      umwandeln: optionaleUuid("listeneintrag_id"),
+      fest: true,
+    },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
   },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
@@ -195,7 +228,7 @@ export async function wendeAn(
           `Kein Mitglied von Haushalt ${String(data.haushalt_id)}`,
         );
       }
-      if (o.table === "listeneintraege") {
+      if (o.table === "listeneintraege" || o.table === "vorratsbuchungen") {
         data.erstellt_von = nutzerId;
       }
       const zeile = { ...data, id: o.id };

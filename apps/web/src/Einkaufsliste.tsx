@@ -8,8 +8,10 @@ import {
   kategorieName,
   kategorieRang,
 } from "@haushalt/db/kategorien";
+import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { type FormEvent, useMemo, useState } from "react";
+import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
 
 type Zeile = {
   id: string;
@@ -61,6 +63,7 @@ export function Einkaufsliste({
   const [menge, setMenge] = useState("");
   const [einheit, setEinheit] = useState<Einheit>("stueck");
   const [kategorie, setKategorie] = useState("");
+  const [hinweis, setHinweis] = useState<string | null>(null);
 
   const offen = eintraege.filter((e) => !e.erledigt);
   const imWagen = eintraege.filter((e) => e.erledigt);
@@ -98,14 +101,15 @@ export function Einkaufsliste({
       if (!artikelId) {
         artikelId = crypto.randomUUID();
         await tx.execute(
-          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, erstellt_am)
-           VALUES (?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, erstellt_am)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
             artikelId,
             haushaltId,
             artikelName,
             kategorie || null,
             einheit,
+            standardmaessigImVorrat(kategorie) ? 1 : 0,
             jetzt,
           ],
         );
@@ -134,11 +138,24 @@ export function Einkaufsliste({
     setKategorie("");
   }
 
-  function umschalten(eintrag: Zeile) {
+  /** Abhaken bucht ins Vorrat, Zurücknehmen entfernt die Buchung wieder. */
+  async function umschalten(eintrag: Zeile) {
     const erledigt = eintrag.erledigt ? 0 : 1;
-    return db.execute(
-      "UPDATE listeneintraege SET erledigt = ?, erledigt_von = ? WHERE id = ?",
-      [erledigt, erledigt ? nutzerId : null, eintrag.id],
+    const gebucht = await db.writeTransaction(async (tx) => {
+      await tx.execute(
+        "UPDATE listeneintraege SET erledigt = ?, erledigt_von = ? WHERE id = ?",
+        [erledigt, erledigt ? nutzerId : null, eintrag.id],
+      );
+      if (erledigt) {
+        return einkaufBuchen(tx, eintrag.id, nutzerId);
+      }
+      await einkaufZuruecknehmen(tx, eintrag.id, nutzerId);
+      return true;
+    });
+    setHinweis(
+      gebucht
+        ? null
+        : `${eintrag.name}: ohne passende Menge nicht in den Vorrat gebucht. Bitte im Vorrat nachtragen.`,
     );
   }
 
@@ -204,6 +221,12 @@ export function Einkaufsliste({
         </select>
         <button type="submit">Hinzufügen</button>
       </form>
+
+      {hinweis && (
+        <p className="hinweis" role="status">
+          {hinweis}
+        </p>
+      )}
 
       {gruppen.map(([gruppe, zeilen]) => (
         <div key={gruppe} className="gruppe">
