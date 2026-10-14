@@ -36,6 +36,13 @@
       "when": 1792015822583,
       "tag": "0004_kategorie_check_sortiert",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792016946082,
+      "tag": "0005_kaeufe",
+      "breakpoints": true
     }
   ]
 }

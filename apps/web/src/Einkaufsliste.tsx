@@ -37,7 +37,9 @@ import { useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
+import { type Kaufverlauf, ueberfaellige } from "@/lib/vergessen";
 import { ABHAK_KLASSE, KritzelStrich, useVerzoegertesAbhaken } from "./Abhaken";
+import { Vergessen } from "./Vergessen";
 import {
   knalligeFlaeche,
   RASTER,
@@ -46,6 +48,7 @@ import {
   VerlaufBlock,
 } from "./Verlauf";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
+import { FlugEbene, WAGEN_ZIEL, zumWagenFliegen } from "./WagenFlug";
 
 type Zeile = {
   id: string;
@@ -78,11 +81,32 @@ export function Einkaufsliste({
   // angelegter Artikel hat archiviert = NULL, bis der Server-Stand zurückkommt.
   const { data: bekannteArtikel } = useQuery<VerlaufArtikel>(
     `SELECT a.id, a.name, a.kategorie,
-            EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
+            EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste,
+            COALESCE((SELECT MAX(k.gekauft_am) FROM kaeufe k WHERE k.artikel_id = a.id), a.erstellt_am) AS zuletzt
        FROM artikel a
       WHERE a.haushalt_id = ? AND COALESCE(a.archiviert, 0) = 0
       ORDER BY a.name`,
     [haushaltId],
+  );
+
+  // Kaufhistorie je Artikel (ohne offene Einträge) für „Vielleicht vergessen?“.
+  const { data: kaufverlaeufe } = useQuery<
+    Omit<Kaufverlauf, "kaeufe"> & { kaeufe: string }
+  >(
+    `SELECT a.id, a.name, a.kategorie, json_group_array(k.gekauft_am) AS kaeufe
+       FROM artikel a
+       JOIN kaeufe k ON k.artikel_id = a.id
+      WHERE a.haushalt_id = ? AND COALESCE(a.archiviert, 0) = 0
+        AND NOT EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0)
+      GROUP BY a.id`,
+    [haushaltId],
+  );
+  const vergessen = useMemo(
+    () =>
+      ueberfaellige(
+        kaufverlaeufe.map((a) => ({ ...a, kaeufe: JSON.parse(a.kaeufe) })),
+      ),
+    [kaufverlaeufe],
   );
 
   const [name, setName] = useState("");
@@ -206,6 +230,9 @@ export function Einkaufsliste({
     await db.writeTransaction(async (tx) => {
       if (!erledigt) {
         await einkaufZuruecknehmen(tx, eintrag.id, nutzerId);
+        await tx.execute("DELETE FROM kaeufe WHERE listeneintrag_id = ?", [
+          eintrag.id,
+        ]);
         const doppelt = await tx.getOptional(
           "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0 AND id != ?",
           [eintrag.artikel_id, eintrag.id],
@@ -223,12 +250,18 @@ export function Einkaufsliste({
       );
       if (erledigt) {
         await einkaufBuchen(tx, eintrag.id, nutzerId);
+        // Kaufhistorie für jeden Artikel (Grundlage für „Vielleicht vergessen?“).
+        await tx.execute(
+          `INSERT INTO kaeufe (id, haushalt_id, artikel_id, listeneintrag_id, gekauft_am, erstellt_von)
+           SELECT uuid(), haushalt_id, artikel_id, id, ?, ? FROM listeneintraege WHERE id = ?`,
+          [new Date().toISOString(), nutzerId, eintrag.id],
+        );
       }
     });
   }
 
   /** Aus dem Verlauf: wieder auf die Liste setzen. */
-  async function ausVerlaufHinzufuegen(artikel: VerlaufArtikel) {
+  async function ausVerlaufHinzufuegen(artikel: Pick<VerlaufArtikel, "id">) {
     await db.writeTransaction(async (tx) => {
       const offen = await tx.getOptional(
         "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
@@ -302,6 +335,11 @@ export function Einkaufsliste({
 
   return (
     <>
+      <FlugEbene />
+      <Vergessen
+        artikel={vergessen}
+        hinzufuegen={(id) => ausVerlaufHinzufuegen({ id })}
+      />
       {gruppen.map(([gruppe, kategorie, zeilen]) => {
         const schluessel = kategorie ?? "";
         if (verlaufOffen === schluessel) {
@@ -550,7 +588,10 @@ function Wagen({
       }}
     >
       <h3 className="flex items-center justify-center gap-2 pb-3 text-sm font-semibold tracking-wide text-primary uppercase">
-        <ShoppingCart className="size-4" /> Im Wagen
+        <span {...{ [WAGEN_ZIEL]: "" }} className="inline-flex">
+          <ShoppingCart className="size-4" />
+        </span>{" "}
+        Im Wagen
       </h3>
       <ul className={cn("grid auto-rows-fr gap-2", RASTER[spalten])}>
         {children}
@@ -615,6 +656,7 @@ function ZumWagenKnopf({
     <button
       type="button"
       aria-label={`Zum Wagen (${anzahl})`}
+      {...{ [WAGEN_ZIEL]: "" }}
       onClick={() =>
         wagen.current?.scrollIntoView({ behavior: "smooth", block: "start" })
       }
@@ -680,12 +722,21 @@ function Kachel({
   const kompakt = spalten === 3;
   // Abhaken mit kurzer Verzögerung (Animation); nochmal antippen bricht ab.
   // Zurücknehmen aus dem Wagen geschieht sofort.
-  const abhaken = useVerzoegertesAbhaken(() => umschalten(eintrag));
+  const knopf = useRef<HTMLButtonElement>(null);
+  const abhaken = useVerzoegertesAbhaken(() => {
+    // Ab in den Wagen – nur wenn die Kachel noch da ist (sonst kein Startpunkt).
+    const r = knopf.current?.getBoundingClientRect();
+    if (r) {
+      zumWagenFliegen(r, eintrag.name, eintrag.kategorie);
+    }
+    umschalten(eintrag);
+  });
 
   return (
     <li className="min-w-0">
       {/* biome-ignore lint/a11y/useSemanticElements: Die ganze Kachel ist die Tippfläche und erkennt langes Drücken; ein <input type="checkbox"> kann das nicht. */}
       <button
+        ref={knopf}
         type="button"
         role="checkbox"
         aria-checked={erledigt}
