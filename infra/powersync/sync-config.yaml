@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
+#
+# Legt fest, welche Daten auf welche Geräte synchronisiert werden.
+# Änderungen erfordern einen Neustart: docker compose restart powersync
+# Doku: https://docs.powersync.com/sync/streams/overview
+
+config:
+  edition: 3
+
+streams:
+  # Platzhalter für den Sync-Prototyp (Schritt 5). Später wird hier pro
+  # Haushalt gefiltert, damit jeder nur die eigenen Daten bekommt.
+  einkaufsliste:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM listeneintraege

@@ -1,0 +1,57 @@
+# Lokale Infrastruktur: PostgreSQL und PowerSync.
+# Start: pnpm infra:up · Stopp: pnpm infra:down · Werte kommen aus .env (Vorlage: .env.example)
+
+name: haushalt
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # PowerSync liest Änderungen über logische Replikation mit.
+    command: ["postgres", "-c", "wal_level=logical"]
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  powersync:
+    image: journeyapps/powersync-service:1.27.0
+    restart: unless-stopped
+    command: ["start", "-r", "unified"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+      NODE_OPTIONS: --max-old-space-size=1000
+      PS_PORT: "8080"
+      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/powersync_storage
+      PS_JWT_SECRET: ${POWERSYNC_JWT_SECRET}
+      PS_ADMIN_TOKEN: ${POWERSYNC_ADMIN_TOKEN}
+    volumes:
+      - ./infra/powersync:/config:ro
+    ports:
+      - "${POWERSYNC_PORT:-8080}:8080"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:8080/probes/liveness').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 5s
+      timeout: 2s
+      retries: 20
+
+volumes:
+  postgres_data:
