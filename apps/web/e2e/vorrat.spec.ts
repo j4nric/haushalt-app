@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import {
-  anzahl,
   bestand,
   einladen,
   eintrag,
@@ -20,17 +19,14 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
   const { page } = handy;
   try {
     await haushaltAnlegen(page, "Vorrat-Haushalt");
-    await hinzufuegen(page, "Nudeln", {
-      menge: 2,
-      kategorie: "Vorrat & Konserven",
-    });
+    await hinzufuegen(page, "Nudeln", { kategorie: "Vorrat & Konserven" });
     await hinzufuegen(page, "Bananen", { kategorie: "Obst & Gemüse" });
 
     // Abhaken bucht Vorratsartikel ein – Frisches nicht.
     await eintrag(page, "Nudeln").getByRole("checkbox").click();
     await eintrag(page, "Bananen").getByRole("checkbox").click();
     await zumVorrat(page);
-    await expect(bestand(page, "Nudeln")).toHaveText("2");
+    await expect(bestand(page, "Nudeln")).toHaveText("1");
     await expect(bestand(page, "Bananen")).toHaveCount(0);
     await expect(page.getByText("Weitere Artikel (1)")).toBeVisible();
 
@@ -42,9 +38,9 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
     await zurListe(page);
     await eintrag(page, "Nudeln").getByRole("checkbox").click();
     await zumVorrat(page);
-    await expect(bestand(page, "Nudeln")).toHaveText("2");
+    await expect(bestand(page, "Nudeln")).toHaveText("1");
 
-    // Mindestbestand 3 bei Bestand 2 → 1 Stück kommt automatisch auf die Liste.
+    // Mindestbestand 3 bei Bestand 1 → kommt automatisch wieder auf die Liste.
     await bestand(page, "Nudeln").click();
     await page.getByLabel("Mindestbestand Nudeln").fill("3");
     await page.getByLabel("Mindestbestand Nudeln").press("Enter");
@@ -53,7 +49,11 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
       page.getByRole("listitem").filter({ hasText: "Nudeln" }),
     ).toContainText("knapp, auf der Liste");
     await zurListe(page);
-    await expect(anzahl(page, "Nudeln")).toHaveText("1");
+    await expect(
+      eintrag(page, "Nudeln").filter({
+        has: page.getByRole("checkbox", { checked: false }),
+      }),
+    ).toBeVisible();
   } finally {
     await handy.schliessen();
   }

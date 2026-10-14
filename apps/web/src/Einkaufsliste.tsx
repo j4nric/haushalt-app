@@ -7,18 +7,14 @@ import {
 } from "@haushalt/db/kategorien";
 import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import { usePowerSync, useQuery } from "@powersync/react";
-import {
-  Check,
-  Minus,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
-import { Gruppe } from "@/components/Gruppe";
+import {
+  KategorieSymbol,
+  useKategorieFarbe,
+} from "@/components/KategorieSymbol";
 import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,14 +25,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { type Spalten, useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
+import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
 
@@ -45,15 +37,11 @@ type Zeile = {
   artikel_id: string;
   name: string;
   kategorie: string | null;
-  /** Anzahl in Stück; leer bedeutet 1. */
-  menge: number | null;
   erledigt: number;
   erledigt_von_name: string | null;
 };
 
 type Artikel = { id: string; name: string; kategorie: string | null };
-
-const anzahl = (zeile: { menge: number | null }) => zeile.menge ?? 1;
 
 export function Einkaufsliste({
   haushaltId,
@@ -64,7 +52,7 @@ export function Einkaufsliste({
 }) {
   const db = usePowerSync();
   const { data: eintraege } = useQuery<Zeile>(
-    `SELECT l.id, l.artikel_id, a.name, a.kategorie, l.menge, l.erledigt,
+    `SELECT l.id, l.artikel_id, a.name, a.kategorie, l.erledigt,
             m.anzeigename AS erledigt_von_name
        FROM listeneintraege l
        JOIN artikel a ON a.id = l.artikel_id
@@ -91,15 +79,12 @@ export function Einkaufsliste({
   const imWagen = eintraege.filter((e) => e.erledigt);
   const gruppen = useMemo(() => nachKategorie(offen), [offen]);
 
-  /**
-   * Trägt ein. Steht der Artikel schon offen auf der Liste, zählt das die Anzahl
-   * hoch statt eine zweite Zeile anzulegen.
-   */
+  /** Trägt ein; steht der Artikel schon offen auf der Liste, gibt es nur einen Hinweis. */
   async function hinzufuegen(kategorie: string) {
-    const artikelName = name.trim();
+    const artikelName = ersterBuchstabeGross(name);
     const jetzt = new Date().toISOString();
 
-    await db.writeTransaction(async (tx) => {
+    const schonDa = await db.writeTransaction(async (tx) => {
       const vorhanden = await tx.getOptional<{
         id: string;
         kategorie: string | null;
@@ -130,36 +115,28 @@ export function Einkaufsliste({
         ]);
       }
 
-      const offenerEintrag = await tx.getOptional<{ id: string }>(
-        "SELECT id FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
+      const offenerEintrag = await tx.getOptional(
+        "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
         [artikelId],
       );
       if (offenerEintrag) {
-        await tx.execute(
-          "UPDATE listeneintraege SET menge = COALESCE(menge, 1) + 1, einheit = 'stueck' WHERE id = ?",
-          [offenerEintrag.id],
-        );
-      } else {
-        await tx.execute(
-          `INSERT INTO listeneintraege (id, haushalt_id, artikel_id, menge, einheit, erledigt, erstellt_von, erstellt_am)
-           VALUES (uuid(), ?, ?, 1, 'stueck', 0, ?, ?)`,
-          [haushaltId, artikelId, nutzerId, jetzt],
-        );
+        return true;
       }
+      await tx.execute(
+        `INSERT INTO listeneintraege (id, haushalt_id, artikel_id, erledigt, erstellt_von, erstellt_am)
+         VALUES (uuid(), ?, ?, 0, ?, ?)`,
+        [haushaltId, artikelId, nutzerId, jetzt],
+      );
+      return false;
     });
+    if (schonDa) {
+      toast(`${artikelName} steht schon auf der Liste`);
+    }
     setName("");
     setManuell(null);
   }
 
-  function anzahlAendern(eintrag: Zeile, um: number) {
-    const neu = Math.max(1, anzahl(eintrag) + um);
-    return db.execute(
-      "UPDATE listeneintraege SET menge = ?, einheit = 'stueck' WHERE id = ?",
-      [neu, eintrag.id],
-    );
-  }
-
-  /** Abhaken bucht ins Vorrat, Zurücknehmen entfernt die Buchung wieder. */
+  /** Antippen = gekauft (bucht ins Vorrat); nochmal antippen nimmt es zurück. */
   async function umschalten(eintrag: Zeile) {
     const erledigt = eintrag.erledigt ? 0 : 1;
     await db.writeTransaction(async (tx) => {
@@ -206,27 +183,25 @@ export function Einkaufsliste({
     );
   }
 
-  const zeile = (eintrag: Zeile) => (
-    <Eintrag
+  const kachel = (eintrag: Zeile) => (
+    <Kachel
       key={eintrag.id}
       eintrag={eintrag}
       umschalten={umschalten}
-      loeschen={loeschen}
       bearbeiten={setBearbeitet}
-      anzahlAendern={anzahlAendern}
     />
   );
 
   return (
     <>
-      {gruppen.map(([gruppe, zeilen]) => (
-        <Gruppe key={gruppe} titel={gruppe}>
-          {zeilen.map(zeile)}
-        </Gruppe>
+      {gruppen.map(([gruppe, kategorie, zeilen]) => (
+        <KategorieRaster key={gruppe} titel={gruppe} kategorie={kategorie}>
+          {zeilen.map(kachel)}
+        </KategorieRaster>
       ))}
 
       {imWagen.length > 0 && (
-        <Gruppe
+        <KategorieRaster
           titel="Im Wagen"
           aktion={
             <Button
@@ -239,8 +214,8 @@ export function Einkaufsliste({
             </Button>
           }
         >
-          {imWagen.map(zeile)}
-        </Gruppe>
+          {imWagen.map(kachel)}
+        </KategorieRaster>
       )}
 
       {eintraege.length === 0 && (
@@ -248,6 +223,12 @@ export function Einkaufsliste({
           <p>Die Liste ist leer.</p>
           <p className="text-sm">Unten eintragen, was fehlt.</p>
         </div>
+      )}
+
+      {offen.length > 0 && (
+        <p className="pt-6 text-center text-xs text-muted-foreground">
+          Antippen = gekauft · lang drücken = Kategorie ändern oder löschen
+        </p>
       )}
 
       <EintragBearbeiten
@@ -276,140 +257,118 @@ export function Einkaufsliste({
 }
 
 /**
- * Eine Zeile: antippen = abhaken, nach links wischen = löschen, lang drücken = bearbeiten.
- * Offene Einträge haben − / Anzahl / +.
+ * Überschrift (in Kategoriefarbe) und ein Raster aus Kacheln. Das Symbol der Kategorie
+ * steht einmal links mittig daneben; ohne Kategorie (z. B. „Im Wagen“) bleibt der
+ * Platz frei, damit alle Raster bündig sind.
  */
-function Eintrag({
+function KategorieRaster({
+  titel,
+  kategorie,
+  aktion,
+  children,
+}: {
+  titel: string;
+  kategorie?: string | null;
+  aktion?: ReactNode;
+  children: ReactNode;
+}) {
+  const farbe = useKategorieFarbe(kategorie);
+  const { spalten } = useEinstellungen();
+  const mitKategorie = kategorie !== undefined;
+  return (
+    <section className="mt-5 first:mt-2">
+      <h3
+        className="flex items-baseline justify-between pb-1.5 pl-11 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+        style={mitKategorie ? { color: farbe } : undefined}
+      >
+        {titel}
+        {aktion}
+      </h3>
+      <div className="flex items-center gap-3">
+        <div className="flex w-8 shrink-0 justify-center">
+          {mitKategorie && (
+            <KategorieSymbol kategorie={kategorie} className="size-7" />
+          )}
+        </div>
+        {/* auto-rows-fr: Alle Zeilen eines Rasters so hoch wie die höchste Kachel. */}
+        <ul
+          data-spalten={spalten}
+          className={cn("grid flex-1 auto-rows-fr gap-2", RASTER[spalten])}
+        >
+          {children}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+// Vollständige Klassennamen, damit Tailwind sie beim Bauen findet.
+const RASTER: Record<Spalten, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
+
+/** Eine Kachel: antippen = gekauft / zurück, lang drücken = bearbeiten. */
+function Kachel({
   eintrag,
   umschalten,
-  loeschen,
   bearbeiten,
-  anzahlAendern,
 }: {
   eintrag: Zeile;
   umschalten: (e: Zeile) => void;
-  loeschen: (e: Zeile) => void;
   bearbeiten: (e: Zeile) => void;
-  anzahlAendern: (e: Zeile, um: number) => void;
 }) {
   const erledigt = eintrag.erledigt === 1;
-  const stueck = anzahl(eintrag);
-  const { versatz, handler, klick } = useWischen({
-    loeschen: () => loeschen(eintrag),
-    lang: () => bearbeiten(eintrag),
-  });
+  const farbe = useKategorieFarbe(eintrag.kategorie);
+  const { handler, klick } = useWischen({ lang: () => bearbeiten(eintrag) });
+  // Bei 3 Spalten etwas kompakter, damit weniger Namen umbrechen.
+  const kompakt = useEinstellungen().spalten === 3;
 
   return (
-    <li className="relative overflow-hidden">
-      {/* Liegt unter der Zeile und wird beim Wischen sichtbar. */}
-      <div
-        className="absolute inset-0 flex items-center justify-end bg-destructive px-5 text-white"
-        aria-hidden
-      >
-        <Trash2 className="size-5" />
-      </div>
-      <div
-        className="relative flex items-center bg-card transition-transform"
-        style={{
-          transform: `translateX(${versatz}px)`,
-          transitionDuration: versatz ? "0ms" : "150ms",
-        }}
-      >
-        {/* biome-ignore lint/a11y/useSemanticElements: Die ganze Zeile ist die Tippfläche und trägt die Wisch-Gesten; ein <input type="checkbox"> kann das nicht. */}
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={erledigt}
-          {...handler}
-          onClick={klick(() => umschalten(eintrag))}
-          className="flex min-h-14 flex-1 touch-pan-y items-center gap-3 py-2 pl-4 text-left select-none"
-        >
-          <span
-            className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-              erledigt
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-input",
-            )}
-          >
-            {erledigt && <Check className="size-4" strokeWidth={3} />}
-          </span>
-          <span className={cn("flex-1", erledigt && "text-muted-foreground")}>
-            {/* Nur den Namen durchstreichen, nicht „von …“. */}
-            <span className={cn("text-base", erledigt && "line-through")}>
-              {eintrag.name}
-              {erledigt && stueck > 1 && (
-                <span className="ml-2 text-sm tabular-nums">{stueck}×</span>
-              )}
-            </span>
-            {erledigt && eintrag.erledigt_von_name && (
-              <span className="block text-xs">
-                von {eintrag.erledigt_von_name}
-              </span>
-            )}
-          </span>
-        </button>
-
-        {!erledigt && (
-          <div className="flex items-center gap-0.5 pr-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-full text-muted-foreground"
-              aria-label={`${eintrag.name} weniger`}
-              disabled={stueck <= 1}
-              onClick={() => anzahlAendern(eintrag, -1)}
-            >
-              <Minus />
-            </Button>
-            <output
-              aria-label={`Anzahl ${eintrag.name}`}
-              className="min-w-6 text-center tabular-nums"
-            >
-              {stueck}
-            </output>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-9 rounded-full text-muted-foreground"
-              aria-label={`${eintrag.name} mehr`}
-              onClick={() => anzahlAendern(eintrag, 1)}
-            >
-              <Plus />
-            </Button>
-          </div>
+    <li className="min-w-0">
+      {/* biome-ignore lint/a11y/useSemanticElements: Die ganze Kachel ist die Tippfläche und erkennt langes Drücken; ein <input type="checkbox"> kann das nicht. */}
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={erledigt}
+        aria-label={eintrag.name}
+        {...handler}
+        onClick={klick(() => umschalten(eintrag))}
+        className={cn(
+          "flex h-full min-h-14 w-full touch-pan-y flex-col justify-center rounded-xl border py-2 text-left transition-colors select-none active:scale-[0.98]",
+          kompakt ? "px-2.5" : "px-3",
+          erledigt
+            ? "border-dashed bg-transparent text-muted-foreground"
+            : "bg-card shadow-xs",
         )}
-
-        {/* Am Rechner (mit Maus) statt Wischen und langem Drücken. */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="mr-2 hidden text-muted-foreground [@media(hover:hover)]:flex"
-              aria-label={`Aktionen für ${eintrag.name}`}
-            >
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => bearbeiten(eintrag)}>
-              <Pencil /> Kategorie ändern
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onSelect={() => loeschen(eintrag)}
-            >
-              <Trash2 /> Löschen
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+        style={
+          erledigt
+            ? undefined
+            : {
+                borderColor: `color-mix(in oklab, ${farbe} 35%, var(--border))`,
+                background: `color-mix(in oklab, var(--card), ${farbe} 7%)`,
+              }
+        }
+      >
+        <span
+          className={cn(
+            "leading-tight font-medium break-words hyphens-auto",
+            kompakt ? "text-sm" : "text-base",
+            erledigt && "line-through",
+          )}
+        >
+          {eintrag.name}
+        </span>
+        {erledigt && eintrag.erledigt_von_name && (
+          <span className="text-xs">von {eintrag.erledigt_von_name}</span>
+        )}
+      </button>
     </li>
   );
 }
 
-/** Kategorie eines Artikels nachträglich ändern (gilt auch für künftige Einträge). */
+/** Lang gedrückt: Kategorie ändern (gilt auch künftig) oder löschen. */
 function EintragBearbeiten({
   eintrag,
   schliessen,
@@ -444,7 +403,10 @@ function EintragBearbeiten({
             }}
           >
             <DrawerHeader>
-              <DrawerTitle>{eintrag.name}</DrawerTitle>
+              <DrawerTitle className="flex items-center justify-center gap-2">
+                <KategorieSymbol kategorie={eintrag.kategorie} />
+                {eintrag.name}
+              </DrawerTitle>
               <DrawerDescription>
                 Die Kategorie gilt auch für künftige Einträge.
               </DrawerDescription>
@@ -496,14 +458,16 @@ function finde(artikel: Artikel[], name: string) {
 }
 
 /** Gruppiert offene Einträge nach Kategorie, in Supermarkt-Reihenfolge. */
-function nachKategorie(zeilen: Zeile[]): [string, Zeile[]][] {
+function nachKategorie(zeilen: Zeile[]): [string, string | null, Zeile[]][] {
   const sortiert = [...zeilen].sort(
     (a, b) => kategorieRang(a.kategorie) - kategorieRang(b.kategorie),
   );
-  const gruppen = new Map<string, Zeile[]>();
+  const gruppen = new Map<string, [string, string | null, Zeile[]]>();
   for (const zeile of sortiert) {
-    const gruppe = kategorieName(zeile.kategorie);
-    gruppen.set(gruppe, [...(gruppen.get(gruppe) ?? []), zeile]);
+    const name = kategorieName(zeile.kategorie);
+    const gruppe = gruppen.get(name) ?? [name, zeile.kategorie, []];
+    gruppe[2].push(zeile);
+    gruppen.set(name, gruppe);
   }
-  return [...gruppen];
+  return [...gruppen.values()];
 }

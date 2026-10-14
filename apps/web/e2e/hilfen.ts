@@ -1,4 +1,9 @@
-import { type BrowserType, expect, type Page } from "@playwright/test";
+import {
+  type BrowserType,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { Netzwerk } from "./netzwerk";
 
 /**
@@ -46,14 +51,11 @@ export function eintrag(page: Page, name: string) {
   return page.getByRole("main").getByRole("listitem").filter({ hasText: name });
 }
 
-/**
- * Trägt einen Artikel ein. Mit `kategorie` wird sie gewählt (als Sorten-Knopf, falls
- * die App mehrere anbietet, sonst in der Auswahl); mit `menge` danach per „+“ erhöht.
- */
+/** Trägt einen Artikel ein; mit `kategorie` wird sie gewählt (Sorten-Knopf oder Auswahl). */
 export async function hinzufuegen(
   page: Page,
   name: string,
-  optionen: { menge?: number; kategorie?: string } = {},
+  optionen: { kategorie?: string } = {},
 ) {
   await page.getByLabel("Neuer Eintrag").fill(name);
   const sorten = page.getByRole("group", { name: "Sorte wählen" });
@@ -70,17 +72,14 @@ export async function hinzufuegen(
     await page.getByRole("button", { name: "Hinzufügen" }).click();
   }
   await expect(eintrag(page, name)).toBeVisible();
-  for (let i = 1; i < (optionen.menge ?? 1); i++) {
-    await page.getByRole("button", { name: `${name} mehr` }).click();
-  }
-  if (optionen.menge) {
-    await expect(anzahl(page, name)).toHaveText(String(optionen.menge));
-  }
 }
 
-/** Anzahl eines offenen Listeneintrags. */
-export function anzahl(page: Page, name: string) {
-  return page.getByLabel(`Anzahl ${name}`);
+/** Langes Drücken (wie auf dem Handy), z. B. auf eine Kachel. */
+export async function langDruecken(page: Page, ziel: Locator) {
+  await ziel.hover();
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
 }
 
 /** Lädt ein weiteres Gerät per Einladungscode in den Haushalt des ersten ein. */
