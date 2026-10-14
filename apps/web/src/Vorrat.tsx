@@ -55,7 +55,7 @@ export function Vorrat({
     [haushaltId],
   );
   const { data: andere } = useQuery<{ id: string; name: string }>(
-    "SELECT id, name FROM artikel WHERE haushalt_id = ? AND im_vorrat = 0 ORDER BY name",
+    "SELECT id, name FROM artikel WHERE haushalt_id = ? AND COALESCE(im_vorrat, 0) = 0 ORDER BY name",
     [haushaltId],
   );
   const [details, setDetails] = useState<string | null>(null);
@@ -409,8 +409,8 @@ function NeuerVorratsartikel({
       } else {
         artikelId = crypto.randomUUID();
         await tx.execute(
-          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, erstellt_am)
-           VALUES (?, ?, ?, ?, 'stueck', 1, ?)`,
+          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, erstellt_am)
+           VALUES (?, ?, ?, ?, 'stueck', 1, 0, ?)`,
           [
             artikelId,
             haushaltId,

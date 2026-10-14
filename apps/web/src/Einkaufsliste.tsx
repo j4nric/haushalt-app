@@ -32,7 +32,7 @@ import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import {
   knalligeFlaeche,
-  PlusKachel,
+  SymbolKnopf,
   type VerlaufArtikel,
   VerlaufFlaeche,
 } from "./Verlauf";
@@ -65,11 +65,13 @@ export function Einkaufsliste({
       ORDER BY l.erstellt_am`,
     [haushaltId],
   );
+  // Die lokale Datenbank kennt keine Standardwerte der Server-Spalten: Ein gerade erst
+  // angelegter Artikel hat archiviert = NULL, bis der Server-Stand zurückkommt.
   const { data: bekannteArtikel } = useQuery<VerlaufArtikel>(
     `SELECT a.id, a.name, a.kategorie,
             EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
        FROM artikel a
-      WHERE a.haushalt_id = ? AND a.archiviert = 0
+      WHERE a.haushalt_id = ? AND COALESCE(a.archiviert, 0) = 0
       ORDER BY a.name`,
     [haushaltId],
   );
@@ -117,8 +119,8 @@ export function Einkaufsliste({
       if (!artikelId) {
         artikelId = crypto.randomUUID();
         await tx.execute(
-          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, erstellt_am)
-           VALUES (?, ?, ?, ?, 'stueck', ?, ?)`,
+          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, erstellt_am)
+           VALUES (?, ?, ?, ?, 'stueck', ?, 0, ?)`,
           [
             artikelId,
             haushaltId,
@@ -276,14 +278,10 @@ export function Einkaufsliste({
             key={gruppe}
             titel={gruppe}
             kategorie={kategorie}
-            plus={
-              <PlusKachel
-                titel={gruppe}
-                kategorie={kategorie}
-                offen={offen}
-                umschalten={() => setVerlaufOffen(offen ? null : schluessel)}
-              />
-            }
+            verlauf={{
+              offen,
+              umschalten: () => setVerlaufOffen(offen ? null : schluessel),
+            }}
             unten={
               offen && (
                 <VerlaufFlaeche
@@ -302,7 +300,7 @@ export function Einkaufsliste({
       })}
 
       {weitereVerlaeufe.length > 0 && (
-        <section className="mt-6 pl-11">
+        <section className="mt-6 pl-[3.25rem]">
           <h3 className="pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             Aus dem Verlauf
           </h3>
@@ -360,8 +358,8 @@ export function Einkaufsliste({
 
       {offen.length > 0 && (
         <p className="pt-6 text-center text-xs text-muted-foreground">
-          Antippen = gekauft · lang drücken = ändern oder löschen · + = aus dem
-          Verlauf
+          Antippen = gekauft · lang drücken = ändern oder löschen · Symbol = aus
+          dem Verlauf
         </p>
       )}
 
@@ -399,15 +397,15 @@ function KategorieRaster({
   titel,
   kategorie,
   aktion,
-  plus,
+  verlauf,
   unten,
   children,
 }: {
   titel: string;
   kategorie?: string | null;
   aktion?: ReactNode;
-  /** Letzte Kachel im Raster (Plus für den Verlauf). */
-  plus?: ReactNode;
+  /** Symbol als Knopf, der den Verlauf der Kategorie auf- und zuklappt. */
+  verlauf?: { offen: boolean; umschalten: () => void };
   /** Unter dem Raster, bündig (aufgeklappter Verlauf). */
   unten?: ReactNode;
   children: ReactNode;
@@ -418,17 +416,25 @@ function KategorieRaster({
   return (
     <section className="mt-5 first:mt-2">
       <h3
-        className="flex items-baseline justify-between pb-1.5 pl-11 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+        className="flex items-baseline justify-between pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide text-muted-foreground uppercase"
         style={mitKategorie ? { color: farbe } : undefined}
       >
         {titel}
         {aktion}
       </h3>
       <div className="flex items-center gap-3">
-        <div className="flex w-8 shrink-0 justify-center">
-          {mitKategorie && (
-            <KategorieSymbol kategorie={kategorie} className="size-7" />
-          )}
+        <div className="-ml-1.5 flex w-11 shrink-0 justify-center">
+          {mitKategorie &&
+            (verlauf ? (
+              <SymbolKnopf
+                titel={titel}
+                kategorie={kategorie}
+                offen={verlauf.offen}
+                umschalten={verlauf.umschalten}
+              />
+            ) : (
+              <KategorieSymbol kategorie={kategorie} className="size-7" />
+            ))}
         </div>
         {/* auto-rows-fr: Alle Zeilen eines Rasters so hoch wie die höchste Kachel. */}
         <ul
@@ -436,10 +442,9 @@ function KategorieRaster({
           className={cn("grid flex-1 auto-rows-fr gap-2", RASTER[spalten])}
         >
           {children}
-          {plus}
         </ul>
       </div>
-      {unten && <div className="pl-11">{unten}</div>}
+      {unten && <div className="pl-[3.25rem]">{unten}</div>}
     </section>
   );
 }
@@ -513,7 +518,7 @@ function Kachel({
         {...handler}
         onClick={klick(() => umschalten(eintrag))}
         className={cn(
-          "flex h-full min-h-14 w-full touch-pan-y flex-col justify-center rounded-xl border py-2 text-left transition-colors select-none active:scale-[0.98]",
+          "flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
           erledigt
             ? "border-dashed bg-transparent text-muted-foreground"
