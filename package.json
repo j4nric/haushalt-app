@@ -2,9 +2,23 @@
   "name": "haushalt-app",
   "private": true,
   "description": "Gemeinsame, offline-fähige Einkaufsliste, Vorrat und Rezepte für den Haushalt",
+  "type": "module",
   "packageManager": "pnpm@12.11.2",
   "engines": {
     "node": ">=24"
   },
-  "scripts": {}
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
 }

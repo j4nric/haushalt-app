@@ -47,4 +47,18 @@ cd haushalt-app
 pnpm install
 ```
 
-Weitere Befehle (Entwicklungsserver, Tests, Datenbank) folgen mit den nächsten Schritten.
+## Befehle
+
+| Befehl | Zweck |
+|---|---|
+| `pnpm check` | Alles prüfen, was auch die CI prüft (Lint, Typcheck, Tests) |
+| `pnpm lint` / `pnpm lint:fix` | Biome: Code prüfen bzw. automatisch formatieren und korrigieren |
+| `pnpm typecheck` | TypeScript in allen Paketen prüfen |
+| `pnpm test` / `pnpm test:watch` | Vitest einmalig bzw. im Watch-Modus |
+
+Entwicklungsserver und Datenbank folgen mit den nächsten Schritten.
+
+## Arbeitsweise
+
+`main` ist geschützt: Änderungen kommen nur über Pull Requests, und die CI
+(Lint, Typcheck, Tests) muss grün sein. Vor dem Push lokal `pnpm check` laufen lassen.
