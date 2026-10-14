@@ -30,8 +30,7 @@ test("Haushalt teilen und offline einkaufen", async ({
   try {
     // 1. Anna legt den Haushalt an und lädt Ben ein.
     await haushaltAnlegen(anna.page, `Haushalt ${lauf}`);
-    await einladen(anna.page, ben.page, `Haushalt ${lauf}`);
-    await expect(anna.page.getByText("Anna, Ben")).toBeVisible();
+    await einladen(anna.page, ben.page, `Haushalt ${lauf}`, "Ben");
 
     // Ein fremder Haushalt daneben.
     await haushaltAnlegen(fremd.page, `Fremd ${lauf}`);

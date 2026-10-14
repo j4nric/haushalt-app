@@ -41,8 +41,9 @@ export async function haushaltAnlegen(page: Page, name: string) {
   await expect(page.getByTestId("sync-status")).toHaveText(/Online · synchron/);
 }
 
+/** Eine Zeile der Liste (nur im Hauptbereich, nicht z. B. eine Benachrichtigung). */
 export function eintrag(page: Page, name: string) {
-  return page.getByRole("listitem").filter({ hasText: name });
+  return page.getByRole("main").getByRole("listitem").filter({ hasText: name });
 }
 
 export async function hinzufuegen(
@@ -51,36 +52,72 @@ export async function hinzufuegen(
   optionen: { menge?: string; kategorie?: string } = {},
 ) {
   await page.getByLabel("Neuer Eintrag").fill(name);
+  if (optionen.menge || optionen.kategorie) {
+    await detailsOeffnen(page);
+  }
   if (optionen.menge) {
-    await page.getByLabel("Menge").fill(optionen.menge);
+    await page.getByLabel("Menge", { exact: true }).fill(optionen.menge);
   }
   if (optionen.kategorie) {
     await page
-      .getByLabel("Kategorie")
+      .getByLabel("Kategorie", { exact: true })
       .selectOption({ label: optionen.kategorie });
   }
   await page.getByRole("button", { name: "Hinzufügen" }).click();
   await expect(eintrag(page, name)).toBeVisible();
 }
 
+/** Klappt Menge/Einheit/Kategorie in der Eingabeleiste auf (falls noch zu). */
+export async function detailsOeffnen(page: Page) {
+  const knopf = page.getByRole("button", { name: "Menge und Kategorie" });
+  if ((await knopf.getAttribute("aria-expanded")) !== "true") {
+    await knopf.click();
+  }
+}
+
 /** Lädt ein weiteres Gerät per Einladungscode in den Haushalt des ersten ein. */
-export async function einladen(von: Page, zu: Page, haushaltName: string) {
+export async function einladen(
+  von: Page,
+  zu: Page,
+  haushaltName: string,
+  neuesMitglied: string,
+) {
+  await zuBereich(von, "Haushalt");
   await von.getByRole("button", { name: "Jemanden einladen" }).click();
   const code = (await von.getByTestId("einladungscode").textContent()) ?? "";
   await zu.getByLabel("Einladungscode").fill(code);
   await zu.getByRole("button", { name: "Beitreten" }).click();
   await expect(zu.getByRole("heading", { name: haushaltName })).toBeVisible();
   await expect(zu.getByTestId("sync-status")).toHaveText(/Online · synchron/);
+  await expect(
+    von.getByRole("listitem").filter({ hasText: neuesMitglied }),
+  ).toBeVisible();
+  await zuBereich(von, "Einkaufsliste");
 }
 
-export async function zumVorrat(page: Page) {
-  await page.getByRole("button", { name: "Vorrat", exact: true }).click();
-}
-
-export async function zurListe(page: Page) {
+export async function zuBereich(
+  page: Page,
+  bereich: "Einkaufsliste" | "Vorrat" | "Haushalt",
+) {
   await page
-    .getByRole("button", { name: "Einkaufsliste", exact: true })
+    .getByRole("navigation", { name: "Bereiche" })
+    .getByRole("button", { name: bereich })
     .click();
+}
+
+export const zumVorrat = (page: Page) => zuBereich(page, "Vorrat");
+export const zurListe = (page: Page) => zuBereich(page, "Einkaufsliste");
+
+/** Trägt im Vorrat einen Artikel mit Bestand ein. */
+export async function vorratEintragen(
+  page: Page,
+  name: string,
+  bestand: string,
+) {
+  await page.getByLabel("Vorratsartikel").fill(name);
+  await detailsOeffnen(page);
+  await page.getByLabel("Bestand", { exact: true }).fill(bestand);
+  await page.getByRole("button", { name: "Eintragen" }).click();
 }
 
 export function bestand(page: Page, artikel: string) {

@@ -1,4 +1,7 @@
 import { type FormEvent, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 
 /** Erster Start: eigenen Haushalt anlegen oder mit Einladungscode beitreten. */
 export function HaushaltEinrichten() {
@@ -25,10 +28,15 @@ export function HaushaltEinrichten() {
   }
 
   return (
-    <section className="stapel">
-      <h2>Haushalt einrichten</h2>
+    <section className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold">Haushalt einrichten</h2>
+        <p className="text-sm text-muted-foreground">
+          Leg einen neuen Haushalt an oder tritt mit einem Code bei.
+        </p>
+      </div>
       <form
-        className="zeile"
+        className="space-y-2"
         onSubmit={(e: FormEvent<HTMLFormElement>) => {
           e.preventDefault();
           senden("/haushalte", {
@@ -36,19 +44,22 @@ export function HaushaltEinrichten() {
           });
         }}
       >
-        <input
+        <Input
           name="name"
           required
           placeholder="z. B. Familie Muster"
           aria-label="Name des Haushalts"
+          className="h-11 text-base"
         />
-        <button type="submit" disabled={laeuft}>
+        <Button type="submit" disabled={laeuft} className="h-11 w-full">
           Neuen Haushalt anlegen
-        </button>
+        </Button>
       </form>
-      <p className="leer">oder</p>
+      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <Separator className="flex-1" /> oder <Separator className="flex-1" />
+      </div>
       <form
-        className="zeile"
+        className="space-y-2"
         onSubmit={(e: FormEvent<HTMLFormElement>) => {
           e.preventDefault();
           senden("/einladungen/annehmen", {
@@ -56,19 +67,25 @@ export function HaushaltEinrichten() {
           });
         }}
       >
-        <input
+        <Input
           name="code"
           required
           placeholder="ABCD-2345"
           aria-label="Einladungscode"
           autoCapitalize="characters"
+          className="h-11 text-center font-mono text-base tracking-widest"
         />
-        <button type="submit" disabled={laeuft}>
+        <Button
+          type="submit"
+          variant="outline"
+          disabled={laeuft}
+          className="h-11 w-full"
+        >
           Beitreten
-        </button>
+        </Button>
       </form>
       {fehler && (
-        <p className="fehler" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {fehler}
         </p>
       )}

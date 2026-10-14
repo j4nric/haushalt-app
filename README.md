@@ -15,7 +15,7 @@ gleicht sich automatisch ab, sobald wieder Netz da ist.
 
 | Bereich | Technik |
 |---|---|
-| Frontend | React, Vite, TanStack Router, Tailwind CSS, shadcn/ui, PWA |
+| Frontend | React, Vite, Tailwind CSS 4, shadcn/ui, PWA |
 | Offline und Sync | Lokale SQLite im Browser + Sync-Engine (PowerSync, wird im Prototyp geprüft) |
 | Backend | Hono, PostgreSQL, Drizzle ORM, Better Auth |
 | Qualität | TypeScript (strict), Biome, Vitest, Playwright, GitHub Actions |

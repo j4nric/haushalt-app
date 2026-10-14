@@ -2,12 +2,11 @@ import { useQuery, useStatus } from "@powersync/react";
 import { useEffect } from "react";
 import { Anmeldung } from "./Anmeldung";
 import { Navigation, useAnsicht } from "./Ansicht";
-import { authClient } from "./auth";
 import { Einkaufsliste } from "./Einkaufsliste";
+import { Haushalt } from "./Haushalt";
 import { HaushaltEinrichten } from "./HaushaltEinrichten";
-import { HaushaltInfo } from "./HaushaltInfo";
-import { useNutzer, vergessen } from "./nutzer";
-import { trennenUndLeeren, verbinden } from "./powersync";
+import { useNutzer } from "./nutzer";
+import { verbinden } from "./powersync";
 import { SyncStatus } from "./SyncStatus";
 import { Vorrat } from "./Vorrat";
 
@@ -15,7 +14,9 @@ export function App() {
   const { nutzer, laedt } = useNutzer();
 
   if (laedt) {
-    return <main className="mitte">Lädt …</main>;
+    return (
+      <main className="p-8 text-center text-muted-foreground">Lädt …</main>
+    );
   }
   if (!nutzer) {
     return <Anmeldung />;
@@ -36,37 +37,40 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
     verbinden();
   }, []);
 
-  async function abmelden() {
-    await trennenUndLeeren();
-    vergessen();
-    await authClient.signOut();
-  }
-
   return (
-    <main>
-      <header>
-        <h1>{haushalt?.name ?? "Einkaufsliste"}</h1>
-        <button type="button" className="leise" onClick={abmelden}>
-          {name} abmelden
-        </button>
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-3 px-4">
+          <h1 className="truncate text-lg font-semibold">
+            {haushalt?.name ?? "Haushalt"}
+          </h1>
+          <SyncStatus />
+        </div>
       </header>
-      <SyncStatus />
 
       {haushalt ? (
         <>
+          {/* Platz unten für Eingabeleiste und Navigation. */}
+          <main className="mx-auto max-w-lg px-4 pt-2 pb-48">
+            {ansicht === "vorrat" ? (
+              <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
+            ) : ansicht === "haushalt" ? (
+              <Haushalt haushaltId={haushalt.id} name={name} />
+            ) : (
+              <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
+            )}
+          </main>
           <Navigation ansicht={ansicht} wechseln={wechseln} />
-          {ansicht === "vorrat" ? (
-            <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
-          ) : (
-            <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
-          )}
-          <HaushaltInfo haushaltId={haushalt.id} />
         </>
-      ) : status.hasSynced ? (
-        <HaushaltEinrichten />
       ) : (
-        <p className="leer">Daten werden geladen …</p>
+        <main className="mx-auto max-w-lg px-4 py-6">
+          {status.hasSynced ? (
+            <HaushaltEinrichten />
+          ) : (
+            <p className="text-muted-foreground">Daten werden geladen …</p>
+          )}
+        </main>
       )}
-    </main>
+    </div>
   );
 }
