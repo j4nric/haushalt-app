@@ -152,11 +152,20 @@ jobs:
             'bash -s' <<'SKRIPT'
           set -euo pipefail
           cd ~/haushalt-app
+          # Stand der PowerSync-Konfiguration vorher merken: Sie ist als Datei eingebunden,
+          # Änderungen (z. B. neue Sync-Tabellen) greifen erst nach einem Neustart.
+          SYNC_VORHER=$(git rev-parse HEAD:infra/powersync 2>/dev/null || true)
           git fetch --quiet origin main && git reset --quiet --hard origin/main
+          SYNC_NACHHER=$(git rev-parse HEAD:infra/powersync)
           cd infra/production
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           APP_IMAGE="$IMAGE" docker compose pull app
           APP_IMAGE="$IMAGE" docker compose up -d --wait
+          # Erst nach dem Start der App (sie spielt die Migrationen ein) neu starten.
+          if [ "$SYNC_VORHER" != "$SYNC_NACHHER" ]; then
+            echo "PowerSync-Konfiguration geändert – Neustart"
+            APP_IMAGE="$IMAGE" docker compose restart powersync
+          fi
           docker logout ghcr.io
           docker image prune -f
           SKRIPT
