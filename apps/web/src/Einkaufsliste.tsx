@@ -26,6 +26,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
+import { type Spalten, useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
@@ -272,6 +273,7 @@ function KategorieRaster({
   children: ReactNode;
 }) {
   const farbe = useKategorieFarbe(kategorie);
+  const { spalten } = useEinstellungen();
   const mitKategorie = kategorie !== undefined;
   return (
     <section className="mt-5 first:mt-2">
@@ -288,11 +290,24 @@ function KategorieRaster({
             <KategorieSymbol kategorie={kategorie} className="size-7" />
           )}
         </div>
-        <ul className="grid flex-1 grid-cols-2 gap-2">{children}</ul>
+        {/* auto-rows-fr: Alle Zeilen eines Rasters so hoch wie die höchste Kachel. */}
+        <ul
+          data-spalten={spalten}
+          className={cn("grid flex-1 auto-rows-fr gap-2", RASTER[spalten])}
+        >
+          {children}
+        </ul>
       </div>
     </section>
   );
 }
+
+// Vollständige Klassennamen, damit Tailwind sie beim Bauen findet.
+const RASTER: Record<Spalten, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
 
 /** Eine Kachel: antippen = gekauft / zurück, lang drücken = bearbeiten. */
 function Kachel({
@@ -307,9 +322,11 @@ function Kachel({
   const erledigt = eintrag.erledigt === 1;
   const farbe = useKategorieFarbe(eintrag.kategorie);
   const { handler, klick } = useWischen({ lang: () => bearbeiten(eintrag) });
+  // Bei 3 Spalten etwas kompakter, damit weniger Namen umbrechen.
+  const kompakt = useEinstellungen().spalten === 3;
 
   return (
-    <li>
+    <li className="min-w-0">
       {/* biome-ignore lint/a11y/useSemanticElements: Die ganze Kachel ist die Tippfläche und erkennt langes Drücken; ein <input type="checkbox"> kann das nicht. */}
       <button
         type="button"
@@ -319,7 +336,8 @@ function Kachel({
         {...handler}
         onClick={klick(() => umschalten(eintrag))}
         className={cn(
-          "flex min-h-14 w-full touch-pan-y flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors select-none active:scale-[0.98]",
+          "flex h-full min-h-14 w-full touch-pan-y flex-col justify-center rounded-xl border py-2 text-left transition-colors select-none active:scale-[0.98]",
+          kompakt ? "px-2.5" : "px-3",
           erledigt
             ? "border-dashed bg-transparent text-muted-foreground"
             : "bg-card shadow-xs",
@@ -335,7 +353,8 @@ function Kachel({
       >
         <span
           className={cn(
-            "text-base leading-tight font-medium",
+            "leading-tight font-medium break-words hyphens-auto",
+            kompakt ? "text-sm" : "text-base",
             erledigt && "line-through",
           )}
         >

@@ -18,7 +18,17 @@ export type Einstellungen = {
   eigenesThema: { akzent: string; hintergrund: string; flaeche: string };
   palette: KategoriePalette;
   eigenePalette: Record<KategorieSchluessel, string>;
+  /** Spalten der Einkaufsliste (Kacheln pro Zeile). */
+  spalten: Spalten;
 };
+
+export type Spalten = 1 | 2 | 3;
+
+export const SPALTEN: { id: Spalten; name: string }[] = [
+  { id: 1, name: "1 Spalte" },
+  { id: 2, name: "2 Spalten" },
+  { id: 3, name: "3 Spalten" },
+];
 
 type Farben = { akzent: string; hintergrund: string; flaeche: string };
 
@@ -112,6 +122,7 @@ const GEDECKT: Record<KategorieSchluessel, string> = {
 
 const STANDARD: Einstellungen = {
   thema: "frisch",
+  spalten: 2,
   eigenesThema: {
     akzent: "#15803d",
     hintergrund: "#f7f7f5",
@@ -187,7 +198,10 @@ function laden(): Einstellungen {
         eigenePalette[k] = roh.eigenePalette[k];
       }
     }
-    return { thema, palette, eigenesThema, eigenePalette };
+    const spalten = SPALTEN.some((o) => o.id === roh.spalten)
+      ? roh.spalten
+      : STANDARD.spalten;
+    return { thema, palette, eigenesThema, eigenePalette, spalten };
   } catch {
     return STANDARD;
   }

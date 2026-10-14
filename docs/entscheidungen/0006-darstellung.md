@@ -41,3 +41,11 @@ schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standar
   Löschen (mit Rückgängig). Ein Artikel, der schon offen auf der Liste steht, wird
   nicht doppelt eingetragen („steht schon auf der Liste“).
 - Mengen bleiben im Vorrat (Bestand mit − / +) und in der Datenbank erhalten.
+
+## Spalten der Einkaufsliste (Nachtrag)
+
+- Wählbar unter Haushalt → Darstellung: 1, 2 (Standard) oder 3 Spalten, pro Gerät.
+- Jedes Kategorie-Raster nutzt `grid-auto-rows: 1fr`: Bricht ein langer Name um,
+  werden alle Kacheln dieser Kategorie gleich hoch; andere Kategorien bleiben kompakt.
+- Lange Wörter brechen mit deutscher Silbentrennung (`hyphens: auto`, `lang="de"`).
+- Bei 3 Spalten etwas kleinere Schrift und weniger Innenabstand.

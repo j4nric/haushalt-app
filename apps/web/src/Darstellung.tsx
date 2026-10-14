@@ -9,6 +9,7 @@ import {
   kategorieFarbe,
   PALETTEN,
   paletteAlsEigene,
+  SPALTEN,
   THEMEN,
   useEinstellungen,
 } from "@/einstellungen";
@@ -37,6 +38,19 @@ export function Darstellung() {
         >
           <RotateCcw /> Zurücksetzen
         </Button>
+      </div>
+
+      <div className="space-y-3 rounded-xl border bg-card p-4">
+        <h3 className="font-medium">Einkaufsliste</h3>
+        <Umschalter
+          label="Spalten der Einkaufsliste"
+          optionen={SPALTEN}
+          wert={e.spalten}
+          waehlen={(spalten) => einstellungenAendern({ spalten })}
+        />
+        <p className="text-xs text-muted-foreground">
+          Bei langen Namen werden alle Kacheln einer Kategorie gleich hoch.
+        </p>
       </div>
 
       <div className="space-y-3 rounded-xl border bg-card p-4">
@@ -131,7 +145,7 @@ export function Darstellung() {
 }
 
 /** Reihe aus Knöpfen, von denen genau einer gewählt ist. */
-function Umschalter<T extends string>({
+function Umschalter<T extends string | number>({
   label,
   optionen,
   wert,
