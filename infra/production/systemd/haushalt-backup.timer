@@ -1,0 +1,11 @@
+[Unit]
+Description=Tägliches Backup der Haushalt-Datenbank
+
+[Timer]
+OnCalendar=*-*-* 03:30
+# Verpasste Läufe (Server war aus) beim nächsten Start nachholen.
+Persistent=true
+RandomizedDelaySec=10min
+
+[Install]
+WantedBy=timers.target
