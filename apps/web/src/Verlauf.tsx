@@ -1,6 +1,9 @@
 import { Check, Plus, X } from "lucide-react";
 import type { CSSProperties } from "react";
-import { useKategorieFarbe } from "@/components/KategorieSymbol";
+import {
+  KategorieSymbol,
+  useKategorieFarbe,
+} from "@/components/KategorieSymbol";
 import { useWischen } from "@/hooks/use-wischen";
 import { istHexFarbe, kontrast, TEXT_HELL, textFarbeAuf } from "@/lib/farben";
 import { cn } from "@/lib/utils";
@@ -13,8 +16,12 @@ export type VerlaufArtikel = {
   auf_liste: number;
 };
 
-/** Plus-Kachel am Ende eines Kategorie-Rasters: klappt den Verlauf auf und zu. */
-export function PlusKachel({
+/**
+ * Kategorie-Symbol links neben dem Raster, als Knopf: klappt den Verlauf auf und zu.
+ * Ein kleines Plus zeigt, dass es antippbar ist; geöffnet steht es auf einem Kreis
+ * in der Kategoriefarbe.
+ */
+export function SymbolKnopf({
   titel,
   kategorie,
   offen,
@@ -27,25 +34,30 @@ export function PlusKachel({
 }) {
   const farbe = useKategorieFarbe(kategorie);
   return (
-    <li className="min-w-0">
-      <button
-        type="button"
-        aria-label={`Verlauf ${titel}`}
-        aria-expanded={offen}
-        onClick={umschalten}
-        className="flex h-full min-h-14 w-full items-center justify-center rounded-xl border-2 border-dashed transition-colors"
-        style={
-          offen
-            ? { ...knalligeFlaeche(farbe), borderColor: "transparent" }
-            : {
-                borderColor: `color-mix(in oklab, ${farbe} 45%, transparent)`,
-                color: farbe,
-              }
-        }
+    <button
+      type="button"
+      aria-label={`Verlauf ${titel}`}
+      aria-expanded={offen}
+      onClick={umschalten}
+      className="relative flex size-11 items-center justify-center rounded-full transition-colors active:scale-95"
+      style={offen ? knalligeFlaeche(farbe) : undefined}
+    >
+      <KategorieSymbol
+        kategorie={kategorie}
+        className={cn("size-7", offen && "size-6 text-current!")}
+      />
+      <span
+        aria-hidden
+        className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full ring-2 ring-background"
+        style={knalligeFlaeche(farbe)}
       >
-        {offen ? <X className="size-6" /> : <Plus className="size-6" />}
-      </button>
-    </li>
+        {offen ? (
+          <X className="size-3" strokeWidth={3} />
+        ) : (
+          <Plus className="size-3" strokeWidth={3} />
+        )}
+      </span>
+    </button>
   );
 }
 

@@ -52,8 +52,8 @@ schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standar
 
 ## Schnell-Hinzufügen aus dem Verlauf (Nachtrag)
 
-- Jede Kategorie hat am Ende ihres Rasters eine Plus-Kachel; sie klappt den Verlauf
-  der Kategorie auf: eine Fläche in kräftiger Kategoriefarbe (weiße Schrift, solange
+- Das Kategorie-Symbol links neben dem Raster ist ein Knopf (mit kleinem Plus-Abzeichen;
+  geöffnet auf einem Kreis in der Kategoriefarbe). Es klappt den Verlauf der Kategorie auf: eine Fläche in kräftiger Kategoriefarbe (weiße Schrift, solange
   WCAG 3:1 erreicht wird) mit allen bisherigen Produkten. Wählbare zuerst, mit Plus;
   schon offen auf der Liste → ausgegraut mit Haken. Sortiert nach deutschem Alphabet.
 - Kategorien mit Verlauf, aber ohne offene Einträge, stehen unter „Aus dem Verlauf“.
@@ -63,3 +63,5 @@ schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standar
 - Wird ein Eintrag aus „Im Wagen“ zurückgenommen, während derselbe Artikel schon offen
   auf der Liste steht, wird der Wagen-Eintrag gelöscht (samt Vorratsbuchung) statt
   doppelt aufzutauchen.
+
+- Text in den Kacheln ist zentriert.
