@@ -45,7 +45,22 @@ haushalt-app/
 git clone git@github.com:j4nric/haushalt-app.git
 cd haushalt-app
 pnpm install
+cp .env.example .env   # danach Passwort und Schlüssel in .env eintragen
+pnpm infra:up          # startet PostgreSQL und PowerSync
 ```
+
+## Lokale Infrastruktur
+
+`docker-compose.yml` startet zwei Dienste:
+
+| Dienst | Port | Zweck |
+|---|---|---|
+| `postgres` | 5432 | App-Datenbank `haushalt` und Sync-Ablage `powersync_storage` |
+| `powersync` | 8080 | Sync-Dienst: repliziert Änderungen aus Postgres auf die Geräte |
+
+Konfiguration liegt in `infra/`: `postgres/init/` läuft nur beim ersten Start,
+`powersync/service.yaml` ist die Dienstkonfiguration, `powersync/sync-config.yaml`
+legt fest, welche Daten synchronisiert werden.
 
 ## Befehle
 
@@ -55,8 +70,11 @@ pnpm install
 | `pnpm lint` / `pnpm lint:fix` | Biome: Code prüfen bzw. automatisch formatieren und korrigieren |
 | `pnpm typecheck` | TypeScript in allen Paketen prüfen |
 | `pnpm test` / `pnpm test:watch` | Vitest einmalig bzw. im Watch-Modus |
+| `pnpm infra:up` / `pnpm infra:down` | Postgres und PowerSync starten bzw. stoppen |
+| `pnpm infra:logs` | Logs der Dienste live verfolgen |
+| `pnpm infra:reset` | Dienste stoppen **und alle lokalen Daten löschen** |
 
-Entwicklungsserver und Datenbank folgen mit den nächsten Schritten.
+Entwicklungsserver folgen mit den nächsten Schritten.
 
 ## Arbeitsweise
 
