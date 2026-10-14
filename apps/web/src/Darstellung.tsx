@@ -51,6 +51,15 @@ export function Darstellung() {
         <p className="text-xs text-muted-foreground">
           Bei langen Namen werden alle Kacheln einer Kategorie gleich hoch.
         </p>
+        <Umschalter
+          label="Überschriften der Kategorien"
+          optionen={[
+            { id: "an", name: "Mit Überschriften" },
+            { id: "aus", name: "Nur Symbole" },
+          ]}
+          wert={e.ueberschriften ? "an" : "aus"}
+          waehlen={(w) => einstellungenAendern({ ueberschriften: w === "an" })}
+        />
       </div>
 
       <div className="space-y-3 rounded-xl border bg-card p-4">

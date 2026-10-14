@@ -5,6 +5,7 @@ import {
   haushaltAnlegen,
   hinzufuegen,
   langDruecken,
+  zuBereich,
 } from "./hilfen";
 
 test("Zurücknehmen aus dem Wagen legt keinen doppelten Eintrag an", async ({
@@ -163,25 +164,38 @@ test("Verlauf öffnen lässt Überschrift und Symbol an ihrem Platz", async ({
     await hinzufuegen(page, "Milch");
     await page.mouse.click(5, 5);
 
-    for (const titel of ["Obst & Gemüse", "Milch & Käse"]) {
-      const lage = async () => ({
-        ueberschrift: await page
-          .getByRole("heading", { name: titel, exact: true })
-          .boundingBox(),
-        symbol: await page
-          .getByRole("button", { name: `Verlauf ${titel}` })
-          .boundingBox(),
-      });
-      const vorher = await lage();
-      await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
-      await expect(
-        page.getByRole("region", { name: `Verlauf ${titel}` }),
-      ).toBeVisible();
-      expect(await lage()).toEqual(vorher);
-      await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
-      await expect(
-        page.getByRole("region", { name: `Verlauf ${titel}` }),
-      ).toBeHidden();
+    // Einmal mit Überschriften, einmal nur mit Symbolen.
+    for (const modus of ["Mit Überschriften", "Nur Symbole"]) {
+      await zuBereich(page, "Haushalt");
+      await page.getByRole("button", { name: modus }).click();
+      await zuBereich(page, "Einkaufsliste");
+      if (modus === "Nur Symbole") {
+        // Die Überschrift bleibt für Screenreader, ist aber nicht zu sehen (sr-only).
+        const h = await page
+          .getByRole("heading", { name: "Obst & Gemüse", exact: true })
+          .boundingBox();
+        expect(h?.height).toBeLessThanOrEqual(1);
+      }
+      for (const titel of ["Obst & Gemüse", "Milch & Käse"]) {
+        const lage = async () => ({
+          ueberschrift: await page
+            .getByRole("heading", { name: titel, exact: true })
+            .boundingBox(),
+          symbol: await page
+            .getByRole("button", { name: `Verlauf ${titel}` })
+            .boundingBox(),
+        });
+        const vorher = await lage();
+        await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
+        await expect(
+          page.getByRole("region", { name: `Verlauf ${titel}` }),
+        ).toBeVisible();
+        expect(await lage()).toEqual(vorher);
+        await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
+        await expect(
+          page.getByRole("region", { name: `Verlauf ${titel}` }),
+        ).toBeHidden();
+      }
     }
   } finally {
     await handy.schliessen();

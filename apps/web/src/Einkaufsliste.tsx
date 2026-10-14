@@ -425,11 +425,15 @@ function KategorieRaster({
   children: ReactNode;
 }) {
   const farbe = useKategorieFarbe(kategorie);
-  const { spalten } = useEinstellungen();
+  const { spalten, ueberschriften } = useEinstellungen();
   return (
-    <section className="mt-5 first:mt-2">
+    <section className={ueberschriften ? "mt-5 first:mt-2" : "mt-3 first:mt-2"}>
       <h3
-        className="pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase"
+        className={
+          ueberschriften
+            ? "pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase"
+            : "sr-only"
+        }
         style={{ color: farbe }}
       >
         {titel}
@@ -625,7 +629,7 @@ function Kachel({
           erledigt ? umschalten(eintrag) : abhaken.umschalten(),
         )}
         className={cn(
-          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-none border py-2 text-center transition-colors select-none active:scale-[0.98]",
+          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
           erledigt ? "border-dashed text-foreground/80" : "bg-card shadow-xs",
           abhaken.laeuft && ABHAK_KLASSE,
