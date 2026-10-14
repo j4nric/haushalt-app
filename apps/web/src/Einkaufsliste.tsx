@@ -31,6 +31,12 @@ import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import {
+  AbhakVorschau,
+  abhakKlasse,
+  KritzelStrich,
+  useVerzoegertesAbhaken,
+} from "./Abhaken";
+import {
   knalligeFlaeche,
   SymbolKnopf,
   type VerlaufArtikel,
@@ -270,6 +276,9 @@ export function Einkaufsliste({
 
   return (
     <>
+      {/* VORÜBERGEHEND: Abhak-Animation aussuchen. */}
+      <AbhakVorschau />
+
       {gruppen.map(([gruppe, kategorie, zeilen]) => {
         const schluessel = kategorie ?? "";
         const offen = verlaufOffen === schluessel;
@@ -504,8 +513,12 @@ function Kachel({
   const erledigt = eintrag.erledigt === 1;
   const farbe = useKategorieFarbe(eintrag.kategorie);
   const { handler, klick } = useWischen({ lang: () => bearbeiten(eintrag) });
+  const { spalten, abhakAnimation } = useEinstellungen();
   // Bei 3 Spalten etwas kompakter, damit weniger Namen umbrechen.
-  const kompakt = useEinstellungen().spalten === 3;
+  const kompakt = spalten === 3;
+  // Abhaken mit kurzer Verzögerung (Animation); nochmal antippen bricht ab.
+  // Zurücknehmen aus dem Wagen geschieht sofort.
+  const abhaken = useVerzoegertesAbhaken(() => umschalten(eintrag));
 
   return (
     <li className="min-w-0">
@@ -514,15 +527,19 @@ function Kachel({
         type="button"
         role="checkbox"
         aria-checked={erledigt}
+        aria-busy={abhaken.laeuft}
         aria-label={eintrag.name}
         {...handler}
-        onClick={klick(() => umschalten(eintrag))}
+        onClick={klick(() =>
+          erledigt ? umschalten(eintrag) : abhaken.umschalten(),
+        )}
         className={cn(
-          "flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors select-none active:scale-[0.98]",
+          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
           erledigt
             ? "border-dashed bg-transparent text-muted-foreground"
             : "bg-card shadow-xs",
+          abhaken.laeuft && abhakKlasse(abhakAnimation),
         )}
         style={
           erledigt
@@ -533,6 +550,11 @@ function Kachel({
               }
         }
       >
+        {abhaken.laeuft && abhakAnimation === "kritzeln" && (
+          <span className="contents" style={{ color: farbe }}>
+            <KritzelStrich />
+          </span>
+        )}
         <span
           className={cn(
             "leading-tight font-medium break-words hyphens-auto",

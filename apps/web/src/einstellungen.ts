@@ -20,7 +20,17 @@ export type Einstellungen = {
   eigenePalette: Record<KategorieSchluessel, string>;
   /** Spalten der Einkaufsliste (Kacheln pro Zeile). */
   spalten: Spalten;
+  /** Wie eine abgehakte Kachel verschwindet. */
+  abhakAnimation: AbhakAnimation;
 };
+
+export type AbhakAnimation = "kritzeln" | "radieren" | "falten";
+
+export const ABHAK_ANIMATIONEN: { id: AbhakAnimation; name: string }[] = [
+  { id: "kritzeln", name: "Kritzeln" },
+  { id: "radieren", name: "Radieren" },
+  { id: "falten", name: "Falten" },
+];
 
 export type Spalten = 1 | 2 | 3;
 
@@ -123,6 +133,7 @@ const GEDECKT: Record<KategorieSchluessel, string> = {
 const STANDARD: Einstellungen = {
   thema: "frisch",
   spalten: 2,
+  abhakAnimation: "kritzeln",
   eigenesThema: {
     akzent: "#15803d",
     hintergrund: "#f7f7f5",
@@ -201,7 +212,19 @@ function laden(): Einstellungen {
     const spalten = SPALTEN.some((o) => o.id === roh.spalten)
       ? roh.spalten
       : STANDARD.spalten;
-    return { thema, palette, eigenesThema, eigenePalette, spalten };
+    const abhakAnimation = ABHAK_ANIMATIONEN.some(
+      (a) => a.id === roh.abhakAnimation,
+    )
+      ? roh.abhakAnimation
+      : STANDARD.abhakAnimation;
+    return {
+      thema,
+      palette,
+      eigenesThema,
+      eigenePalette,
+      spalten,
+      abhakAnimation,
+    };
   } catch {
     return STANDARD;
   }
