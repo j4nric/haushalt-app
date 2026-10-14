@@ -92,6 +92,11 @@ export const artikel = pgTable(
       .default("stueck"),
     /** Wird der Bestand dieses Artikels im Vorrat geführt? */
     imVorrat: boolean("im_vorrat").notNull().default(false),
+    /**
+     * Aus dem Verlauf (Schnell-Hinzufügen, Vorschläge) ausgeblendet. Nicht gelöscht,
+     * weil Vorrat und Buchungen am Artikel hängen; erneutes Eintragen blendet ihn ein.
+     */
+    archiviert: boolean("archiviert").notNull().default(false),
     /** Fällt der Bestand darunter, kommt der Artikel auf die Einkaufsliste. */
     mindestbestand: doublePrecision("mindestbestand"),
     erstelltAm: erstelltAm(),

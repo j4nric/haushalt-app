@@ -30,6 +30,12 @@ import { type Spalten, useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
+import {
+  knalligeFlaeche,
+  PlusKachel,
+  type VerlaufArtikel,
+  VerlaufFlaeche,
+} from "./Verlauf";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
 
 type Zeile = {
@@ -40,8 +46,6 @@ type Zeile = {
   erledigt: number;
   erledigt_von_name: string | null;
 };
-
-type Artikel = { id: string; name: string; kategorie: string | null };
 
 export function Einkaufsliste({
   haushaltId,
@@ -61,14 +65,20 @@ export function Einkaufsliste({
       ORDER BY l.erstellt_am`,
     [haushaltId],
   );
-  const { data: bekannteArtikel } = useQuery<Artikel>(
-    "SELECT id, name, kategorie FROM artikel WHERE haushalt_id = ? ORDER BY name",
+  const { data: bekannteArtikel } = useQuery<VerlaufArtikel>(
+    `SELECT a.id, a.name, a.kategorie,
+            EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
+       FROM artikel a
+      WHERE a.haushalt_id = ? AND a.archiviert = 0
+      ORDER BY a.name`,
     [haushaltId],
   );
 
   const [name, setName] = useState("");
   const [manuell, setManuell] = useState<string | null>(null);
   const [bearbeitet, setBearbeitet] = useState<Zeile | null>(null);
+  /** Kategorie, deren Verlauf aufgeklappt ist ("" = Sonstiges). */
+  const [verlaufOffen, setVerlaufOffen] = useState<string | null>(null);
 
   const vorschlag = kategorieVorschlag(
     finde(bekannteArtikel, name)?.kategorie,
@@ -78,6 +88,17 @@ export function Einkaufsliste({
   const offen = eintraege.filter((e) => !e.erledigt);
   const imWagen = eintraege.filter((e) => e.erledigt);
   const gruppen = useMemo(() => nachKategorie(offen), [offen]);
+  const verlaufNach = useMemo(() => {
+    const nach = new Map<string, VerlaufArtikel[]>();
+    for (const a of bekannteArtikel) {
+      nach.set(a.kategorie ?? "", [...(nach.get(a.kategorie ?? "") ?? []), a]);
+    }
+    return nach;
+  }, [bekannteArtikel]);
+  // Kategorien mit Verlauf, aber ohne offene Einträge – in Supermarkt-Reihenfolge.
+  const weitereVerlaeufe = [...verlaufNach.keys()]
+    .filter((k) => !gruppen.some(([, kategorie]) => (kategorie ?? "") === k))
+    .sort((a, b) => kategorieRang(a || null) - kategorieRang(b || null));
 
   /** Trägt ein; steht der Artikel schon offen auf der Liste, gibt es nur einen Hinweis. */
   async function hinzufuegen(kategorie: string) {
@@ -115,6 +136,11 @@ export function Einkaufsliste({
         ]);
       }
 
+      await tx.execute(
+        "UPDATE artikel SET archiviert = 0 WHERE id = ? AND archiviert = 1",
+        [artikelId],
+      );
+
       const offenerEintrag = await tx.getOptional(
         "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
         [artikelId],
@@ -136,19 +162,67 @@ export function Einkaufsliste({
     setManuell(null);
   }
 
-  /** Antippen = gekauft (bucht ins Vorrat); nochmal antippen nimmt es zurück. */
+  /**
+   * Antippen = gekauft (bucht ins Vorrat); nochmal antippen nimmt es zurück.
+   * Steht derselbe Artikel inzwischen wieder offen auf der Liste, wird der Eintrag
+   * aus dem Wagen gelöscht statt ein zweites Mal aufzutauchen.
+   */
   async function umschalten(eintrag: Zeile) {
     const erledigt = eintrag.erledigt ? 0 : 1;
     await db.writeTransaction(async (tx) => {
+      if (!erledigt) {
+        await einkaufZuruecknehmen(tx, eintrag.id, nutzerId);
+        const doppelt = await tx.getOptional(
+          "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0 AND id != ?",
+          [eintrag.artikel_id, eintrag.id],
+        );
+        if (doppelt) {
+          await tx.execute("DELETE FROM listeneintraege WHERE id = ?", [
+            eintrag.id,
+          ]);
+          return;
+        }
+      }
       await tx.execute(
         "UPDATE listeneintraege SET erledigt = ?, erledigt_von = ? WHERE id = ?",
         [erledigt, erledigt ? nutzerId : null, eintrag.id],
       );
       if (erledigt) {
         await einkaufBuchen(tx, eintrag.id, nutzerId);
-      } else {
-        await einkaufZuruecknehmen(tx, eintrag.id, nutzerId);
       }
+    });
+  }
+
+  /** Aus dem Verlauf: wieder auf die Liste setzen. */
+  async function ausVerlaufHinzufuegen(artikel: VerlaufArtikel) {
+    await db.writeTransaction(async (tx) => {
+      const offen = await tx.getOptional(
+        "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
+        [artikel.id],
+      );
+      if (!offen) {
+        await tx.execute(
+          `INSERT INTO listeneintraege (id, haushalt_id, artikel_id, erledigt, erstellt_von, erstellt_am)
+           VALUES (uuid(), ?, ?, 0, ?, ?)`,
+          [haushaltId, artikel.id, nutzerId, new Date().toISOString()],
+        );
+      }
+    });
+  }
+
+  /** Aus dem Verlauf nehmen (ausblenden, nicht löschen – Vorrat hängt am Artikel). */
+  async function ausVerlaufNehmen(artikel: VerlaufArtikel) {
+    await db.execute("UPDATE artikel SET archiviert = 1 WHERE id = ?", [
+      artikel.id,
+    ]);
+    toast(`${artikel.name} aus dem Verlauf genommen`, {
+      action: {
+        label: "Rückgängig",
+        onClick: () =>
+          db.execute("UPDATE artikel SET archiviert = 0 WHERE id = ?", [
+            artikel.id,
+          ]),
+      },
     });
   }
 
@@ -194,11 +268,70 @@ export function Einkaufsliste({
 
   return (
     <>
-      {gruppen.map(([gruppe, kategorie, zeilen]) => (
-        <KategorieRaster key={gruppe} titel={gruppe} kategorie={kategorie}>
-          {zeilen.map(kachel)}
-        </KategorieRaster>
-      ))}
+      {gruppen.map(([gruppe, kategorie, zeilen]) => {
+        const schluessel = kategorie ?? "";
+        const offen = verlaufOffen === schluessel;
+        return (
+          <KategorieRaster
+            key={gruppe}
+            titel={gruppe}
+            kategorie={kategorie}
+            plus={
+              <PlusKachel
+                titel={gruppe}
+                kategorie={kategorie}
+                offen={offen}
+                umschalten={() => setVerlaufOffen(offen ? null : schluessel)}
+              />
+            }
+            unten={
+              offen && (
+                <VerlaufFlaeche
+                  titel={gruppe}
+                  kategorie={kategorie}
+                  artikel={verlaufNach.get(schluessel) ?? []}
+                  hinzufuegen={ausVerlaufHinzufuegen}
+                  ausblenden={ausVerlaufNehmen}
+                />
+              )
+            }
+          >
+            {zeilen.map(kachel)}
+          </KategorieRaster>
+        );
+      })}
+
+      {weitereVerlaeufe.length > 0 && (
+        <section className="mt-6 pl-11">
+          <h3 className="pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Aus dem Verlauf
+          </h3>
+          <ul className="flex flex-wrap gap-2">
+            {weitereVerlaeufe.map((schluessel) => (
+              <li key={schluessel}>
+                <VerlaufKnopf
+                  kategorie={schluessel || null}
+                  offen={verlaufOffen === schluessel}
+                  umschalten={() =>
+                    setVerlaufOffen(
+                      verlaufOffen === schluessel ? null : schluessel,
+                    )
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+          {verlaufOffen != null && weitereVerlaeufe.includes(verlaufOffen) && (
+            <VerlaufFlaeche
+              titel={kategorieName(verlaufOffen || null)}
+              kategorie={verlaufOffen || null}
+              artikel={verlaufNach.get(verlaufOffen) ?? []}
+              hinzufuegen={ausVerlaufHinzufuegen}
+              ausblenden={ausVerlaufNehmen}
+            />
+          )}
+        </section>
+      )}
 
       {imWagen.length > 0 && (
         <KategorieRaster
@@ -227,7 +360,8 @@ export function Einkaufsliste({
 
       {offen.length > 0 && (
         <p className="pt-6 text-center text-xs text-muted-foreground">
-          Antippen = gekauft · lang drücken = Kategorie ändern oder löschen
+          Antippen = gekauft · lang drücken = ändern oder löschen · + = aus dem
+          Verlauf
         </p>
       )}
 
@@ -265,11 +399,17 @@ function KategorieRaster({
   titel,
   kategorie,
   aktion,
+  plus,
+  unten,
   children,
 }: {
   titel: string;
   kategorie?: string | null;
   aktion?: ReactNode;
+  /** Letzte Kachel im Raster (Plus für den Verlauf). */
+  plus?: ReactNode;
+  /** Unter dem Raster, bündig (aufgeklappter Verlauf). */
+  unten?: ReactNode;
   children: ReactNode;
 }) {
   const farbe = useKategorieFarbe(kategorie);
@@ -296,9 +436,46 @@ function KategorieRaster({
           className={cn("grid flex-1 auto-rows-fr gap-2", RASTER[spalten])}
         >
           {children}
+          {plus}
         </ul>
       </div>
+      {unten && <div className="pl-11">{unten}</div>}
     </section>
+  );
+}
+
+/** Knopf „Aus dem Verlauf“ für eine Kategorie ohne offene Einträge. */
+function VerlaufKnopf({
+  kategorie,
+  offen,
+  umschalten,
+}: {
+  kategorie: string | null;
+  offen: boolean;
+  umschalten: () => void;
+}) {
+  const farbe = useKategorieFarbe(kategorie);
+  const name = kategorieName(kategorie);
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      aria-label={`Verlauf ${name}`}
+      aria-expanded={offen}
+      onClick={umschalten}
+      className="rounded-full"
+      style={
+        offen
+          ? { ...knalligeFlaeche(farbe), borderColor: farbe }
+          : { borderColor: farbe, color: farbe }
+      }
+    >
+      <KategorieSymbol
+        kategorie={kategorie}
+        className={cn("size-4", offen && "text-current!")}
+      />
+      {name}
+    </Button>
   );
 }
 
@@ -450,7 +627,7 @@ function EintragBearbeiten({
   );
 }
 
-function finde(artikel: Artikel[], name: string) {
+function finde(artikel: VerlaufArtikel[], name: string) {
   const gesucht = name.trim().toLowerCase();
   return gesucht
     ? artikel.find((a) => a.name.toLowerCase() === gesucht)

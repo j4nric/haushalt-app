@@ -46,9 +46,13 @@ export async function haushaltAnlegen(page: Page, name: string) {
   await expect(page.getByTestId("sync-status")).toHaveText(/Online · synchron/);
 }
 
-/** Eine Zeile der Liste (nur im Hauptbereich, nicht z. B. eine Benachrichtigung). */
+/** Eine Kachel der Liste (nur im Hauptbereich; keine Benachrichtigung, kein Verlaufs-Eintrag). */
 export function eintrag(page: Page, name: string) {
-  return page.getByRole("main").getByRole("listitem").filter({ hasText: name });
+  return page
+    .getByRole("main")
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("checkbox") })
+    .filter({ hasText: name });
 }
 
 /** Trägt einen Artikel ein; mit `kategorie` wird sie gewählt (Sorten-Knopf oder Auswahl). */

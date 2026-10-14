@@ -271,7 +271,12 @@ describe("Vorrat", () => {
         await anna.hochladen([
           {
             ...put,
-            opData: { ...put.opData, im_vorrat: 1, mindestbestand: 2 },
+            opData: {
+              ...put.opData,
+              im_vorrat: 1,
+              mindestbestand: 2,
+              archiviert: 1,
+            },
           },
           eintragPut(eintrag, haushalt, nudeln),
           {
@@ -288,8 +293,8 @@ describe("Vorrat", () => {
     ).toBe(200);
 
     const [a] =
-      await t.sql`select im_vorrat, mindestbestand from artikel where id = ${nudeln}`;
-    expect(a).toEqual({ im_vorrat: true, mindestbestand: 2 });
+      await t.sql`select im_vorrat, mindestbestand, archiviert from artikel where id = ${nudeln}`;
+    expect(a).toEqual({ im_vorrat: true, mindestbestand: 2, archiviert: true });
     const [summe] = await t.sql`
       select sum(menge)::float as bestand, count(*) filter (where erstellt_von = ${anna.id})::int as von_anna
       from vorratsbuchungen where artikel_id = ${nudeln}

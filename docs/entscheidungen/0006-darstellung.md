@@ -49,3 +49,17 @@ schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standar
   werden alle Kacheln dieser Kategorie gleich hoch; andere Kategorien bleiben kompakt.
 - Lange Wörter brechen mit deutscher Silbentrennung (`hyphens: auto`, `lang="de"`).
 - Bei 3 Spalten etwas kleinere Schrift und weniger Innenabstand.
+
+## Schnell-Hinzufügen aus dem Verlauf (Nachtrag)
+
+- Jede Kategorie hat am Ende ihres Rasters eine Plus-Kachel; sie klappt den Verlauf
+  der Kategorie auf: eine Fläche in kräftiger Kategoriefarbe (weiße Schrift, solange
+  WCAG 3:1 erreicht wird) mit allen bisherigen Produkten. Wählbare zuerst, mit Plus;
+  schon offen auf der Liste → ausgegraut mit Haken. Sortiert nach deutschem Alphabet.
+- Kategorien mit Verlauf, aber ohne offene Einträge, stehen unter „Aus dem Verlauf“.
+- Lang drücken nimmt ein Produkt aus dem Verlauf (mit Rückgängig). Das **blendet aus**
+  (`artikel.archiviert`, Migration `0003`), statt zu löschen: Vorrat und Buchungen
+  hängen am Artikel. Erneutes Eintragen per Name blendet wieder ein.
+- Wird ein Eintrag aus „Im Wagen“ zurückgenommen, während derselbe Artikel schon offen
+  auf der Liste steht, wird der Wagen-Eintrag gelöscht (samt Vorratsbuchung) statt
+  doppelt aufzutauchen.

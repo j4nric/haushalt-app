@@ -31,6 +31,7 @@ export const schema = new Schema({
     kategorie: column.text,
     standardeinheit: column.text,
     im_vorrat: column.integer,
+    archiviert: column.integer,
     mindestbestand: column.real,
     erstellt_am: column.text,
   }),
