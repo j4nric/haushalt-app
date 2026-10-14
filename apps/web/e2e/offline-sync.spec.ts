@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  anzahl,
   einladen,
   eintrag,
   geraet,
@@ -36,8 +37,8 @@ test("Haushalt teilen und offline einkaufen", async ({
     await haushaltAnlegen(fremd.page, `Fremd ${lauf}`);
 
     // 2. Online: Eintrag mit Menge erscheint beim anderen Mitglied.
-    await hinzufuegen(anna.page, milch, { menge: "2" });
-    await expect(eintrag(ben.page, milch)).toContainText("2 Stk.");
+    await hinzufuegen(anna.page, milch, { menge: 2 });
+    await expect(anzahl(ben.page, milch)).toHaveText("2");
 
     // 3. Anna verliert das Netz und hakt ab; Ben ergänzt derweil etwas.
     anna.netz.offline();

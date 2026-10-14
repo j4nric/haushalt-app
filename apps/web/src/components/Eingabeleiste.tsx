@@ -1,12 +1,20 @@
-import { ChevronUp, Plus, SlidersHorizontal } from "lucide-react";
-import { type FormEvent, type ReactNode, useState } from "react";
+import {
+  KATEGORIEN,
+  kategorieName,
+  OHNE_KATEGORIE,
+} from "@haushalt/db/kategorien";
+import { Plus } from "lucide-react";
+import type { FormEvent } from "react";
+import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 /**
  * Schlanke Eingabe unten am Bildschirm (Daumenbereich): Name tippen und Enter.
- * Weitere Felder (Menge, Einheit, Kategorie) klappen nur bei Bedarf auf.
+ *
+ * Darüber erscheint, sobald etwas getippt ist, die Kategorie:
+ * - eindeutig erkannt oder unbekannt → kleine Auswahl, vorbelegt, änderbar
+ * - mehrdeutig (z. B. Heidelbeeren frisch/tiefgekühlt) → Knöpfe, ein Tipp trägt ein
  */
 export function Eingabeleiste({
   wert,
@@ -15,27 +23,32 @@ export function Eingabeleiste({
   platzhalter,
   label,
   absendenLabel,
-  details,
+  kategorie,
+  kategorieAendern,
+  auswahl,
   vorschlaege,
 }: {
   wert: string;
   aendern: (wert: string) => void;
-  absenden: () => Promise<void> | void;
+  /** Trägt mit der angegebenen Kategorie ein ("" = Sonstiges). */
+  absenden: (kategorie: string) => Promise<void> | void;
   platzhalter: string;
   label: string;
   absendenLabel: string;
-  details: ReactNode;
+  /** Vorbelegte bzw. gewählte Kategorie ("" = Sonstiges). */
+  kategorie: string;
+  kategorieAendern: (kategorie: string) => void;
+  /** Mehrere passende Kategorien: als Knöpfe anbieten statt der Auswahl. */
+  auswahl: string[];
   vorschlaege?: string[];
 }) {
-  const [offen, setOffen] = useState(false);
+  const getippt = wert.trim() !== "";
 
   async function senden(event: FormEvent) {
     event.preventDefault();
-    if (!wert.trim()) {
-      return;
+    if (getippt) {
+      await absenden(kategorie);
     }
-    await absenden();
-    setOffen(false);
   }
 
   return (
@@ -44,11 +57,43 @@ export function Eingabeleiste({
       className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
     >
       <div className="mx-auto max-w-lg">
-        {offen && (
-          <div className="mb-3 grid grid-cols-[5rem_auto_minmax(0,1fr)] gap-2">
-            {details}
-          </div>
-        )}
+        {getippt &&
+          (auswahl.length > 1 ? (
+            <fieldset className="mb-2 flex flex-wrap items-center gap-2">
+              <legend className="sr-only">Sorte wählen</legend>
+              <span className="text-sm text-muted-foreground">
+                Welche Sorte?
+              </span>
+              {auswahl.map((k) => (
+                <Button
+                  key={k}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => absenden(k)}
+                >
+                  {kategorieName(k)}
+                </Button>
+              ))}
+            </fieldset>
+          ) : (
+            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Kategorie</span>
+              <NativeAuswahl
+                value={kategorie}
+                onChange={(e) => kategorieAendern(e.target.value)}
+                aria-label="Kategorie"
+                className="h-8 px-2 text-sm"
+              >
+                <option value="">{OHNE_KATEGORIE}</option>
+                {KATEGORIEN.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.name}
+                  </option>
+                ))}
+              </NativeAuswahl>
+            </div>
+          ))}
         <div className="flex gap-2">
           <Input
             value={wert}
@@ -68,17 +113,6 @@ export function Eingabeleiste({
             </datalist>
           )}
           <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className={cn("size-11 shrink-0", offen && "bg-accent")}
-            aria-label="Menge und Kategorie"
-            aria-expanded={offen}
-            onClick={() => setOffen(!offen)}
-          >
-            {offen ? <ChevronUp /> : <SlidersHorizontal />}
-          </Button>
-          <Button
             type="submit"
             size="icon"
             className="size-11 shrink-0"
@@ -90,4 +124,26 @@ export function Eingabeleiste({
       </div>
     </form>
   );
+}
+
+/**
+ * Kategorie-Vorschlag für einen getippten Namen: Kennt der Haushalt den Artikel,
+ * gilt dessen Kategorie; sonst die Erkennung aus der Tabelle. Eine von Hand
+ * gewählte Kategorie hat immer Vorrang.
+ */
+export function kategorieVorschlag(
+  bekannteKategorie: string | null | undefined,
+  erkannt: string[],
+  manuell: string | null,
+): { kategorie: string; auswahl: string[] } {
+  if (manuell != null) {
+    return { kategorie: manuell, auswahl: [] };
+  }
+  if (bekannteKategorie) {
+    return { kategorie: bekannteKategorie, auswahl: [] };
+  }
+  return {
+    kategorie: erkannt[0] ?? "",
+    auswahl: erkannt.length > 1 ? erkannt : [],
+  };
 }

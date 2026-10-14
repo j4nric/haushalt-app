@@ -46,33 +46,41 @@ export function eintrag(page: Page, name: string) {
   return page.getByRole("main").getByRole("listitem").filter({ hasText: name });
 }
 
+/**
+ * Trägt einen Artikel ein. Mit `kategorie` wird sie gewählt (als Sorten-Knopf, falls
+ * die App mehrere anbietet, sonst in der Auswahl); mit `menge` danach per „+“ erhöht.
+ */
 export async function hinzufuegen(
   page: Page,
   name: string,
-  optionen: { menge?: string; kategorie?: string } = {},
+  optionen: { menge?: number; kategorie?: string } = {},
 ) {
   await page.getByLabel("Neuer Eintrag").fill(name);
-  if (optionen.menge || optionen.kategorie) {
-    await detailsOeffnen(page);
+  const sorten = page.getByRole("group", { name: "Sorte wählen" });
+  if (optionen.kategorie && (await sorten.isVisible())) {
+    await sorten
+      .getByRole("button", { name: optionen.kategorie, exact: true })
+      .click();
+  } else {
+    if (optionen.kategorie) {
+      await page
+        .getByLabel("Kategorie", { exact: true })
+        .selectOption({ label: optionen.kategorie });
+    }
+    await page.getByRole("button", { name: "Hinzufügen" }).click();
+  }
+  await expect(eintrag(page, name)).toBeVisible();
+  for (let i = 1; i < (optionen.menge ?? 1); i++) {
+    await page.getByRole("button", { name: `${name} mehr` }).click();
   }
   if (optionen.menge) {
-    await page.getByLabel("Menge", { exact: true }).fill(optionen.menge);
+    await expect(anzahl(page, name)).toHaveText(String(optionen.menge));
   }
-  if (optionen.kategorie) {
-    await page
-      .getByLabel("Kategorie", { exact: true })
-      .selectOption({ label: optionen.kategorie });
-  }
-  await page.getByRole("button", { name: "Hinzufügen" }).click();
-  await expect(eintrag(page, name)).toBeVisible();
 }
 
-/** Klappt Menge/Einheit/Kategorie in der Eingabeleiste auf (falls noch zu). */
-export async function detailsOeffnen(page: Page) {
-  const knopf = page.getByRole("button", { name: "Menge und Kategorie" });
-  if ((await knopf.getAttribute("aria-expanded")) !== "true") {
-    await knopf.click();
-  }
+/** Anzahl eines offenen Listeneintrags. */
+export function anzahl(page: Page, name: string) {
+  return page.getByLabel(`Anzahl ${name}`);
 }
 
 /** Lädt ein weiteres Gerät per Einladungscode in den Haushalt des ersten ein. */
@@ -108,16 +116,18 @@ export async function zuBereich(
 export const zumVorrat = (page: Page) => zuBereich(page, "Vorrat");
 export const zurListe = (page: Page) => zuBereich(page, "Einkaufsliste");
 
-/** Trägt im Vorrat einen Artikel mit Bestand ein. */
+/** Trägt im Vorrat einen Artikel ein und setzt den Bestand über die Details. */
 export async function vorratEintragen(
   page: Page,
   name: string,
-  bestand: string,
+  bestandNeu: number,
 ) {
   await page.getByLabel("Vorratsartikel").fill(name);
-  await detailsOeffnen(page);
-  await page.getByLabel("Bestand", { exact: true }).fill(bestand);
   await page.getByRole("button", { name: "Eintragen" }).click();
+  await bestand(page, name).click();
+  await page.getByLabel(`Bestand setzen ${name}`).fill(String(bestandNeu));
+  await page.getByLabel(`Bestand setzen ${name}`).press("Enter");
+  await expect(bestand(page, name)).toHaveText(String(bestandNeu));
 }
 
 export function bestand(page: Page, artikel: string) {
