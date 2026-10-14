@@ -1,0 +1,53 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color-scheme: light dark;
+}
+main {
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+form {
+  display: flex;
+  gap: 0.5rem;
+}
+form input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+}
+ul {
+  list-style: none;
+  padding: 0;
+}
+li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #8884;
+}
+li label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  font-size: 1.1rem;
+}
+li.erledigt label {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.status {
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+.status.online {
+  background: #16a34a33;
+}
+.status.offline {
+  background: #f59e0b44;
+}
+.leer {
+  opacity: 0.6;
+}

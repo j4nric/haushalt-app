@@ -1,3 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Pakete, deren Installationsskripte laufen dürfen (pnpm blockiert sie sonst).
+allowBuilds:
+  esbuild: true
