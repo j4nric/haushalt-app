@@ -48,8 +48,7 @@ das Muss vollständig, und PowerSync passt gut zum Rest des Stacks:
   Der eingebaute Browser der Claude-Desktop-App kann die Worker nicht laden;
   Chrome, Safari und Firefox funktionieren.
 
-## Noch offen (Schritt 6)
+## Nachtrag
 
-- Echtes Login (Better Auth) statt zufälliger Geräte-ID, PowerSync-Token über JWKS
-- Sync Streams pro Haushalt filtern, Uploads auf den eigenen Haushalt beschränken
-- Tabelle per Drizzle-Migration statt `create table if not exists` im API
+Login, Haushalte und Zugriffsbeschränkung sind umgesetzt, siehe
+[0002: Login, Haushalt und Datenzugriff](0002-login-und-haushalt.md).

@@ -8,9 +8,16 @@ config:
   edition: 3
 
 streams:
-  # Platzhalter für den Sync-Prototyp (Schritt 5). Später wird hier pro
-  # Haushalt gefiltert, damit jeder nur die eigenen Daten bekommt.
-  einkaufsliste:
+  # Alles aus den Haushalten, in denen der angemeldete Nutzer Mitglied ist.
+  # auth.user_id() ist die Nutzer-ID aus dem Token (sub).
+  haushalt:
     auto_subscribe: true
     queries:
+      - SELECT * FROM haushalte
+        WHERE id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
+      - SELECT * FROM haushalt_mitglieder
+        WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
+      - SELECT * FROM artikel
+        WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
       - SELECT * FROM listeneintraege
+        WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())

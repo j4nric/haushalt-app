@@ -6,43 +6,62 @@ import {
   Schema,
   Table,
 } from "@powersync/web";
+import { authClient } from "./auth";
 
-/** Lokales Schema (SQLite im Browser). Spiegelt die Postgres-Tabelle. */
-const listeneintraege = new Table({
-  name: column.text,
-  erledigt: column.integer, // 0/1, SQLite kennt keine Booleans
-  erstellt_am: column.text,
+/**
+ * Lokales Schema (SQLite im Browser). Spiegelt die Postgres-Tabellen aus
+ * packages/db; synchronisiert wird nur, was infra/powersync/sync-config.yaml freigibt.
+ * SQLite kennt keine Booleans (0/1) und keine Zeitstempel (ISO-Text).
+ */
+export const schema = new Schema({
+  haushalte: new Table({
+    name: column.text,
+    erstellt_am: column.text,
+  }),
+  haushalt_mitglieder: new Table({
+    haushalt_id: column.text,
+    nutzer_id: column.text,
+    anzeigename: column.text,
+    rolle: column.text,
+    beigetreten_am: column.text,
+  }),
+  artikel: new Table({
+    haushalt_id: column.text,
+    name: column.text,
+    kategorie: column.text,
+    standardeinheit: column.text,
+    erstellt_am: column.text,
+  }),
+  listeneintraege: new Table({
+    haushalt_id: column.text,
+    artikel_id: column.text,
+    menge: column.real,
+    einheit: column.text,
+    erledigt: column.integer,
+    erstellt_von: column.text,
+    erledigt_von: column.text,
+    erstellt_am: column.text,
+  }),
 });
 
-export const schema = new Schema({ listeneintraege });
-
-export type Listeneintrag = (typeof schema)["types"]["listeneintraege"];
-
-/** PROTOTYP: Statt Login eine zufällige, im Browser gespeicherte Geräte-ID. */
-function geraeteId(): string {
-  const schluessel = "haushalt-geraete-id";
-  let id = localStorage.getItem(schluessel);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(schluessel, id);
-  }
-  return id;
-}
+const POWERSYNC_URL =
+  import.meta.env.VITE_POWERSYNC_URL ?? "http://localhost:8080";
 
 /** Verbindet die lokale Datenbank mit unserem Backend. */
 class Connector implements PowerSyncBackendConnector {
   async fetchCredentials() {
-    const antwort = await fetch(`/api/powersync/token?nutzer=${geraeteId()}`);
-    if (!antwort.ok) {
-      throw new Error(`Token konnte nicht geladen werden (${antwort.status})`);
+    const { data, error } = await authClient.token();
+    if (error) {
+      // Nicht angemeldet: kein Sync. Andere Fehler (Netz) → PowerSync versucht es später erneut.
+      if (error.status === 401) {
+        return null;
+      }
+      throw new Error(`Token konnte nicht geladen werden (${error.status})`);
     }
-    return (await antwort.json()) as { endpoint: string; token: string };
+    return { endpoint: POWERSYNC_URL, token: data.token };
   }
 
-  /**
-   * Schickt lokale Änderungen ans API. Wirft bei Fehlern, dann versucht
-   * PowerSync es später erneut, z. B. sobald wieder Netz da ist.
-   */
+  /** Schickt lokale Änderungen ans API, eine Transaktion nach der anderen. */
   async uploadData(db: AbstractPowerSyncDatabase) {
     const transaktion = await db.getNextCrudTransaction();
     if (!transaktion) {
@@ -60,20 +79,32 @@ class Connector implements PowerSyncBackendConnector {
         })),
       }),
     });
-    if (!antwort.ok) {
-      throw new Error(
-        `Upload fehlgeschlagen (${antwort.status}): ${await antwort.text()}`,
-      );
+    if (antwort.ok) {
+      await transaktion.complete();
+      return;
     }
-    await transaktion.complete();
+    // 400/403: Das API lehnt die Änderung dauerhaft ab. Verwerfen, sonst blockiert sie
+    // die Warteschlange für immer; beim nächsten Sync gilt wieder der Server-Stand.
+    if (antwort.status === 400 || antwort.status === 403) {
+      console.error(
+        "Änderung vom Server abgelehnt und verworfen:",
+        await antwort.text(),
+        transaktion.crud,
+      );
+      await transaktion.complete();
+      return;
+    }
+    // Netzwerk, 401, 5xx: später erneut versuchen.
+    throw new Error(`Upload fehlgeschlagen (${antwort.status})`);
   }
 }
 
 export const db = new PowerSyncDatabase({
   schema,
-  database: { dbFilename: "haushalt-prototyp.db" },
+  database: { dbFilename: "haushalt.db" },
 });
 
-export function verbinden() {
-  return db.connect(new Connector());
-}
+export const verbinden = () => db.connect(new Connector());
+
+/** Beim Abmelden: Verbindung trennen und alle lokalen Daten löschen. */
+export const trennenUndLeeren = () => db.disconnectAndClear();

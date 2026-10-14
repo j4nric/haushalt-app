@@ -25,17 +25,11 @@ port: !env PS_PORT
 sync_config:
   path: sync-config.yaml
 
-# Wer darf sich verbinden? Clients schicken ein JWT, das mit diesem Schlüssel
-# signiert ist. Vorläufig ein symmetrischer Entwicklungsschlüssel; mit Better Auth
-# (Schritt 6) wechseln wir auf jwks_uri des API.
+# Wer darf sich verbinden? Clients schicken ein JWT von Better Auth (GET /api/auth/token).
+# PowerSync prüft die Signatur mit den öffentlichen Schlüsseln des API (JWKS).
 client_auth:
+  jwks_uri: !env PS_JWKS_URL
   audience: ["powersync"]
-  jwks:
-    keys:
-      - kty: oct
-        alg: HS256
-        kid: haushalt-dev
-        k: !env PS_JWT_SECRET
 
 # Token für die Admin-API des Dienstes (Diagnose).
 api:

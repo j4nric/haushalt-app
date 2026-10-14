@@ -47,7 +47,11 @@ cd haushalt-app
 pnpm install
 cp .env.example .env   # danach Passwort und Schlüssel in .env eintragen
 pnpm infra:up          # startet PostgreSQL und PowerSync
+pnpm dev               # API (spielt Migrationen ein) und Frontend
 ```
+
+Dann http://localhost:5173 öffnen, ein Konto anlegen und einen Haushalt erstellen.
+Weitere Mitglieder treten mit einem Einladungscode bei („Jemanden einladen“).
 
 ## Lokale Infrastruktur
 
@@ -55,12 +59,15 @@ pnpm infra:up          # startet PostgreSQL und PowerSync
 
 | Dienst | Port | Zweck |
 |---|---|---|
-| `postgres` | 5432 | App-Datenbank `haushalt` und Sync-Ablage `powersync_storage` |
+| `postgres` | 5432 | App-Datenbank `haushalt`, Sync-Ablage `powersync_storage`, Tests in `haushalt_test` |
 | `powersync` | 8080 | Sync-Dienst: repliziert Änderungen aus Postgres auf die Geräte |
 
 Konfiguration liegt in `infra/`: `postgres/init/` läuft nur beim ersten Start,
 `powersync/service.yaml` ist die Dienstkonfiguration, `powersync/sync-config.yaml`
-legt fest, welche Daten synchronisiert werden.
+legt fest, welche Daten synchronisiert werden (nur die des eigenen Haushalts).
+
+Das Datenbankschema steht in `packages/db/src/schema/`, die Migrationen in
+`packages/db/drizzle/`. Das API spielt fehlende Migrationen beim Start ein.
 
 ## Befehle
 
@@ -69,7 +76,8 @@ legt fest, welche Daten synchronisiert werden.
 | `pnpm check` | Alles prüfen, was auch die CI prüft (Lint, Typcheck, Tests) |
 | `pnpm lint` / `pnpm lint:fix` | Biome: Code prüfen bzw. automatisch formatieren und korrigieren |
 | `pnpm typecheck` | TypeScript in allen Paketen prüfen |
-| `pnpm test` / `pnpm test:watch` | Vitest einmalig bzw. im Watch-Modus |
+| `pnpm test` / `pnpm test:watch` | Vitest einmalig bzw. im Watch-Modus (API-Tests brauchen `infra:up`) |
+| `pnpm --filter @haushalt/db db:generate` | Nach Schema-Änderungen eine neue Migration erzeugen |
 | `pnpm infra:up` / `pnpm infra:down` | Postgres und PowerSync starten bzw. stoppen |
 | `pnpm infra:logs` | Logs der Dienste live verfolgen |
 | `pnpm infra:reset` | Dienste stoppen **und alle lokalen Daten löschen** |

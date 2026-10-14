@@ -3,18 +3,51 @@
   color-scheme: light dark;
 }
 main {
-  max-width: 28rem;
-  margin: 2rem auto;
+  max-width: 32rem;
+  margin: 1.5rem auto;
   padding: 0 1rem;
 }
-form {
+main.schmal {
+  max-width: 22rem;
+}
+main.mitte {
+  text-align: center;
+  opacity: 0.6;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+input,
+select,
+button {
+  font: inherit;
+  padding: 0.5rem;
+}
+.stapel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.zeile {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
-form input {
-  flex: 1;
-  padding: 0.5rem;
-  font-size: 1rem;
+.zeile input:first-child {
+  flex: 1 1 10rem;
+}
+.zeile .menge {
+  width: 5rem;
+}
+button.leise {
+  background: none;
+  border: none;
+  opacity: 0.7;
+  cursor: pointer;
+  text-decoration: underline;
 }
 ul {
   list-style: none;
@@ -37,6 +70,10 @@ li.erledigt label {
   text-decoration: line-through;
   opacity: 0.5;
 }
+.menge-anzeige {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
 .status {
   font-size: 0.85rem;
   padding: 0.25rem 0.5rem;
@@ -48,6 +85,19 @@ li.erledigt label {
 .status.offline {
   background: #f59e0b44;
 }
+.fehler {
+  color: #dc2626;
+}
 .leer {
   opacity: 0.6;
+}
+.haushalt-info {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+form.stapel label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }

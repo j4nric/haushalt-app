@@ -1,3 +1,4 @@
+import { EINHEITEN } from "@haushalt/db";
 import type postgres from "postgres";
 
 /**
@@ -9,107 +10,201 @@ export type Operation =
       op: "PUT" | "PATCH";
       table: Tabelle;
       id: string;
-      data: Record<string, unknown>;
+      data: Record<string, Wert>;
     }
   | { op: "DELETE"; table: Tabelle; id: string };
 
+type Wert = string | number | boolean | null;
+
+/** Fehler in der Anfrage selbst (HTTP 400). */
+export class UngueltigeOperation extends Error {}
+/** Zugriff auf einen fremden Haushalt (HTTP 403). */
+export class KeinZugriff extends Error {}
+
+const text = (spalte: string) => (wert: unknown) => {
+  if (typeof wert !== "string" || wert.trim() === "") {
+    throw new UngueltigeOperation(`${spalte} muss ein nicht-leerer Text sein`);
+  }
+  return wert.trim();
+};
+const optionalerText = (wert: unknown) =>
+  wert == null || wert === "" ? null : text("Text")(wert);
+const uuid = (spalte: string) => (wert: unknown) => {
+  if (typeof wert !== "string" || !UUID.test(wert)) {
+    throw new UngueltigeOperation(`${spalte} muss eine UUID sein`);
+  }
+  return wert;
+};
+const einheit = (pflicht: boolean) => (wert: unknown) => {
+  if (wert == null && !pflicht) {
+    return null;
+  }
+  if (!EINHEITEN.includes(wert as never)) {
+    throw new UngueltigeOperation(`Unbekannte Einheit: ${String(wert)}`);
+  }
+  return wert as string;
+};
+const menge = (wert: unknown) => {
+  if (wert == null) {
+    return null;
+  }
+  if (typeof wert !== "number" || !Number.isFinite(wert) || wert <= 0) {
+    throw new UngueltigeOperation("menge muss eine positive Zahl sein");
+  }
+  return wert;
+};
+// SQLite kennt keine Booleans: PowerSync liefert 0/1.
+const bool = (wert: unknown) => wert === 1 || wert === true;
+const zeitpunkt = (wert: unknown) => {
+  if (typeof wert !== "string" || Number.isNaN(Date.parse(wert))) {
+    throw new UngueltigeOperation("Zeitpunkt muss ein ISO-Datum sein");
+  }
+  return wert;
+};
+
 /**
- * Nur diese Tabellen und Spalten dürfen Clients schreiben. Jede Spalte hat
- * eine Umwandlung vom SQLite-Wert (Client) in den Postgres-Wert.
+ * Nur diese Tabellen und Spalten dürfen Clients schreiben. `fest` markiert
+ * Spalten, die nur beim Anlegen (PUT) gesetzt und danach nie geändert werden.
+ * `vomServer` markiert Spalten, die der Client lokal setzen darf (für die sofortige
+ * Anzeige), deren Wert der Server aber verwirft und selbst bestimmt.
  */
 const ERLAUBT = {
-  listeneintraege: {
-    name: (wert: unknown) => {
-      if (typeof wert !== "string" || wert.trim() === "") {
-        throw new UngueltigeOperation("name muss ein nicht-leerer Text sein");
-      }
-      return wert.trim();
-    },
-    // SQLite kennt keine Booleans: PowerSync liefert 0/1.
-    erledigt: (wert: unknown) => wert === 1 || wert === true,
-    erstellt_am: (wert: unknown) => {
-      if (typeof wert !== "string" || Number.isNaN(Date.parse(wert))) {
-        throw new UngueltigeOperation("erstellt_am muss ein ISO-Datum sein");
-      }
-      return wert;
-    },
+  artikel: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    name: { umwandeln: text("name") },
+    kategorie: { umwandeln: optionalerText },
+    standardeinheit: { umwandeln: einheit(true) },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },
-} satisfies Record<string, Record<string, (wert: unknown) => unknown>>;
+  listeneintraege: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
+    menge: { umwandeln: menge },
+    einheit: { umwandeln: einheit(false) },
+    erledigt: { umwandeln: bool },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
+    erledigt_von: { umwandeln: () => null, vomServer: true },
+  },
+} satisfies Record<string, Record<string, Regel>>;
+
+type Regel = {
+  umwandeln: (wert: unknown) => Wert;
+  fest?: true;
+  vomServer?: true;
+};
 
 type Tabelle = keyof typeof ERLAUBT;
 
-export class UngueltigeOperation extends Error {}
-
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Prüft den Request-Body und wandelt ihn in sichere, typisierte Operationen um. */
+/** Prüft den Request-Body und wandelt ihn in typisierte Operationen um. */
 export function parseOperationen(body: unknown): Operation[] {
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !Array.isArray((body as { operationen?: unknown }).operationen)
-  ) {
+  const operationen = (body as { operationen?: unknown } | null)?.operationen;
+  if (!Array.isArray(operationen)) {
     throw new UngueltigeOperation("Erwartet { operationen: [...] }");
   }
-  return (body as { operationen: unknown[] }).operationen.map(
-    (roh): Operation => {
-      const { op, table, id, opData } = (roh ?? {}) as Record<string, unknown>;
-      if (typeof table !== "string" || !Object.hasOwn(ERLAUBT, table)) {
+  return operationen.map((roh): Operation => {
+    const { op, table, id, opData } = (roh ?? {}) as Record<string, unknown>;
+    if (typeof table !== "string" || !Object.hasOwn(ERLAUBT, table)) {
+      throw new UngueltigeOperation(`Tabelle nicht erlaubt: ${String(table)}`);
+    }
+    const tabelle = table as Tabelle;
+    const geprueftId = uuid("id")(id);
+    if (op === "DELETE") {
+      return { op, table: tabelle, id: geprueftId };
+    }
+    if (op !== "PUT" && op !== "PATCH") {
+      throw new UngueltigeOperation(`Unbekannte Operation: ${String(op)}`);
+    }
+    const spalten: Record<string, Regel> = ERLAUBT[tabelle];
+    const data: Record<string, Wert> = {};
+    for (const [spalte, wert] of Object.entries(
+      (opData ?? {}) as Record<string, unknown>,
+    )) {
+      const regel = spalten[spalte];
+      if (!regel) {
         throw new UngueltigeOperation(
-          `Tabelle nicht erlaubt: ${String(table)}`,
+          `Spalte nicht erlaubt: ${tabelle}.${spalte}`,
         );
       }
-      const tabelle = table as Tabelle;
-      if (typeof id !== "string" || !UUID.test(id)) {
-        throw new UngueltigeOperation(`Ungültige id: ${String(id)}`);
+      if (op === "PATCH" && regel.fest) {
+        throw new UngueltigeOperation(
+          `${tabelle}.${spalte} kann nicht geändert werden`,
+        );
       }
-      if (op === "DELETE") {
-        return { op, table: tabelle, id };
+      if (regel.vomServer) {
+        continue;
       }
-      if (op !== "PUT" && op !== "PATCH") {
-        throw new UngueltigeOperation(`Unbekannte Operation: ${String(op)}`);
-      }
-      const spalten: Record<string, (wert: unknown) => unknown> =
-        ERLAUBT[tabelle];
-      const data: Record<string, unknown> = {};
-      for (const [spalte, wert] of Object.entries(
-        (opData ?? {}) as Record<string, unknown>,
-      )) {
-        const umwandeln = spalten[spalte];
-        if (!umwandeln) {
-          throw new UngueltigeOperation(
-            `Spalte nicht erlaubt: ${tabelle}.${spalte}`,
-          );
-        }
-        data[spalte] = umwandeln(wert);
-      }
-      return { op, table: tabelle, id, data };
-    },
-  );
+      data[spalte] = regel.umwandeln(wert);
+    }
+    if (op === "PUT" && typeof data.haushalt_id !== "string") {
+      throw new UngueltigeOperation(`${tabelle}: haushalt_id fehlt`);
+    }
+    return { op, table: tabelle, id: geprueftId, data };
+  });
 }
 
-/** Wendet die Operationen in einer Transaktion an: alles oder nichts. */
+/**
+ * Wendet die Operationen eines Nutzers in einer Transaktion an: alles oder nichts.
+ * Jede Zeile muss zu einem Haushalt gehören, in dem der Nutzer Mitglied ist.
+ */
 export async function wendeAn(
   sql: postgres.Sql,
+  nutzerId: string,
   operationen: Operation[],
 ): Promise<void> {
   await sql.begin(async (tx) => {
+    const zeilen = await tx<{ haushalt_id: string }[]>`
+      select haushalt_id from haushalt_mitglieder where nutzer_id = ${nutzerId}
+    `;
+    const meineHaushalte = zeilen.map((z) => z.haushalt_id);
+
     for (const o of operationen) {
+      const t = tx(o.table);
       if (o.op === "DELETE") {
-        await tx`delete from ${tx(o.table)} where id = ${o.id}`;
-      } else if (o.op === "PUT") {
-        const zeile = { ...o.data, id: o.id } as Record<
-          string,
-          postgres.ParameterOrJSON<never>
-        >;
-        const spalten = Object.keys(o.data);
-        await tx`
-          insert into ${tx(o.table)} ${tx(zeile)}
-          on conflict (id) do ${spalten.length > 0 ? tx`update set ${tx(o.data as Record<string, postgres.ParameterOrJSON<never>>, ...spalten)}` : tx`nothing`}
-        `;
-      } else if (Object.keys(o.data).length > 0) {
-        await tx`update ${tx(o.table)} set ${tx(o.data as Record<string, postgres.ParameterOrJSON<never>>)} where id = ${o.id}`;
+        await tx`delete from ${t} where id = ${o.id} and haushalt_id = any(${meineHaushalte}::uuid[])`;
+        continue;
       }
+
+      const data: Record<string, Wert> = { ...o.data };
+      if (o.table === "listeneintraege" && "erledigt" in data) {
+        data.erledigt_von = data.erledigt ? nutzerId : null;
+      }
+
+      if (o.op === "PATCH") {
+        if (Object.keys(data).length > 0) {
+          await tx`
+            update ${t} set ${tx(data)}
+            where id = ${o.id} and haushalt_id = any(${meineHaushalte}::uuid[])
+          `;
+        }
+        continue;
+      }
+
+      // PUT: Nur in eigene Haushalte schreiben ...
+      if (!meineHaushalte.includes(data.haushalt_id as string)) {
+        throw new KeinZugriff(
+          `Kein Mitglied von Haushalt ${String(data.haushalt_id)}`,
+        );
+      }
+      if (o.table === "listeneintraege") {
+        data.erstellt_von = nutzerId;
+      }
+      const zeile = { ...data, id: o.id };
+      const aenderbar = Object.keys(data).filter(
+        (spalte) => spalte !== "haushalt_id" && spalte !== "erstellt_von",
+      );
+      // ... und eine bestehende Zeile mit derselben id nur überschreiben, wenn sie
+      // im selben Haushalt liegt.
+      await tx`
+        insert into ${t} ${tx(zeile)}
+        on conflict (id) do ${
+          aenderbar.length > 0
+            ? tx`update set ${tx(data, ...aenderbar)} where ${t}.haushalt_id = ${data.haushalt_id as string}`
+            : tx`nothing`
+        }
+      `;
     }
   });
 }

@@ -2,10 +2,8 @@ import { PowerSyncContext } from "@powersync/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
-import { db, verbinden } from "./powersync";
+import { db } from "./powersync";
 import "./styles.css";
-
-verbinden();
 
 const root = document.getElementById("root");
 if (!root) {
