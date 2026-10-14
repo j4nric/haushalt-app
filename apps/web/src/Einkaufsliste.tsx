@@ -1,19 +1,23 @@
-import {
-  EINHEITEN,
-  type Einheit,
-  formatiereMenge,
-} from "@haushalt/db/einheiten";
+import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
 import {
   KATEGORIEN,
   kategorieName,
   kategorieRang,
+  OHNE_KATEGORIE,
 } from "@haushalt/db/kategorien";
 import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { Check, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  Check,
+  Minus,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Eingabeleiste } from "@/components/Eingabeleiste";
+import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import { Gruppe } from "@/components/Gruppe";
 import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
@@ -31,7 +35,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWischen } from "@/hooks/use-wischen";
 import { cn } from "@/lib/utils";
@@ -42,24 +45,15 @@ type Zeile = {
   artikel_id: string;
   name: string;
   kategorie: string | null;
+  /** Anzahl in Stück; leer bedeutet 1. */
   menge: number | null;
-  einheit: Einheit | null;
   erledigt: number;
   erledigt_von_name: string | null;
 };
 
-type Artikel = {
-  id: string;
-  name: string;
-  kategorie: string | null;
-  standardeinheit: Einheit;
-};
+type Artikel = { id: string; name: string; kategorie: string | null };
 
-export const EINHEIT_NAMEN: Record<Einheit, string> = {
-  stueck: "Stk.",
-  g: "g",
-  ml: "ml",
-};
+const anzahl = (zeile: { menge: number | null }) => zeile.menge ?? 1;
 
 export function Einkaufsliste({
   haushaltId,
@@ -70,7 +64,7 @@ export function Einkaufsliste({
 }) {
   const db = usePowerSync();
   const { data: eintraege } = useQuery<Zeile>(
-    `SELECT l.id, l.artikel_id, a.name, a.kategorie, l.menge, l.einheit, l.erledigt,
+    `SELECT l.id, l.artikel_id, a.name, a.kategorie, l.menge, l.erledigt,
             m.anzeigename AS erledigt_von_name
        FROM listeneintraege l
        JOIN artikel a ON a.id = l.artikel_id
@@ -80,36 +74,31 @@ export function Einkaufsliste({
     [haushaltId],
   );
   const { data: bekannteArtikel } = useQuery<Artikel>(
-    "SELECT id, name, kategorie, standardeinheit FROM artikel WHERE haushalt_id = ? ORDER BY name",
+    "SELECT id, name, kategorie FROM artikel WHERE haushalt_id = ? ORDER BY name",
     [haushaltId],
   );
 
   const [name, setName] = useState("");
-  const [menge, setMenge] = useState("");
-  const [einheit, setEinheit] = useState<Einheit>("stueck");
-  const [kategorie, setKategorie] = useState("");
+  const [manuell, setManuell] = useState<string | null>(null);
   const [bearbeitet, setBearbeitet] = useState<Zeile | null>(null);
 
+  const vorschlag = kategorieVorschlag(
+    finde(bekannteArtikel, name)?.kategorie,
+    erkenneKategorie(name),
+    manuell,
+  );
   const offen = eintraege.filter((e) => !e.erledigt);
   const imWagen = eintraege.filter((e) => e.erledigt);
   const gruppen = useMemo(() => nachKategorie(offen), [offen]);
 
-  /** Bekannter Artikel getippt? Dann seine Kategorie und Einheit vorschlagen. */
-  function nameAendern(wert: string) {
-    setName(wert);
-    const bekannt = finde(bekannteArtikel, wert);
-    if (bekannt) {
-      setKategorie(bekannt.kategorie ?? "");
-      setEinheit(bekannt.standardeinheit);
-    }
-  }
-
-  async function hinzufuegen() {
+  /**
+   * Trägt ein. Steht der Artikel schon offen auf der Liste, zählt das die Anzahl
+   * hoch statt eine zweite Zeile anzulegen.
+   */
+  async function hinzufuegen(kategorie: string) {
     const artikelName = name.trim();
-    const zahl = menge.trim() === "" ? null : Number(menge.replace(",", "."));
     const jetzt = new Date().toISOString();
 
-    // Artikel wiederverwenden, falls der Haushalt ihn schon kennt – sonst neu anlegen.
     await db.writeTransaction(async (tx) => {
       const vorhanden = await tx.getOptional<{
         id: string;
@@ -123,62 +112,67 @@ export function Einkaufsliste({
         artikelId = crypto.randomUUID();
         await tx.execute(
           `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, erstellt_am)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, 'stueck', ?, ?)`,
           [
             artikelId,
             haushaltId,
             artikelName,
             kategorie || null,
-            einheit,
             standardmaessigImVorrat(kategorie) ? 1 : 0,
             jetzt,
           ],
         );
       } else if ((vorhanden?.kategorie ?? "") !== kategorie) {
-        // Kategorie geändert: gilt ab jetzt für diesen Artikel.
+        // Kategorie gewählt oder geändert: gilt ab jetzt für diesen Artikel.
         await tx.execute("UPDATE artikel SET kategorie = ? WHERE id = ?", [
           kategorie || null,
           artikelId,
         ]);
       }
-      await tx.execute(
-        `INSERT INTO listeneintraege (id, haushalt_id, artikel_id, menge, einheit, erledigt, erstellt_von, erstellt_am)
-         VALUES (uuid(), ?, ?, ?, ?, 0, ?, ?)`,
-        [
-          haushaltId,
-          artikelId,
-          zahl && zahl > 0 ? zahl : null,
-          zahl ? einheit : null,
-          nutzerId,
-          jetzt,
-        ],
+
+      const offenerEintrag = await tx.getOptional<{ id: string }>(
+        "SELECT id FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
+        [artikelId],
       );
+      if (offenerEintrag) {
+        await tx.execute(
+          "UPDATE listeneintraege SET menge = COALESCE(menge, 1) + 1, einheit = 'stueck' WHERE id = ?",
+          [offenerEintrag.id],
+        );
+      } else {
+        await tx.execute(
+          `INSERT INTO listeneintraege (id, haushalt_id, artikel_id, menge, einheit, erledigt, erstellt_von, erstellt_am)
+           VALUES (uuid(), ?, ?, 1, 'stueck', 0, ?, ?)`,
+          [haushaltId, artikelId, nutzerId, jetzt],
+        );
+      }
     });
     setName("");
-    setMenge("");
-    setKategorie("");
+    setManuell(null);
+  }
+
+  function anzahlAendern(eintrag: Zeile, um: number) {
+    const neu = Math.max(1, anzahl(eintrag) + um);
+    return db.execute(
+      "UPDATE listeneintraege SET menge = ?, einheit = 'stueck' WHERE id = ?",
+      [neu, eintrag.id],
+    );
   }
 
   /** Abhaken bucht ins Vorrat, Zurücknehmen entfernt die Buchung wieder. */
   async function umschalten(eintrag: Zeile) {
     const erledigt = eintrag.erledigt ? 0 : 1;
-    const gebucht = await db.writeTransaction(async (tx) => {
+    await db.writeTransaction(async (tx) => {
       await tx.execute(
         "UPDATE listeneintraege SET erledigt = ?, erledigt_von = ? WHERE id = ?",
         [erledigt, erledigt ? nutzerId : null, eintrag.id],
       );
       if (erledigt) {
-        return einkaufBuchen(tx, eintrag.id, nutzerId);
+        await einkaufBuchen(tx, eintrag.id, nutzerId);
+      } else {
+        await einkaufZuruecknehmen(tx, eintrag.id, nutzerId);
       }
-      await einkaufZuruecknehmen(tx, eintrag.id, nutzerId);
-      return true;
     });
-    if (!gebucht) {
-      toast.info(`${eintrag.name} wurde nicht in den Vorrat gebucht`, {
-        description:
-          "Ohne passende Menge geht das nicht automatisch. Bitte im Vorrat nachtragen.",
-      });
-    }
   }
 
   /** Löschen mit „Rückgängig“: Die Zeile wird vorher gemerkt und bei Bedarf neu angelegt. */
@@ -212,19 +206,22 @@ export function Einkaufsliste({
     );
   }
 
+  const zeile = (eintrag: Zeile) => (
+    <Eintrag
+      key={eintrag.id}
+      eintrag={eintrag}
+      umschalten={umschalten}
+      loeschen={loeschen}
+      bearbeiten={setBearbeitet}
+      anzahlAendern={anzahlAendern}
+    />
+  );
+
   return (
     <>
       {gruppen.map(([gruppe, zeilen]) => (
         <Gruppe key={gruppe} titel={gruppe}>
-          {zeilen.map((eintrag) => (
-            <Eintrag
-              key={eintrag.id}
-              eintrag={eintrag}
-              umschalten={umschalten}
-              loeschen={loeschen}
-              bearbeiten={setBearbeitet}
-            />
-          ))}
+          {zeilen.map(zeile)}
         </Gruppe>
       ))}
 
@@ -242,15 +239,7 @@ export function Einkaufsliste({
             </Button>
           }
         >
-          {imWagen.map((eintrag) => (
-            <Eintrag
-              key={eintrag.id}
-              eintrag={eintrag}
-              umschalten={umschalten}
-              loeschen={loeschen}
-              bearbeiten={setBearbeitet}
-            />
-          ))}
+          {imWagen.map(zeile)}
         </Gruppe>
       )}
 
@@ -269,65 +258,42 @@ export function Einkaufsliste({
 
       <Eingabeleiste
         wert={name}
-        aendern={nameAendern}
+        aendern={(wert) => {
+          setName(wert);
+          setManuell(null);
+        }}
         absenden={hinzufuegen}
         platzhalter="Was fehlt?"
         label="Neuer Eintrag"
         absendenLabel="Hinzufügen"
+        kategorie={vorschlag.kategorie}
+        kategorieAendern={setManuell}
+        auswahl={vorschlag.auswahl}
         vorschlaege={bekannteArtikel.map((a) => a.name)}
-        details={
-          <>
-            <Input
-              value={menge}
-              onChange={(e) => setMenge(e.target.value)}
-              inputMode="decimal"
-              placeholder="Menge"
-              aria-label="Menge"
-              className="h-11 text-base"
-            />
-            <NativeAuswahl
-              value={einheit}
-              onChange={(e) => setEinheit(e.target.value as Einheit)}
-              aria-label="Einheit"
-            >
-              {EINHEITEN.map((e) => (
-                <option key={e} value={e}>
-                  {EINHEIT_NAMEN[e]}
-                </option>
-              ))}
-            </NativeAuswahl>
-            <NativeAuswahl
-              value={kategorie}
-              onChange={(e) => setKategorie(e.target.value)}
-              aria-label="Kategorie"
-            >
-              <option value="">Kategorie …</option>
-              {KATEGORIEN.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.name}
-                </option>
-              ))}
-            </NativeAuswahl>
-          </>
-        }
       />
     </>
   );
 }
 
-/** Eine Zeile: antippen = abhaken, nach links wischen = löschen, lang drücken = bearbeiten. */
+/**
+ * Eine Zeile: antippen = abhaken, nach links wischen = löschen, lang drücken = bearbeiten.
+ * Offene Einträge haben − / Anzahl / +.
+ */
 function Eintrag({
   eintrag,
   umschalten,
   loeschen,
   bearbeiten,
+  anzahlAendern,
 }: {
   eintrag: Zeile;
   umschalten: (e: Zeile) => void;
   loeschen: (e: Zeile) => void;
   bearbeiten: (e: Zeile) => void;
+  anzahlAendern: (e: Zeile, um: number) => void;
 }) {
   const erledigt = eintrag.erledigt === 1;
+  const stueck = anzahl(eintrag);
   const { versatz, handler, klick } = useWischen({
     loeschen: () => loeschen(eintrag),
     lang: () => bearbeiten(eintrag),
@@ -356,7 +322,7 @@ function Eintrag({
           aria-checked={erledigt}
           {...handler}
           onClick={klick(() => umschalten(eintrag))}
-          className="flex min-h-14 flex-1 touch-pan-y items-center gap-3 px-4 py-2 text-left select-none"
+          className="flex min-h-14 flex-1 touch-pan-y items-center gap-3 py-2 pl-4 text-left select-none"
         >
           <span
             className={cn(
@@ -369,13 +335,11 @@ function Eintrag({
             {erledigt && <Check className="size-4" strokeWidth={3} />}
           </span>
           <span className={cn("flex-1", erledigt && "text-muted-foreground")}>
-            {/* Nur Name und Menge durchstreichen, nicht „von …“. */}
-            <span className={cn(erledigt && "line-through")}>
-              <span className="text-base">{eintrag.name}</span>
-              {eintrag.menge && eintrag.einheit && (
-                <span className="ml-2 text-sm text-muted-foreground tabular-nums">
-                  {formatiereMenge(eintrag.menge, eintrag.einheit)}
-                </span>
+            {/* Nur den Namen durchstreichen, nicht „von …“. */}
+            <span className={cn("text-base", erledigt && "line-through")}>
+              {eintrag.name}
+              {erledigt && stueck > 1 && (
+                <span className="ml-2 text-sm tabular-nums">{stueck}×</span>
               )}
             </span>
             {erledigt && eintrag.erledigt_von_name && (
@@ -385,6 +349,37 @@ function Eintrag({
             )}
           </span>
         </button>
+
+        {!erledigt && (
+          <div className="flex items-center gap-0.5 pr-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 rounded-full text-muted-foreground"
+              aria-label={`${eintrag.name} weniger`}
+              disabled={stueck <= 1}
+              onClick={() => anzahlAendern(eintrag, -1)}
+            >
+              <Minus />
+            </Button>
+            <output
+              aria-label={`Anzahl ${eintrag.name}`}
+              className="min-w-6 text-center tabular-nums"
+            >
+              {stueck}
+            </output>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-9 rounded-full text-muted-foreground"
+              aria-label={`${eintrag.name} mehr`}
+              onClick={() => anzahlAendern(eintrag, 1)}
+            >
+              <Plus />
+            </Button>
+          </div>
+        )}
+
         {/* Am Rechner (mit Maus) statt Wischen und langem Drücken. */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -399,7 +394,7 @@ function Eintrag({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => bearbeiten(eintrag)}>
-              <Pencil /> Bearbeiten
+              <Pencil /> Kategorie ändern
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
@@ -414,7 +409,7 @@ function Eintrag({
   );
 }
 
-/** Menge, Einheit und Kategorie eines Eintrags nachträglich ändern. */
+/** Kategorie eines Artikels nachträglich ändern (gilt auch für künftige Einträge). */
 function EintragBearbeiten({
   eintrag,
   schliessen,
@@ -437,76 +432,38 @@ function EintragBearbeiten({
             className="mx-auto w-full max-w-lg"
             onSubmit={async (e) => {
               e.preventDefault();
-              const daten = new FormData(e.currentTarget);
-              const roh = String(daten.get("menge")).trim().replace(",", ".");
-              const zahl = roh === "" ? null : Number(roh);
-              const gueltig =
-                zahl != null && Number.isFinite(zahl) && zahl > 0 ? zahl : null;
-              const kategorie = String(daten.get("kategorie")) || null;
-              await db.writeTransaction(async (tx) => {
-                await tx.execute(
-                  "UPDATE listeneintraege SET menge = ?, einheit = ? WHERE id = ?",
-                  [
-                    gueltig,
-                    gueltig ? String(daten.get("einheit")) : null,
-                    eintrag.id,
-                  ],
+              const kategorie =
+                String(new FormData(e.currentTarget).get("kategorie")) || null;
+              if (kategorie !== eintrag.kategorie) {
+                await db.execute(
+                  "UPDATE artikel SET kategorie = ? WHERE id = ?",
+                  [kategorie, eintrag.artikel_id],
                 );
-                if (kategorie !== eintrag.kategorie) {
-                  await tx.execute(
-                    "UPDATE artikel SET kategorie = ? WHERE id = ?",
-                    [kategorie, eintrag.artikel_id],
-                  );
-                }
-              });
+              }
               schliessen();
             }}
           >
             <DrawerHeader>
               <DrawerTitle>{eintrag.name}</DrawerTitle>
-              <DrawerDescription>Menge und Kategorie ändern</DrawerDescription>
+              <DrawerDescription>
+                Die Kategorie gilt auch für künftige Einträge.
+              </DrawerDescription>
             </DrawerHeader>
-            <div className="grid grid-cols-[1fr_auto] gap-3 px-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="bearbeiten-menge">Menge</Label>
-                <Input
-                  id="bearbeiten-menge"
-                  name="menge"
-                  inputMode="decimal"
-                  defaultValue={eintrag.menge ?? ""}
-                  className="h-11 text-base"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="bearbeiten-einheit">Einheit</Label>
-                <NativeAuswahl
-                  id="bearbeiten-einheit"
-                  name="einheit"
-                  defaultValue={eintrag.einheit ?? "stueck"}
-                >
-                  {EINHEITEN.map((e) => (
-                    <option key={e} value={e}>
-                      {EINHEIT_NAMEN[e]}
-                    </option>
-                  ))}
-                </NativeAuswahl>
-              </div>
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="bearbeiten-kategorie">Kategorie</Label>
-                <NativeAuswahl
-                  id="bearbeiten-kategorie"
-                  name="kategorie"
-                  defaultValue={eintrag.kategorie ?? ""}
-                  className="w-full"
-                >
-                  <option value="">Sonstiges</option>
-                  {KATEGORIEN.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      {k.name}
-                    </option>
-                  ))}
-                </NativeAuswahl>
-              </div>
+            <div className="space-y-1.5 px-4">
+              <Label htmlFor="bearbeiten-kategorie">Kategorie</Label>
+              <NativeAuswahl
+                id="bearbeiten-kategorie"
+                name="kategorie"
+                defaultValue={eintrag.kategorie ?? ""}
+                className="w-full"
+              >
+                <option value="">{OHNE_KATEGORIE}</option>
+                {KATEGORIEN.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.name}
+                  </option>
+                ))}
+              </NativeAuswahl>
             </div>
             <DrawerFooter className="grid grid-cols-2">
               <Button
@@ -533,7 +490,9 @@ function EintragBearbeiten({
 
 function finde(artikel: Artikel[], name: string) {
   const gesucht = name.trim().toLowerCase();
-  return artikel.find((a) => a.name.toLowerCase() === gesucht);
+  return gesucht
+    ? artikel.find((a) => a.name.toLowerCase() === gesucht)
+    : undefined;
 }
 
 /** Gruppiert offene Einträge nach Kategorie, in Supermarkt-Reihenfolge. */

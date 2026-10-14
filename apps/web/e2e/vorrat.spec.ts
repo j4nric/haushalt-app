@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  anzahl,
   bestand,
   einladen,
   eintrag,
@@ -20,7 +21,7 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
   try {
     await haushaltAnlegen(page, "Vorrat-Haushalt");
     await hinzufuegen(page, "Nudeln", {
-      menge: "2",
+      menge: 2,
       kategorie: "Vorrat & Konserven",
     });
     await hinzufuegen(page, "Bananen", { kategorie: "Obst & Gemüse" });
@@ -29,7 +30,7 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
     await eintrag(page, "Nudeln").getByRole("checkbox").click();
     await eintrag(page, "Bananen").getByRole("checkbox").click();
     await zumVorrat(page);
-    await expect(bestand(page, "Nudeln")).toHaveText("2 Stk.");
+    await expect(bestand(page, "Nudeln")).toHaveText("2");
     await expect(bestand(page, "Bananen")).toHaveCount(0);
     await expect(page.getByText("Weitere Artikel (1)")).toBeVisible();
 
@@ -37,11 +38,11 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
     await zurListe(page);
     await eintrag(page, "Nudeln").getByRole("checkbox").click();
     await zumVorrat(page);
-    await expect(bestand(page, "Nudeln")).toHaveText("0 Stk.");
+    await expect(bestand(page, "Nudeln")).toHaveText("0");
     await zurListe(page);
     await eintrag(page, "Nudeln").getByRole("checkbox").click();
     await zumVorrat(page);
-    await expect(bestand(page, "Nudeln")).toHaveText("2 Stk.");
+    await expect(bestand(page, "Nudeln")).toHaveText("2");
 
     // Mindestbestand 3 bei Bestand 2 → 1 Stück kommt automatisch auf die Liste.
     await bestand(page, "Nudeln").click();
@@ -52,13 +53,7 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
       page.getByRole("listitem").filter({ hasText: "Nudeln" }),
     ).toContainText("knapp, auf der Liste");
     await zurListe(page);
-    const offen = page
-      .getByRole("listitem")
-      .filter({ hasText: "Nudeln" })
-      .filter({
-        has: page.getByRole("checkbox", { checked: false }),
-      });
-    await expect(offen).toContainText("1 Stk.");
+    await expect(anzahl(page, "Nudeln")).toHaveText("1");
   } finally {
     await handy.schliessen();
   }
@@ -81,32 +76,28 @@ test("Offline-Verbrauch auf zwei Geräten geht nicht verloren", async ({
     await einladen(anna.page, ben.page, "Kaffeehaushalt", "Ben");
 
     await zumVorrat(anna.page);
-    await vorratEintragen(anna.page, "Kaffee", "5");
-    await expect(bestand(anna.page, "Kaffee")).toHaveText("5 Stk.");
+    await vorratEintragen(anna.page, "Kaffee", 5);
+    await expect(bestand(anna.page, "Kaffee")).toHaveText("5");
     await zumVorrat(ben.page);
-    await expect(bestand(ben.page, "Kaffee")).toHaveText("5 Stk.");
+    await expect(bestand(ben.page, "Kaffee")).toHaveText("5");
 
     // Beide offline, beide verbrauchen je ein Stück.
     anna.netz.offline();
     ben.netz.offline();
     await expect(anna.page.getByTestId("sync-status")).toHaveText(/Offline/);
     await expect(ben.page.getByTestId("sync-status")).toHaveText(/Offline/);
-    await anna.page
-      .getByRole("button", { name: "Kaffee: 1 Stk. weniger" })
-      .click();
-    await ben.page
-      .getByRole("button", { name: "Kaffee: 1 Stk. weniger" })
-      .click();
-    await expect(bestand(anna.page, "Kaffee")).toHaveText("4 Stk.");
-    await expect(bestand(ben.page, "Kaffee")).toHaveText("4 Stk.");
+    await anna.page.getByRole("button", { name: "Kaffee weniger" }).click();
+    await ben.page.getByRole("button", { name: "Kaffee weniger" }).click();
+    await expect(bestand(anna.page, "Kaffee")).toHaveText("4");
+    await expect(bestand(ben.page, "Kaffee")).toHaveText("4");
 
     // Wieder online: Beide Verbräuche zählen.
     anna.netz.wiederOnline();
     ben.netz.wiederOnline();
-    await expect(bestand(anna.page, "Kaffee")).toHaveText("3 Stk.", {
+    await expect(bestand(anna.page, "Kaffee")).toHaveText("3", {
       timeout: 30_000,
     });
-    await expect(bestand(ben.page, "Kaffee")).toHaveText("3 Stk.", {
+    await expect(bestand(ben.page, "Kaffee")).toHaveText("3", {
       timeout: 30_000,
     });
   } finally {

@@ -1,19 +1,10 @@
-import {
-  EINHEITEN,
-  type Einheit,
-  formatiereMenge,
-} from "@haushalt/db/einheiten";
-import {
-  KATEGORIEN,
-  kategorieName,
-  kategorieRang,
-} from "@haushalt/db/kategorien";
+import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
+import { kategorieName, kategorieRang } from "@haushalt/db/kategorien";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { Minus, PackageOpen, Plus } from "lucide-react";
 import { useState } from "react";
-import { Eingabeleiste } from "@/components/Eingabeleiste";
+import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import { Gruppe } from "@/components/Gruppe";
-import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -26,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { EINHEIT_NAMEN } from "./Einkaufsliste";
 import {
   bestandSetzen,
   buchen,
@@ -37,14 +27,13 @@ type VorratsZeile = {
   id: string;
   name: string;
   kategorie: string | null;
-  standardeinheit: Einheit;
   mindestbestand: number | null;
   bestand: number;
   auf_liste: number;
 };
 
-/** Schrittweite für Plus/Minus: ein Stück bzw. 100 g / 100 ml. */
-const SCHRITT: Record<Einheit, number> = { stueck: 1, g: 100, ml: 100 };
+const stueck = (zahl: number) =>
+  Math.max(zahl, 0).toLocaleString("de-DE", { maximumFractionDigits: 2 });
 
 export function Vorrat({
   haushaltId,
@@ -55,7 +44,7 @@ export function Vorrat({
 }) {
   const db = usePowerSync();
   const { data: zeilen } = useQuery<VorratsZeile>(
-    `SELECT a.id, a.name, a.kategorie, a.standardeinheit, a.mindestbestand,
+    `SELECT a.id, a.name, a.kategorie, a.mindestbestand,
             COALESCE((SELECT SUM(b.menge) FROM vorratsbuchungen b WHERE b.artikel_id = a.id), 0) AS bestand,
             EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
        FROM artikel a
@@ -180,9 +169,7 @@ function VorratsEintrag({
   aendern: (zeile: VorratsZeile, menge: number) => void;
   oeffnen: () => void;
 }) {
-  const schritt = SCHRITT[zeile.standardeinheit];
   const bestand = Math.max(zeile.bestand, 0);
-  const einheit = EINHEIT_NAMEN[zeile.standardeinheit];
   const knapp = istKnapp(zeile);
 
   return (
@@ -210,9 +197,9 @@ function VorratsEintrag({
         variant="outline"
         size="icon"
         className="size-10 rounded-full"
-        aria-label={`${zeile.name}: ${schritt} ${einheit} weniger`}
+        aria-label={`${zeile.name} weniger`}
         disabled={bestand <= 0}
-        onClick={() => aendern(zeile, -Math.min(schritt, bestand))}
+        onClick={() => aendern(zeile, -Math.min(1, bestand))}
       >
         <Minus />
       </Button>
@@ -221,18 +208,18 @@ function VorratsEintrag({
         onClick={oeffnen}
         aria-label={`Bestand ${zeile.name}`}
         className={cn(
-          "min-w-16 text-center text-base font-medium tabular-nums",
+          "min-w-10 text-center text-lg font-medium tabular-nums",
           bestand <= 0 && "text-muted-foreground",
         )}
       >
-        {formatiereMenge(bestand, zeile.standardeinheit)}
+        {stueck(bestand)}
       </button>
       <Button
         variant="outline"
         size="icon"
         className="size-10 rounded-full"
-        aria-label={`${zeile.name}: ${schritt} ${einheit} mehr`}
-        onClick={() => aendern(zeile, schritt)}
+        aria-label={`${zeile.name} mehr`}
+        onClick={() => aendern(zeile, 1)}
       >
         <Plus />
       </Button>
@@ -255,7 +242,6 @@ function VorratsDetails({
   entfernen: (artikelId: string) => void;
 }) {
   const db = usePowerSync();
-  const einheit = zeile ? EINHEIT_NAMEN[zeile.standardeinheit] : "";
 
   return (
     <Drawer
@@ -304,24 +290,22 @@ function VorratsDetails({
             </DrawerHeader>
             <div className="grid grid-cols-2 gap-3 px-4">
               <div className="space-y-1.5">
-                <Label htmlFor="details-bestand">Bestand ({einheit})</Label>
+                <Label htmlFor="details-bestand">Bestand</Label>
                 <Input
                   id="details-bestand"
                   name="bestand"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   defaultValue={Math.max(zeile.bestand, 0)}
                   aria-label={`Bestand setzen ${zeile.name}`}
                   className="h-11 text-base"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="details-mindest">
-                  Mindestbestand ({einheit})
-                </Label>
+                <Label htmlFor="details-mindest">Mindestbestand</Label>
                 <Input
                   id="details-mindest"
                   name="mindestbestand"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   placeholder="keiner"
                   defaultValue={zeile.mindestbestand ?? ""}
                   aria-label={`Mindestbestand ${zeile.name}`}
@@ -374,7 +358,10 @@ function VorratsDetails({
   );
 }
 
-/** Artikel direkt in den Vorrat eintragen, z. B. bei der ersten Inventur. */
+/**
+ * Artikel direkt in den Vorrat eintragen, z. B. bei der ersten Inventur: legt ihn
+ * mit Bestand 1 an bzw. erhöht den Bestand um 1. Feinjustieren mit + / −.
+ */
 function NeuerVorratsartikel({
   haushaltId,
   nutzerId,
@@ -383,100 +370,84 @@ function NeuerVorratsartikel({
   nutzerId: string;
 }) {
   const db = usePowerSync();
+  const { data: bekannte } = useQuery<{
+    name: string;
+    kategorie: string | null;
+  }>("SELECT name, kategorie FROM artikel WHERE haushalt_id = ?", [haushaltId]);
   const [name, setName] = useState("");
-  const [menge, setMenge] = useState("");
-  const [einheit, setEinheit] = useState<Einheit>("stueck");
-  const [kategorie, setKategorie] = useState("vorrat");
+  const [manuell, setManuell] = useState<string | null>(null);
+  const bekannt = bekannte.find(
+    (a) => a.name.toLowerCase() === name.trim().toLowerCase(),
+  );
+  const vorschlag = kategorieVorschlag(
+    bekannt?.kategorie,
+    erkenneKategorie(name),
+    manuell,
+  );
 
-  async function eintragen() {
+  async function eintragen(kategorie: string) {
     const artikelName = name.trim();
-    const bestand = zahl(menge) ?? 0;
     await db.writeTransaction(async (tx) => {
-      const vorhanden = await tx.getOptional<{ id: string }>(
-        "SELECT id FROM artikel WHERE haushalt_id = ? AND lower(name) = lower(?)",
+      const vorhanden = await tx.getOptional<{
+        id: string;
+        kategorie: string | null;
+      }>(
+        "SELECT id, kategorie FROM artikel WHERE haushalt_id = ? AND lower(name) = lower(?)",
         [haushaltId, artikelName],
       );
       let artikelId = vorhanden?.id;
       if (artikelId) {
-        await tx.execute("UPDATE artikel SET im_vorrat = 1 WHERE id = ?", [
-          artikelId,
-        ]);
+        await tx.execute(
+          "UPDATE artikel SET im_vorrat = 1, kategorie = ? WHERE id = ?",
+          [kategorie || null, artikelId],
+        );
       } else {
         artikelId = crypto.randomUUID();
         await tx.execute(
           `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, erstellt_am)
-           VALUES (?, ?, ?, ?, ?, 1, ?)`,
+           VALUES (?, ?, ?, ?, 'stueck', 1, ?)`,
           [
             artikelId,
             haushaltId,
             artikelName,
             kategorie || null,
-            einheit,
             new Date().toISOString(),
           ],
         );
       }
-      if (bestand > 0) {
-        await bestandSetzen(tx, {
-          haushaltId,
-          artikelId,
-          neu: bestand,
-          nutzerId,
-        });
-      }
+      await buchen(tx, {
+        haushaltId,
+        artikelId,
+        menge: 1,
+        grund: "korrektur",
+        nutzerId,
+      });
     });
     setName("");
-    setMenge("");
+    setManuell(null);
   }
 
   return (
     <Eingabeleiste
       wert={name}
-      aendern={setName}
+      aendern={(wert) => {
+        setName(wert);
+        setManuell(null);
+      }}
       absenden={eintragen}
       platzhalter="Was ist da?"
       label="Vorratsartikel"
       absendenLabel="Eintragen"
-      details={
-        <>
-          <Input
-            value={menge}
-            onChange={(e) => setMenge(e.target.value)}
-            inputMode="decimal"
-            placeholder="Menge"
-            aria-label="Bestand"
-            className="h-11 text-base"
-          />
-          <NativeAuswahl
-            value={einheit}
-            onChange={(e) => setEinheit(e.target.value as Einheit)}
-            aria-label="Einheit"
-          >
-            {EINHEITEN.map((e) => (
-              <option key={e} value={e}>
-                {EINHEIT_NAMEN[e]}
-              </option>
-            ))}
-          </NativeAuswahl>
-          <NativeAuswahl
-            value={kategorie}
-            onChange={(e) => setKategorie(e.target.value)}
-            aria-label="Kategorie"
-          >
-            {KATEGORIEN.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.name}
-              </option>
-            ))}
-          </NativeAuswahl>
-        </>
-      }
+      kategorie={vorschlag.kategorie}
+      kategorieAendern={setManuell}
+      auswahl={vorschlag.auswahl}
+      vorschlaege={bekannte.map((a) => a.name)}
     />
   );
 }
 
 /** Eingabe als Zahl ≥ 0 lesen (Komma oder Punkt); leer oder ungültig → null. */
-function zahl(wert: FormDataEntryValue | string | null): number | null {
+function zahl(wert: FormDataEntryValue | null): number | null {
   const roh = String(wert ?? "")
     .trim()
     .replace(",", ".");
