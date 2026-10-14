@@ -1,11 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  ABHAK_ANIMATIONEN,
-  type AbhakAnimation,
-  einstellungenAendern,
-  useEinstellungen,
-} from "@/einstellungen";
-import { cn } from "@/lib/utils";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** So lange läuft die Animation; so lange lässt sich das Abhaken noch abbrechen. */
 export const ABHAK_DAUER_MS = 1500;
@@ -58,10 +51,15 @@ export function useVerzoegertesAbhaken(abhaken: () => void) {
   };
 }
 
-// --- Kritzel-Formen ---------------------------------------------------------------
-// Koordinaten im viewBox 0..100 × 0..40; das SVG ist rundum 6 px größer als die Kachel,
-// dadurch ragen die Striche leicht über den Rand.
+// --- Kritzel-Strich -----------------------------------------------------------------
+// Der Zickzack wird in echten Pixeln der Kachel gezeichnet (gemessen beim Einblenden).
+// Ein gestrecktes SVG (preserveAspectRatio="none") mit gleich dicker Linie würde die
+// normierte Strichlänge (pathLength) verfälschen: Der Strich endete dann vor dem Rand.
 // Ein fester Zufallsgenerator sorgt für Handschrift-Zittern, das jedes Mal gleich ist.
+
+/** So weit ragt der Strich rundum über die Kachel hinaus. */
+const UEBERSTAND = 6;
+const ZACKEN = 28;
 
 function zufall(saat: number) {
   let a = saat;
@@ -73,127 +71,55 @@ function zufall(saat: number) {
   };
 }
 
-function pfad(punkte: [number, number][]) {
-  return punkte
-    .map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`)
-    .join(" ");
-}
-
-/** Dichter, senkrechter Zickzack quer über die Kachel. */
-function zickzack() {
+/** Dichter, senkrechter Zickzack von ganz links bis ganz rechts (Breite b, Höhe h in px). */
+export function zickzackPfad(b: number, h: number) {
   const r = zufall(7);
-  const punkte: [number, number][] = [];
-  for (let i = 0, x = -3; x <= 103; i++, x += 3.6) {
-    punkte.push([x + r() * 1.5, (i % 2 ? 37 : 3) + r() * 4]);
+  const punkte: string[] = [];
+  for (let i = 0; i <= ZACKEN; i++) {
+    // Erster und letzter Punkt exakt am Rand, dazwischen leichtes Zittern.
+    const x = (b * i) / ZACKEN + (i > 0 && i < ZACKEN ? r() * 2 : 0);
+    const y = (i % 2 ? h * 0.92 : h * 0.08) + r() * h * 0.08;
+    punkte.push(`${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`);
   }
-  return pfad(punkte);
+  return punkte.join(" ");
 }
 
-/** Waagerechtes Durchstreichen: Striche hin und zurück, die langsam nach unten wandern. */
-function hinUndHer() {
-  const r = zufall(11);
-  const punkte: [number, number][] = [];
-  const striche = 9;
-  for (let i = 0; i <= striche; i++) {
-    const y = 8 + (24 * i) / striche;
-    punkte.push([(i % 2 ? 103 : -3) + r() * 4, y + r() * 4]);
-  }
-  return pfad(punkte);
-}
+/** Strich über der Kachel – ragt über den Rand und ist leicht durchscheinend. */
+export function KritzelStrich() {
+  const svg = useRef<SVGSVGElement>(null);
+  const [groesse, setGroesse] = useState<{ b: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const rechteck = svg.current?.getBoundingClientRect();
+    if (rechteck) {
+      setGroesse({ b: rechteck.width, h: rechteck.height });
+    }
+  }, []);
 
-/** Fortlaufende Schleifen wie hastige Schreibschrift. */
-function kringel() {
-  const r = zufall(23);
-  const punkte: [number, number][] = [];
-  const schleifen = 10;
-  const schritte = 300;
-  for (let i = 0; i <= schritte; i++) {
-    const t = i / schritte;
-    const w = 2 * Math.PI * schleifen * t;
-    punkte.push([
-      -3 + 106 * t + 6 * Math.sin(w),
-      20 + 15 * Math.cos(w) + r() * 1.2,
-    ]);
-  }
-  return pfad(punkte);
-}
-
-const FORMEN: Record<AbhakAnimation, string> = {
-  zickzack: zickzack(),
-  "hin-und-her": hinUndHer(),
-  kringel: kringel(),
-};
-
-/** Strich über der Kachel – ragt über den Rand und ist leicht transparent. */
-export function KritzelStrich({ form }: { form: AbhakAnimation }) {
   return (
     <svg
+      ref={svg}
       aria-hidden
-      viewBox="0 0 100 40"
-      preserveAspectRatio="none"
-      className="pointer-events-none absolute -inset-1.5 overflow-visible"
-      style={{ width: "calc(100% + 0.75rem)", height: "calc(100% + 0.75rem)" }}
+      className="pointer-events-none absolute overflow-visible"
+      style={{
+        inset: -UEBERSTAND,
+        width: `calc(100% + ${2 * UEBERSTAND}px)`,
+        height: `calc(100% + ${2 * UEBERSTAND}px)`,
+      }}
+      viewBox={groesse ? `0 0 ${groesse.b} ${groesse.h}` : undefined}
     >
-      <path
-        className="kritzel-strich"
-        pathLength={1}
-        d={FORMEN[form]}
-        fill="none"
-        stroke="currentColor"
-        strokeOpacity={0.55}
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
+      {groesse && (
+        <path
+          className="kritzel-strich"
+          pathLength={1}
+          d={zickzackPfad(groesse.b, groesse.h)}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity={0.8}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      )}
     </svg>
-  );
-}
-
-/**
- * VORÜBERGEHEND, zum Aussuchen: drei Beispielkacheln spielen ihre Animation in
- * Dauerschleife. Antippen wählt die Form für das echte Abhaken.
- */
-export function AbhakVorschau() {
-  const { abhakAnimation } = useEinstellungen();
-  return (
-    <section
-      aria-label="Abhak-Animation wählen"
-      className="mt-2 border border-dashed px-4 py-3"
-    >
-      <p className="pb-3 text-center text-xs text-muted-foreground">
-        Test: Welches Kritzeln beim Abhaken? Antippen zum Auswählen.
-      </p>
-      <ul className="grid grid-cols-3 gap-4">
-        {ABHAK_ANIMATIONEN.map((a) => (
-          <li key={a.id} className="flex flex-col items-center gap-2">
-            <div className="h-14 w-full">
-              <div
-                className={cn(
-                  "abhak-schleife relative flex h-full items-center justify-center border bg-card text-base font-medium text-primary",
-                  ABHAK_KLASSE,
-                )}
-              >
-                <KritzelStrich form={a.id} />
-                <span className="text-foreground">Milch</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              aria-pressed={abhakAnimation === a.id}
-              onClick={() => einstellungenAendern({ abhakAnimation: a.id })}
-              className={cn(
-                "w-full rounded-full px-2 py-1 text-xs font-medium",
-                abhakAnimation === a.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground",
-              )}
-            >
-              {a.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }

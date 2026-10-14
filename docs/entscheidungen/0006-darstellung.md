@@ -65,3 +65,17 @@ schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standar
   doppelt aufzutauchen.
 
 - Text in den Kacheln ist zentriert.
+
+## Abhaken mit Verzögerung (Nachtrag)
+
+- Antippen startet eine 1,5-s-Animation; ein zweiter Tipp bricht ab. Danach wandert
+  der Eintrag in den Wagen. Zurücknehmen bleibt sofort. Verschwindet die Kachel
+  während der Animation (Bereichswechsel), wird sofort abgehakt.
+- Animation „Zickzack“ (ausgewählt aus sechs Varianten): dichter, senkrechter Zickzack
+  in der Kategoriefarbe, 80 % Deckkraft, rundum 6 px über den Rand, gleichmäßig von
+  links nach rechts gezeichnet (fertig nach 40 %), danach blendet die Kachel aus.
+- Der Zickzack wird in echten Pixeln der Kachel gezeichnet. Ein gestrecktes SVG mit
+  gleich dicker Linie (`vector-effect: non-scaling-stroke`) verfälscht `pathLength`:
+  Der Strich endete vor dem rechten Rand.
+- Kacheln der Liste ohne Eckenradius (Papierzettel).
+- Bei „Bewegung reduzieren“ nur Ausblenden.

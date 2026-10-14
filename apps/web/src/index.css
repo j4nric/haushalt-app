@@ -103,8 +103,7 @@
 /*
  * Abhak-Animation „Kritzeln“: Ein Strich wird über die Kachel gekritzelt (über den
  * Rand hinaus, leicht transparent, damit der Name lesbar bleibt), danach blendet die
- * Kachel aus. Gesamtdauer --abhak-dauer; am Ende unsichtbar (forwards). In der
- * Vorschau (.abhak-schleife) endlos.
+ * Kachel aus. Gesamtdauer --abhak-dauer; am Ende unsichtbar (forwards).
  */
 .abhaken-kritzeln {
   animation: kachel-ausblenden-spaet var(--abhak-dauer, 1.5s) ease-in forwards;
@@ -112,11 +111,11 @@
 .abhaken-kritzeln .kritzel-strich {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: kritzel-strich var(--abhak-dauer, 1.5s) ease-out forwards;
+  animation: kritzel-strich var(--abhak-dauer, 1.5s) linear forwards;
 }
 @keyframes kachel-ausblenden-spaet {
   0%,
-  55% {
+  50% {
     opacity: 1;
   }
   95%,
@@ -128,16 +127,10 @@
   0% {
     stroke-dashoffset: 1;
   }
-  50%,
+  40%,
   100% {
     stroke-dashoffset: 0;
   }
-}
-
-.abhak-schleife,
-.abhak-schleife .kritzel-strich {
-  --abhak-dauer: 2.4s;
-  animation-iteration-count: infinite;
 }
 
 /* Bewegung reduzieren: kein Strich, nur ausblenden. */

@@ -30,12 +30,7 @@ import { type Spalten, useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
-import {
-  ABHAK_KLASSE,
-  AbhakVorschau,
-  KritzelStrich,
-  useVerzoegertesAbhaken,
-} from "./Abhaken";
+import { ABHAK_KLASSE, KritzelStrich, useVerzoegertesAbhaken } from "./Abhaken";
 import {
   knalligeFlaeche,
   SymbolKnopf,
@@ -276,9 +271,6 @@ export function Einkaufsliste({
 
   return (
     <>
-      {/* VORÜBERGEHEND: Abhak-Animation aussuchen. */}
-      <AbhakVorschau />
-
       {gruppen.map(([gruppe, kategorie, zeilen]) => {
         const schluessel = kategorie ?? "";
         const offen = verlaufOffen === schluessel;
@@ -513,7 +505,7 @@ function Kachel({
   const erledigt = eintrag.erledigt === 1;
   const farbe = useKategorieFarbe(eintrag.kategorie);
   const { handler, klick } = useWischen({ lang: () => bearbeiten(eintrag) });
-  const { spalten, abhakAnimation } = useEinstellungen();
+  const { spalten } = useEinstellungen();
   // Bei 3 Spalten etwas kompakter, damit weniger Namen umbrechen.
   const kompakt = spalten === 3;
   // Abhaken mit kurzer Verzögerung (Animation); nochmal antippen bricht ab.
@@ -552,7 +544,7 @@ function Kachel({
       >
         {abhaken.laeuft && (
           <span className="contents" style={{ color: farbe }}>
-            <KritzelStrich form={abhakAnimation} />
+            <KritzelStrich />
           </span>
         )}
         <span
