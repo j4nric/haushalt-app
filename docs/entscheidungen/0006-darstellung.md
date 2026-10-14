@@ -12,10 +12,13 @@
   Eigene (Farbwähler pro Kategorie, Start mit der zuletzt gewählten Palette).
   Kräftig und Gedeckt sind so gewählt, dass sie auf hellem und dunklem Hintergrund
   lesbar bleiben.
-- **Farbschema der App:** Frisch (Grün, Standard) und Ozean (Blau) folgen dem
-  Dunkelmodus des Geräts. „Eigene“ setzt Akzent, Hintergrund und Karten fest; Text-,
-  Linien- und Flächenfarben werden daraus abgeleitet (Textfarbe nach WCAG-Kontrast,
-  Zwischentöne per `color-mix`).
+- **Farbschema der App:** System (neutral Schwarz/Weiß), Frisch (Grün auf Mint,
+  Standard) und Ozean (Blau auf Himmelblau) folgen dem Dunkelmodus des Geräts und
+  färben auch Hintergrund und Karten, damit ein Wechsel sofort sichtbar ist. Jeder
+  Knopf zeigt eine Farbvorschau. „Eigene“ setzt Akzent, Hintergrund und Karten fest.
+  Alle Schemata bestehen aus drei Grundfarben pro Modus; Text-, Linien- und
+  Flächenfarben werden abgeleitet (Textfarbe nach WCAG-Kontrast, Zwischentöne per
+  `color-mix` in OKLab – OKLCH erzeugte bei fast farblosen Tönen einen Rosastich).
 - **Pro Gerät:** Gespeichert im Browser (`apps/web/src/einstellungen.ts`), nicht im
   Haushalt. Jede Person kann ihr Handy anders einstellen. Lässt sich später auf
   Haushaltsebene heben, falls gewünscht.
@@ -27,3 +30,14 @@
 Das Farbschema überschreibt die Variablen aus `index.css` über ein eigenes
 `<style id="app-thema">` mit `:root:root`, damit es auch die Dunkelmodus-Regeln
 schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standardfarben).
+
+## Einkaufsliste als Kacheln (Nachtrag)
+
+- Pro Kategorie ein Raster mit 2 Spalten; das Symbol steht einmal links mittig neben
+  den Kacheln, die Überschrift ist reiner Text in der Kategoriefarbe. Kacheln sind
+  leicht in der Kategoriefarbe getönt.
+- Kein Haken, keine Mengen in der Liste: Antippen = gekauft (wandert nach
+  „Im Wagen“), nochmal antippen = zurück. Lang drücken öffnet Kategorie ändern und
+  Löschen (mit Rückgängig). Ein Artikel, der schon offen auf der Liste steht, wird
+  nicht doppelt eingetragen („steht schon auf der Liste“).
+- Mengen bleiben im Vorrat (Bestand mit − / +) und in der Datenbank erhalten.

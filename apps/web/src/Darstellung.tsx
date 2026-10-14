@@ -138,7 +138,11 @@ function Umschalter<T extends string>({
   waehlen,
 }: {
   label: string;
-  optionen: { id: T; name: string }[];
+  optionen: {
+    id: T;
+    name: string;
+    vorschau?: { akzent: string; hintergrund: string };
+  }[];
   wert: T;
   waehlen: (id: T) => void;
 }) {
@@ -156,6 +160,18 @@ function Umschalter<T extends string>({
             wert === o.id && "bg-card text-foreground shadow-sm",
           )}
         >
+          {o.vorschau && (
+            <span
+              aria-hidden
+              className="mx-auto mb-1 flex size-6 items-center justify-center rounded-full border"
+              style={{ background: o.vorschau.hintergrund }}
+            >
+              <span
+                className="size-3 rounded-full"
+                style={{ background: o.vorschau.akzent }}
+              />
+            </span>
+          )}
           {o.name}
         </button>
       ))}

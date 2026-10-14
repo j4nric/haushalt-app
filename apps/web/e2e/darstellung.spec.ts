@@ -25,9 +25,15 @@ test("Großer Anfangsbuchstabe, Farbschema und Kategorie-Farben", async ({
       page.getByRole("main").getByText("milch", { exact: true }),
     ).toHaveCount(0);
 
-    // Preset „Ozean“ wird angewendet und übersteht einen Neustart.
+    // Die Presets unterscheiden sich sichtbar, auch im Hintergrund.
     await zuBereich(page, "Haushalt");
     const thema = page.getByRole("group", { name: "Farbschema der App" });
+    await thema.getByRole("button", { name: "System" }).click();
+    expect(await farbVariable(page, "--background")).toBe("#fafafa");
+    await thema.getByRole("button", { name: "Frisch" }).click();
+    expect(await farbVariable(page, "--background")).toBe("#eef7f0");
+
+    // Preset „Ozean“ wird angewendet und übersteht einen Neustart.
     await thema.getByRole("button", { name: "Ozean" }).click();
     expect(await farbVariable(page, "--primary")).toBe("#2563eb");
     await page.reload();

@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import {
-  anzahl,
   eintrag,
   geraet,
   haushaltAnlegen,
   hinzufuegen,
+  langDruecken,
 } from "./hilfen";
 
-test("Kategorie-Erkennung, Anzahl, Bearbeiten und Löschen mit Rückgängig", async ({
+test("Kategorie-Erkennung, Kacheln, lang drücken zum Bearbeiten und Löschen", async ({
   browserName,
   playwright,
 }) => {
@@ -35,33 +35,30 @@ test("Kategorie-Erkennung, Anzahl, Bearbeiten und Löschen mit Rückgängig", as
     ]);
     await sorten.getByRole("button", { name: "Tiefkühl" }).click();
     await expect(page.getByRole("heading", { name: "Tiefkühl" })).toBeVisible();
-    await expect(eintrag(page, "Heidelbeeren")).toBeVisible();
 
-    // Gelernt: Beim nächsten Mal keine Rückfrage mehr, stattdessen zählt die Anzahl hoch.
+    // Gelernt: keine Rückfrage mehr; steht schon drauf → Hinweis statt Doppel.
     await page.getByLabel("Neuer Eintrag").fill("heidelbeeren");
     await expect(sorten).toBeHidden();
     await expect(page.getByLabel("Kategorie", { exact: true })).toHaveValue(
       "tiefkuehl",
     );
     await page.getByRole("button", { name: "Hinzufügen" }).click();
-    await expect(anzahl(page, "Heidelbeeren")).toHaveText("2");
+    await expect(
+      page.getByText("Heidelbeeren steht schon auf der Liste"),
+    ).toBeVisible();
     await expect(eintrag(page, "Heidelbeeren")).toHaveCount(1);
 
-    // Plus und Minus; Minus bleibt bei 1 stehen.
-    await page.getByRole("button", { name: "Heidelbeeren mehr" }).click();
-    await expect(anzahl(page, "Heidelbeeren")).toHaveText("3");
-    for (let i = 0; i < 2; i++) {
-      await page.getByRole("button", { name: "Heidelbeeren weniger" }).click();
-    }
-    await expect(anzahl(page, "Heidelbeeren")).toHaveText("1");
-    await expect(
-      page.getByRole("button", { name: "Heidelbeeren weniger" }),
-    ).toBeDisabled();
+    // Antippen = gekauft, nochmal antippen = zurück.
+    const kachel = eintrag(page, "Vollkornbrot").getByRole("checkbox");
+    await kachel.click();
+    await expect(page.getByRole("heading", { name: "Im Wagen" })).toBeVisible();
+    await expect(kachel).toBeChecked();
+    await kachel.click();
+    await expect(kachel).not.toBeChecked();
 
-    // Kategorie nachträglich ändern.
+    // Lang drücken: Kategorie ändern.
     await hinzufuegen(page, "Mehl");
-    await page.getByRole("button", { name: "Aktionen für Mehl" }).click();
-    await page.getByRole("menuitem", { name: "Kategorie ändern" }).click();
+    await langDruecken(page, eintrag(page, "Mehl").getByRole("checkbox"));
     await page
       .locator("#bearbeiten-kategorie")
       .selectOption({ label: "Süßes & Snacks" });
@@ -69,10 +66,11 @@ test("Kategorie-Erkennung, Anzahl, Bearbeiten und Löschen mit Rückgängig", as
     await expect(
       page.getByRole("heading", { name: "Süßes & Snacks" }),
     ).toBeVisible();
+    await expect(eintrag(page, "Mehl").getByRole("checkbox")).not.toBeChecked();
 
-    // Löschen und rückgängig machen.
-    await page.getByRole("button", { name: "Aktionen für Mehl" }).click();
-    await page.getByRole("menuitem", { name: "Löschen" }).click();
+    // Lang drücken: löschen, dann rückgängig.
+    await langDruecken(page, eintrag(page, "Mehl").getByRole("checkbox"));
+    await page.getByRole("button", { name: "Löschen" }).click();
     await expect(eintrag(page, "Mehl")).toHaveCount(0);
     await page.getByRole("button", { name: "Rückgängig" }).click();
     await expect(eintrag(page, "Mehl")).toBeVisible();

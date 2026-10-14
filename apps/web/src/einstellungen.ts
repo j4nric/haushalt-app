@@ -10,7 +10,7 @@ import { istDunkel, istHexFarbe, textFarbeAuf } from "@/lib/farben";
 
 export type KategorieSchluessel = Kategorie | "sonstiges";
 
-export type AppThema = "frisch" | "ozean" | "eigen";
+export type AppThema = "system" | "frisch" | "ozean" | "eigen";
 export type KategoriePalette = "kraeftig" | "gedeckt" | "schlicht" | "eigen";
 
 export type Einstellungen = {
@@ -20,21 +20,57 @@ export type Einstellungen = {
   eigenePalette: Record<KategorieSchluessel, string>;
 };
 
-export const THEMEN: { id: AppThema; name: string; beschreibung: string }[] = [
+type Farben = { akzent: string; hintergrund: string; flaeche: string };
+
+/** Vorgegebene Farbschemata, jeweils für hell und dunkel (folgt dem Gerät). */
+const VORGABEN: Record<
+  Exclude<AppThema, "eigen">,
+  { hell: Farben; dunkel: Farben }
+> = {
+  system: {
+    hell: { akzent: "#18181b", hintergrund: "#fafafa", flaeche: "#ffffff" },
+    dunkel: { akzent: "#f4f4f5", hintergrund: "#09090b", flaeche: "#18181b" },
+  },
+  frisch: {
+    hell: { akzent: "#15803d", hintergrund: "#eef7f0", flaeche: "#ffffff" },
+    dunkel: { akzent: "#4ade80", hintergrund: "#0b1a11", flaeche: "#122519" },
+  },
+  ozean: {
+    hell: { akzent: "#2563eb", hintergrund: "#eaf2fd", flaeche: "#ffffff" },
+    dunkel: { akzent: "#60a5fa", hintergrund: "#0a1426", flaeche: "#101e38" },
+  },
+};
+
+export const THEMEN: {
+  id: AppThema;
+  name: string;
+  beschreibung: string;
+  vorschau: Farben;
+}[] = [
+  {
+    id: "system",
+    name: "System",
+    beschreibung: "Neutral in Schwarz und Weiß, hell oder dunkel wie das Gerät",
+    vorschau: VORGABEN.system.hell,
+  },
   {
     id: "frisch",
     name: "Frisch",
-    beschreibung: "Grün, hell und dunkel nach Gerät",
+    beschreibung: "Grün auf zartem Mint, hell oder dunkel wie das Gerät",
+    vorschau: VORGABEN.frisch.hell,
   },
   {
     id: "ozean",
     name: "Ozean",
-    beschreibung: "Blau, hell und dunkel nach Gerät",
+    beschreibung: "Blau auf hellem Himmelblau, hell oder dunkel wie das Gerät",
+    vorschau: VORGABEN.ozean.hell,
   },
   {
     id: "eigen",
     name: "Eigene",
-    beschreibung: "Akzent, Hintergrund und Karten selbst wählen",
+    beschreibung:
+      "Akzent, Hintergrund und Karten selbst wählen – gilt immer, auch im Dunkelmodus",
+    vorschau: { akzent: "#c2410c", hintergrund: "#1c1917", flaeche: "#292524" },
   },
 ];
 
@@ -198,55 +234,35 @@ export function themaAnwenden(e: Einstellungen = aktuell) {
     document.head.append(style);
   }
   style.textContent = themaCss(e);
-  const meta = document.querySelector('meta[name="theme-color"]');
-  meta?.setAttribute(
-    "content",
+  const dunkel = matchMedia("(prefers-color-scheme: dark)").matches;
+  const farben =
     e.thema === "eigen"
-      ? e.eigenesThema.hintergrund
-      : e.thema === "ozean"
-        ? "#2563eb"
-        : "#15803d",
-  );
+      ? e.eigenesThema
+      : VORGABEN[e.thema][dunkel ? "dunkel" : "hell"];
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", farben.hintergrund);
 }
+
+// Wechselt das Gerät zwischen hell und dunkel, die Farbe der Statusleiste nachziehen.
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () =>
+  themaAnwenden(),
+);
 
 function themaCss(e: Einstellungen): string {
-  if (e.thema === "ozean") {
-    return akzentCss("#2563eb", "#ffffff", "#60a5fa", "#0b1220");
-  }
   if (e.thema === "eigen") {
-    return eigenesCss(e.eigenesThema);
+    return `:root:root {${farbenCss(e.eigenesThema)}}`;
   }
-  return ""; // Frisch = Farben aus index.css
+  const { hell, dunkel } = VORGABEN[e.thema];
+  return `:root:root {${farbenCss(hell)}}
+@media (prefers-color-scheme: dark) { :root:root {${farbenCss(dunkel)}} }`;
 }
 
-/** Nur die Akzentfarbe tauschen; Hintergründe und Dunkelmodus bleiben automatisch. */
-function akzentCss(
-  hell: string,
-  hellText: string,
-  dunkel: string,
-  dunkelText: string,
-) {
-  const vars = (akzent: string, text: string) => `
-    --primary: ${akzent};
-    --primary-foreground: ${text};
-    --ring: ${akzent};
-    --secondary: color-mix(in oklch, var(--background), ${akzent} 12%);
-    --secondary-foreground: color-mix(in oklch, var(--foreground) 75%, ${akzent});
-    --accent: color-mix(in oklch, var(--background), ${akzent} 15%);
-    --accent-foreground: color-mix(in oklch, var(--foreground) 75%, ${akzent});`;
-  return `:root:root {${vars(hell, hellText)}}
-@media (prefers-color-scheme: dark) { :root:root {${vars(dunkel, dunkelText)}} }`;
-}
-
-/** Feste Farben in beiden Modi; Text- und Linienfarben werden daraus abgeleitet. */
-function eigenesCss({
-  akzent,
-  hintergrund,
-  flaeche,
-}: Einstellungen["eigenesThema"]) {
+/** Alle Farbvariablen aus drei Grundfarben; Text nach Kontrast, Zwischentöne per color-mix. */
+function farbenCss({ akzent, hintergrund, flaeche }: Farben) {
   const text = textFarbeAuf(hintergrund);
   const textFlaeche = textFarbeAuf(flaeche);
-  return `:root:root {
+  return `
     color-scheme: ${istDunkel(hintergrund) ? "dark" : "light"};
     --background: ${hintergrund};
     --foreground: ${text};
@@ -257,13 +273,12 @@ function eigenesCss({
     --primary: ${akzent};
     --primary-foreground: ${textFarbeAuf(akzent)};
     --ring: ${akzent};
-    --muted: color-mix(in oklch, ${hintergrund}, ${text} 6%);
-    --muted-foreground: color-mix(in oklch, ${text} 60%, ${hintergrund});
-    --border: color-mix(in oklch, ${hintergrund}, ${text} 12%);
-    --input: color-mix(in oklch, ${hintergrund}, ${text} 20%);
-    --secondary: color-mix(in oklch, ${hintergrund}, ${akzent} 14%);
-    --secondary-foreground: color-mix(in oklch, ${text} 80%, ${akzent});
-    --accent: color-mix(in oklch, ${hintergrund}, ${akzent} 16%);
-    --accent-foreground: ${text};
-  }`;
+    --muted: color-mix(in oklab, ${hintergrund}, ${text} 6%);
+    --muted-foreground: color-mix(in oklab, ${text} 60%, ${hintergrund});
+    --border: color-mix(in oklab, ${hintergrund}, ${text} 12%);
+    --input: color-mix(in oklab, ${hintergrund}, ${text} 20%);
+    --secondary: color-mix(in oklab, ${hintergrund}, ${akzent} 14%);
+    --secondary-foreground: color-mix(in oklab, ${text} 80%, ${akzent});
+    --accent: color-mix(in oklab, ${hintergrund}, ${akzent} 16%);
+    --accent-foreground: ${text};`;
 }

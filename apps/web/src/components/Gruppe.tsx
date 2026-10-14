@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { KategorieSymbol, useKategorieFarbe } from "./KategorieSymbol";
+import { useKategorieFarbe } from "./KategorieSymbol";
 
 /**
  * Überschrift mit den zugehörigen Zeilen. Mit `kategorie` erscheint die Überschrift
@@ -23,9 +23,6 @@ export function Gruppe({
         className="flex items-center gap-2 px-1 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase"
         style={kategorie !== undefined ? { color: farbe } : undefined}
       >
-        {kategorie !== undefined && (
-          <KategorieSymbol kategorie={kategorie} className="size-4" />
-        )}
         <span className="flex-1">{titel}</span>
         {aktion}
       </h3>
