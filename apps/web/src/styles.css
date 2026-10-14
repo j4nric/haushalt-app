@@ -54,6 +54,8 @@ ul {
   padding: 0;
 }
 li {
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -129,4 +131,75 @@ form.stapel label {
 }
 .gruppe ul {
   margin-top: 0.25rem;
+}
+/* Bereiche: Einkaufsliste / Vorrat */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1rem 0;
+  border-bottom: 1px solid #8884;
+}
+.tabs button {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.tabs button[aria-current="page"] {
+  border-bottom-color: #15803d;
+  opacity: 1;
+  font-weight: 600;
+}
+.hinweis {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  background: #f59e0b33;
+}
+/* Vorrat */
+.vorrat-name {
+  flex: 1 1 8rem;
+}
+.vorrat-steuerung,
+.vorrat-mindest {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.vorrat-steuerung button:not(.leise) {
+  min-width: 2.25rem;
+}
+.vorrat-steuerung .bestand {
+  min-width: 4.5rem;
+  background: none;
+  border: none;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.vorrat-mindest {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+.vorrat-mindest .mindest-feld {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+input.zahl {
+  width: 4rem;
+  padding: 0.25rem;
+}
+li.knapp .vorrat-name {
+  color: #b45309;
+  font-weight: 600;
+}
+.weitere {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+.weitere summary {
+  cursor: pointer;
+  opacity: 0.7;
 }

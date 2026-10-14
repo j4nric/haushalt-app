@@ -90,10 +90,18 @@ export const artikel = pgTable(
     standardeinheit: text("standardeinheit", { enum: EINHEITEN })
       .notNull()
       .default("stueck"),
+    /** Wird der Bestand dieses Artikels im Vorrat geführt? */
+    imVorrat: boolean("im_vorrat").notNull().default(false),
+    /** Fällt der Bestand darunter, kommt der Artikel auf die Einkaufsliste. */
+    mindestbestand: doublePrecision("mindestbestand"),
     erstelltAm: erstelltAm(),
   },
   (t) => [
     index().on(t.haushaltId),
+    check(
+      "artikel_mindestbestand_positiv",
+      sql`${t.mindestbestand} is null or ${t.mindestbestand} > 0`,
+    ),
     // Ziel des zusammengesetzten Fremdschlüssels aus listeneintraege.
     unique().on(t.id, t.haushaltId),
     check(
@@ -141,6 +149,53 @@ export const listeneintraege = pgTable(
     check(
       "listeneintraege_einheit_gueltig",
       sql`${t.einheit} is null or ${t.einheit} in ('stueck', 'g', 'ml')`,
+    ),
+  ],
+);
+
+/**
+ * Vorrat als Buchungen statt als eine Zahl pro Artikel: Der Bestand ist die Summe
+ * aller Buchungen. Zwei Geräte, die offline gleichzeitig ändern, hängen nur Zeilen
+ * an und überschreiben sich nie gegenseitig (eine einzelne Zahl würde „zuletzt
+ * hochgeladen gewinnt“ und damit verlorene Änderungen bedeuten).
+ * Buchungen werden nie geändert, höchstens gelöscht (z. B. beim Zurücknehmen
+ * eines Hakens).
+ */
+export const vorratsbuchungen = pgTable(
+  "vorratsbuchungen",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    artikelId: uuid("artikel_id").notNull(),
+    /** In der Standardeinheit des Artikels; positiv = Zugang, negativ = Abgang. */
+    menge: doublePrecision("menge").notNull(),
+    grund: text("grund", {
+      enum: ["einkauf", "verbrauch", "korrektur"],
+    }).notNull(),
+    /**
+     * Der abgehakte Listeneintrag, aus dem ein Einkauf stammt (zum Zurücknehmen).
+     * Bewusst ohne Fremdschlüssel: Hat ein anderes Gerät den Eintrag inzwischen
+     * gelöscht, darf die offline erfasste Buchung beim Upload nicht scheitern.
+     */
+    listeneintragId: uuid("listeneintrag_id"),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [
+    index().on(t.haushaltId),
+    index().on(t.artikelId),
+    foreignKey({
+      columns: [t.artikelId, t.haushaltId],
+      foreignColumns: [artikel.id, artikel.haushaltId],
+    }).onDelete("cascade"),
+    check("vorratsbuchungen_menge_nicht_null", sql`${t.menge} <> 0`),
+    check(
+      "vorratsbuchungen_grund_gueltig",
+      sql`${t.grund} in ('einkauf', 'verbrauch', 'korrektur')`,
     ),
   ],
 );

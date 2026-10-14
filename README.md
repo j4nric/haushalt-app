@@ -7,7 +7,7 @@ gleicht sich automatisch ab, sobald wieder Netz da ist.
 ## Ausbaustufen
 
 1. **Einkaufsliste**: geteilt, offline-fähig, mit Login, Haushalt und Kategorien, installierbar als App
-2. **Vorrat**: Mengen pro Artikel, „im Laden abgehakt → Vorrat erhöht“
+2. **Vorrat**: Bestand pro Artikel, Abhaken bucht ein, Knappes kommt automatisch auf die Liste
 3. **Rezepte**: Zutaten verweisen auf dieselben Artikel
 4. **Wochenplanung**
 

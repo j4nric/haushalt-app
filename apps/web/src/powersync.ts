@@ -30,8 +30,24 @@ export const schema = new Schema({
     name: column.text,
     kategorie: column.text,
     standardeinheit: column.text,
+    im_vorrat: column.integer,
+    mindestbestand: column.real,
     erstellt_am: column.text,
   }),
+  vorratsbuchungen: new Table(
+    {
+      haushalt_id: column.text,
+      artikel_id: column.text,
+      menge: column.real,
+      grund: column.text,
+      listeneintrag_id: column.text,
+      erstellt_von: column.text,
+      erstellt_am: column.text,
+    },
+    {
+      indexes: { artikel: ["artikel_id"], listeneintrag: ["listeneintrag_id"] },
+    },
+  ),
   listeneintraege: new Table({
     haushalt_id: column.text,
     artikel_id: column.text,

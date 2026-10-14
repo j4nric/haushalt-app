@@ -62,3 +62,27 @@ export async function hinzufuegen(
   await page.getByRole("button", { name: "Hinzufügen" }).click();
   await expect(eintrag(page, name)).toBeVisible();
 }
+
+/** Lädt ein weiteres Gerät per Einladungscode in den Haushalt des ersten ein. */
+export async function einladen(von: Page, zu: Page, haushaltName: string) {
+  await von.getByRole("button", { name: "Jemanden einladen" }).click();
+  const code = (await von.getByTestId("einladungscode").textContent()) ?? "";
+  await zu.getByLabel("Einladungscode").fill(code);
+  await zu.getByRole("button", { name: "Beitreten" }).click();
+  await expect(zu.getByRole("heading", { name: haushaltName })).toBeVisible();
+  await expect(zu.getByTestId("sync-status")).toHaveText(/Online · synchron/);
+}
+
+export async function zumVorrat(page: Page) {
+  await page.getByRole("button", { name: "Vorrat", exact: true }).click();
+}
+
+export async function zurListe(page: Page) {
+  await page
+    .getByRole("button", { name: "Einkaufsliste", exact: true })
+    .click();
+}
+
+export function bestand(page: Page, artikel: string) {
+  return page.getByRole("button", { name: `Bestand ${artikel}` });
+}

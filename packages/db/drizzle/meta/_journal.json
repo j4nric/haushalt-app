@@ -15,6 +15,13 @@
       "when": 1791992755038,
       "tag": "0001_artikel_kategorie",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792003278286,
+      "tag": "0002_vorrat",
+      "breakpoints": true
     }
   ]
 }

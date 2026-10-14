@@ -21,3 +21,5 @@ streams:
         WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
       - SELECT * FROM listeneintraege
         WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
+      - SELECT * FROM vorratsbuchungen
+        WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())

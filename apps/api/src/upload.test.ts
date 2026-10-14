@@ -229,3 +229,138 @@ describe("Upload mit Rechteprüfung", () => {
     ).toHaveLength(0);
   });
 });
+
+describe("Vorrat", () => {
+  let anna: Awaited<ReturnType<typeof t.nutzer>>;
+  let fremd: Awaited<ReturnType<typeof t.nutzer>>;
+  let haushalt: string;
+  let fremderHaushalt: string;
+
+  const buchung = (
+    id: string,
+    haushaltId: string,
+    artikelId: string,
+    menge: number,
+    grund = "verbrauch",
+  ) => ({
+    op: "PUT",
+    table: "vorratsbuchungen",
+    id,
+    opData: {
+      haushalt_id: haushaltId,
+      artikel_id: artikelId,
+      menge,
+      grund,
+      erstellt_am: jetzt(),
+    },
+  });
+
+  beforeAll(async () => {
+    anna = await t.nutzer("Anna");
+    fremd = await t.nutzer("Fremd");
+    haushalt = await anna.haushaltAnlegen();
+    fremderHaushalt = await fremd.haushaltAnlegen();
+  });
+
+  it("speichert Vorrat-Einstellungen und Buchungen; der Bestand ist die Summe", async () => {
+    const nudeln = neueId();
+    const eintrag = neueId();
+    const put = artikelPut(nudeln, haushalt, "Nudeln");
+    expect(
+      (
+        await anna.hochladen([
+          {
+            ...put,
+            opData: { ...put.opData, im_vorrat: 1, mindestbestand: 2 },
+          },
+          eintragPut(eintrag, haushalt, nudeln),
+          {
+            ...buchung(neueId(), haushalt, nudeln, 3, "einkauf"),
+            opData: {
+              ...buchung(neueId(), haushalt, nudeln, 3, "einkauf").opData,
+              listeneintrag_id: eintrag,
+              erstellt_von: fremd.id,
+            },
+          },
+          buchung(neueId(), haushalt, nudeln, -1),
+        ])
+      ).status,
+    ).toBe(200);
+
+    const [a] =
+      await t.sql`select im_vorrat, mindestbestand from artikel where id = ${nudeln}`;
+    expect(a).toEqual({ im_vorrat: true, mindestbestand: 2 });
+    const [summe] = await t.sql`
+      select sum(menge)::float as bestand, count(*) filter (where erstellt_von = ${anna.id})::int as von_anna
+      from vorratsbuchungen where artikel_id = ${nudeln}
+    `;
+    expect(summe).toEqual({ bestand: 2, von_anna: 2 });
+  });
+
+  it("verbietet Buchungen in fremden Haushalten und auf fremde Artikel", async () => {
+    const reis = neueId();
+    await anna.hochladen([artikelPut(reis, haushalt, "Reis")]);
+    expect(
+      (await fremd.hochladen([buchung(neueId(), haushalt, reis, 1)])).status,
+    ).toBe(403);
+    expect(
+      (await fremd.hochladen([buchung(neueId(), fremderHaushalt, reis, 1)]))
+        .status,
+    ).toBe(400);
+  });
+
+  it("Buchungen sind unveränderlich, dürfen aber gelöscht werden", async () => {
+    const mehl = neueId();
+    const b = neueId();
+    await anna.hochladen([
+      artikelPut(mehl, haushalt, "Mehl"),
+      buchung(b, haushalt, mehl, 1, "einkauf"),
+    ]);
+
+    const patch = {
+      op: "PATCH",
+      table: "vorratsbuchungen",
+      id: b,
+      opData: { menge: 100 },
+    };
+    expect((await anna.hochladen([patch])).status).toBe(400);
+    expect(
+      (
+        await anna.hochladen([
+          { op: "DELETE", table: "vorratsbuchungen", id: b },
+        ])
+      ).status,
+    ).toBe(200);
+    expect(
+      await t.sql`select 1 from vorratsbuchungen where id = ${b}`,
+    ).toHaveLength(0);
+  });
+
+  it.each([
+    ["Buchung mit Menge 0", { menge: 0 }],
+    ["unbekannter Grund", { grund: "geschenkt" }],
+  ])("lehnt ab: %s", async (_, abweichung) => {
+    const artikelId = neueId();
+    await anna.hochladen([artikelPut(artikelId, haushalt, "Salz")]);
+    const b = buchung(neueId(), haushalt, artikelId, 1);
+    expect(
+      (await anna.hochladen([{ ...b, opData: { ...b.opData, ...abweichung } }]))
+        .status,
+    ).toBe(400);
+  });
+
+  it("lehnt einen Mindestbestand von 0 oder kleiner ab", () => {
+    expect(() =>
+      parseOperationen({
+        operationen: [
+          {
+            op: "PATCH",
+            table: "artikel",
+            id: neueId(),
+            opData: { mindestbestand: 0 },
+          },
+        ],
+      }),
+    ).toThrow(UngueltigeOperation);
+  });
+});

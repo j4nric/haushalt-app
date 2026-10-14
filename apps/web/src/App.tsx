@@ -1,6 +1,7 @@
 import { useQuery, useStatus } from "@powersync/react";
 import { useEffect } from "react";
 import { Anmeldung } from "./Anmeldung";
+import { Navigation, useAnsicht } from "./Ansicht";
 import { authClient } from "./auth";
 import { Einkaufsliste } from "./Einkaufsliste";
 import { HaushaltEinrichten } from "./HaushaltEinrichten";
@@ -8,6 +9,7 @@ import { HaushaltInfo } from "./HaushaltInfo";
 import { useNutzer, vergessen } from "./nutzer";
 import { trennenUndLeeren, verbinden } from "./powersync";
 import { SyncStatus } from "./SyncStatus";
+import { Vorrat } from "./Vorrat";
 
 export function App() {
   const { nutzer, laedt } = useNutzer();
@@ -23,6 +25,7 @@ export function App() {
 
 function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
   const status = useStatus();
+  const [ansicht, wechseln] = useAnsicht();
   // Lokal liegen nur die eigenen Haushalte (siehe sync-config.yaml); vorerst genau einer.
   const { data: haushalte } = useQuery<{ id: string; name: string }>(
     "SELECT id, name FROM haushalte LIMIT 1",
@@ -51,7 +54,12 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
 
       {haushalt ? (
         <>
-          <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
+          <Navigation ansicht={ansicht} wechseln={wechseln} />
+          {ansicht === "vorrat" ? (
+            <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
+          ) : (
+            <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
+          )}
           <HaushaltInfo haushaltId={haushalt.id} />
         </>
       ) : status.hasSynced ? (

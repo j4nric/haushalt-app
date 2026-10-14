@@ -11,7 +11,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./einheiten": "./src/einheiten.ts",
-    "./kategorien": "./src/kategorien.ts"
+    "./kategorien": "./src/kategorien.ts",
+    "./vorrat": "./src/vorrat.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
