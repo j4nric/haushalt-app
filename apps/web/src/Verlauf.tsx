@@ -25,8 +25,9 @@ export const RASTER: Record<Spalten, string> = {
 };
 
 /**
- * Kategorie-Symbol links neben dem Raster, als Knopf: klappt den Verlauf auf und zu.
- * Ein kleines Plus zeigt, dass es antippbar ist; geöffnet steht es auf einem Kreis.
+ * Kategorie-Symbol links neben dem Raster, als runder Knopf: klappt den Verlauf auf
+ * und zu. Geschlossen liegt es auf einem zarten Kreis in der Kategoriefarbe, geöffnet
+ * auf einem hellen Kreis im eingefärbten Block, mit einem kleinen X zum Schließen.
  */
 export function SymbolKnopf({
   titel,
@@ -47,34 +48,25 @@ export function SymbolKnopf({
       aria-expanded={offen}
       onClick={umschalten}
       className="relative flex size-11 items-center justify-center rounded-full transition-colors active:scale-95"
-      style={
-        offen
-          ? { background: "color-mix(in oklab, currentColor 20%, transparent)" }
-          : undefined
-      }
+      style={{
+        background: offen
+          ? "color-mix(in oklab, currentColor 20%, transparent)"
+          : `color-mix(in oklab, ${farbe} 14%, transparent)`,
+      }}
     >
       <KategorieSymbol
         kategorie={kategorie}
-        className={cn("size-7", offen && "size-6 text-current!")}
+        className={cn("size-6", offen && "text-current!")}
       />
-      <span
-        aria-hidden
-        className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full"
-        style={
-          offen
-            ? { background: "currentColor" }
-            : {
-                ...knalligeFlaeche(farbe),
-                boxShadow: "0 0 0 2px var(--background)",
-              }
-        }
-      >
-        {offen ? (
+      {offen && (
+        <span
+          aria-hidden
+          className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full"
+          style={{ background: "currentColor" }}
+        >
           <X className="size-3" strokeWidth={3} style={{ color: farbe }} />
-        ) : (
-          <Plus className="size-3" strokeWidth={3} />
-        )}
-      </span>
+        </span>
+      )}
     </button>
   );
 }
@@ -103,15 +95,26 @@ export function VerlaufBlock({
   blockRef?: Ref<HTMLElement>;
 }) {
   const farbe = useKategorieFarbe(kategorie);
-  const { spalten } = useEinstellungen();
+  const { spalten, ueberschriften } = useEinstellungen();
   return (
     <section
       ref={blockRef}
       aria-label={`Verlauf ${titel}`}
-      className="-mx-4 mt-2 px-4 pt-3 pb-4 shadow-md animate-in fade-in first:-mt-1"
+      // Innenpolster (pt-3) und Außenabstand ergeben zusammen genau den Abstand des
+      // geschlossenen Rasters – Überschrift und Symbol springen beim Öffnen nicht.
+      className={cn(
+        "-mx-4 px-4 pt-3 pb-4 shadow-md animate-in fade-in first:-mt-1",
+        ueberschriften ? "mt-2" : "mt-0",
+      )}
       style={knalligeFlaeche(farbe)}
     >
-      <h3 className="pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase">
+      <h3
+        className={
+          ueberschriften
+            ? "pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase"
+            : "sr-only"
+        }
+      >
         {titel}
       </h3>
       <div className="flex items-center gap-3">
@@ -140,9 +143,6 @@ export function VerlaufBlock({
           </ul>
         )}
       </div>
-      <p className="pt-3 pl-[3.25rem] text-xs opacity-85">
-        Antippen = auf die Liste · lang drücken = aus dem Verlauf nehmen
-      </p>
     </section>
   );
 }
@@ -174,7 +174,7 @@ function VerlaufKachel({
         {...handler}
         onClick={klick(() => !aufListe && hinzufuegen(artikel))}
         className={cn(
-          "flex h-full min-h-14 w-full touch-pan-y items-center justify-center gap-1.5 border py-2 text-center font-medium select-none",
+          "flex h-full min-h-14 w-full touch-pan-y items-center justify-center gap-1.5 rounded-xl border py-2 text-center font-medium select-none",
           spalten === 3 ? "px-2 text-sm" : "px-3 text-base",
           aufListe ? "border-solid" : "border-dashed active:scale-[0.98]",
         )}

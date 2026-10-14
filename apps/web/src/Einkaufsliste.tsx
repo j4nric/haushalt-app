@@ -7,7 +7,7 @@ import {
 } from "@haushalt/db/kategorien";
 import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { ShoppingCart, Trash2 } from "lucide-react";
+import { ChevronDown, NotepadText, ShoppingCart, Trash2 } from "lucide-react";
 import {
   type ReactNode,
   type RefObject,
@@ -90,6 +90,8 @@ export function Einkaufsliste({
   const [bearbeitet, setBearbeitet] = useState<Zeile | null>(null);
   /** Kategorie, deren Verlauf aufgeklappt ist ("" = Sonstiges). */
   const [verlaufOffen, setVerlaufOffen] = useState<string | null>(null);
+  /** Bereich „Aus dem Verlauf“ aufgeklappt (Akkordeon, anfangs zu). */
+  const [weitereOffen, setWeitereOffen] = useState(false);
   const verlaufBlock = useRef<HTMLElement>(null);
   const wagen = useRef<HTMLElement>(null);
 
@@ -329,38 +331,47 @@ export function Einkaufsliste({
       })}
 
       {weitereVerlaeufe.length > 0 && (
-        <section className="mt-6 pl-[3.25rem]">
-          <h3 className="pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            Aus dem Verlauf
-          </h3>
-          <ul className="flex flex-wrap gap-2">
-            {weitereVerlaeufe.map((schluessel) => (
-              <li key={schluessel}>
-                <VerlaufKnopf
-                  kategorie={schluessel || null}
-                  offen={verlaufOffen === schluessel}
-                  umschalten={() =>
-                    setVerlaufOffen(
-                      verlaufOffen === schluessel ? null : schluessel,
-                    )
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
+        <AusDemVerlauf
+          offen={weitereOffen}
+          umschalten={() => {
+            // Beim Zuklappen auch einen hier geöffneten Verlauf schließen.
+            if (
+              verlaufOffen != null &&
+              weitereVerlaeufe.includes(verlaufOffen)
+            ) {
+              setVerlaufOffen(null);
+            }
+            setWeitereOffen(!weitereOffen);
+          }}
+        >
+          {weitereVerlaeufe.map((schluessel) => (
+            <li key={schluessel}>
+              <VerlaufKnopf
+                kategorie={schluessel || null}
+                offen={verlaufOffen === schluessel}
+                umschalten={() =>
+                  setVerlaufOffen(
+                    verlaufOffen === schluessel ? null : schluessel,
+                  )
+                }
+              />
+            </li>
+          ))}
+        </AusDemVerlauf>
       )}
-      {verlaufOffen != null && weitereVerlaeufe.includes(verlaufOffen) && (
-        <VerlaufBlock
-          blockRef={verlaufBlock}
-          titel={kategorieName(verlaufOffen || null)}
-          kategorie={verlaufOffen || null}
-          artikel={verlaufNach.get(verlaufOffen) ?? []}
-          schliessen={() => setVerlaufOffen(null)}
-          hinzufuegen={ausVerlaufHinzufuegen}
-          ausblenden={ausVerlaufNehmen}
-        />
-      )}
+      {weitereOffen &&
+        verlaufOffen != null &&
+        weitereVerlaeufe.includes(verlaufOffen) && (
+          <VerlaufBlock
+            blockRef={verlaufBlock}
+            titel={kategorieName(verlaufOffen || null)}
+            kategorie={verlaufOffen || null}
+            artikel={verlaufNach.get(verlaufOffen) ?? []}
+            schliessen={() => setVerlaufOffen(null)}
+            hinzufuegen={ausVerlaufHinzufuegen}
+            ausblenden={ausVerlaufNehmen}
+          />
+        )}
 
       {imWagen.length > 0 && (
         <Wagen bereich={wagen} leeren={imWagenLeeren}>
@@ -425,11 +436,15 @@ function KategorieRaster({
   children: ReactNode;
 }) {
   const farbe = useKategorieFarbe(kategorie);
-  const { spalten } = useEinstellungen();
+  const { spalten, ueberschriften } = useEinstellungen();
   return (
-    <section className="mt-5 first:mt-2">
+    <section className={ueberschriften ? "mt-5 first:mt-2" : "mt-3 first:mt-2"}>
       <h3
-        className="pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase"
+        className={
+          ueberschriften
+            ? "pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase"
+            : "sr-only"
+        }
         style={{ color: farbe }}
       >
         {titel}
@@ -451,6 +466,52 @@ function KategorieRaster({
           {children}
         </ul>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Kategorien mit Verlauf, aber ohne offene Einträge – als Akkordeon (anfangs zu),
+ * abgesetzt wie der Wagen, nur neutral getönt.
+ */
+function AusDemVerlauf({
+  offen,
+  umschalten,
+  children,
+}: {
+  offen: boolean;
+  umschalten: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      aria-label="Aus dem Verlauf"
+      className="-mx-4 mt-8 px-4"
+      style={{
+        background:
+          "color-mix(in oklab, var(--background), var(--foreground) 4%)",
+        borderTop:
+          "1px solid color-mix(in oklab, var(--background), var(--foreground) 12%)",
+      }}
+    >
+      <h3>
+        <button
+          type="button"
+          aria-expanded={offen}
+          onClick={umschalten}
+          className="flex w-full items-center justify-center gap-2 py-4 text-sm font-semibold tracking-wide text-muted-foreground uppercase"
+        >
+          <NotepadText className="size-4" /> Aus dem Verlauf
+          <ChevronDown
+            className={cn("size-4 transition-transform", offen && "rotate-180")}
+          />
+        </button>
+      </h3>
+      {offen && (
+        <ul className="flex flex-wrap justify-center gap-2 pb-5 animate-in fade-in">
+          {children}
+        </ul>
+      )}
     </section>
   );
 }
@@ -625,16 +686,19 @@ function Kachel({
           erledigt ? umschalten(eintrag) : abhaken.umschalten(),
         )}
         className={cn(
-          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-none border py-2 text-center transition-colors select-none active:scale-[0.98]",
+          "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
-          erledigt
-            ? "border-dashed bg-transparent text-muted-foreground"
-            : "bg-card shadow-xs",
+          erledigt ? "border-dashed text-foreground/80" : "bg-card shadow-xs",
           abhaken.laeuft && ABHAK_KLASSE,
         )}
         style={
           erledigt
-            ? undefined
+            ? {
+                // Im Wagen zurückgenommen, aber gut lesbar: kräftige Strichlinie, zarte Fläche.
+                borderColor:
+                  "color-mix(in oklab, var(--foreground) 40%, transparent)",
+                background: "color-mix(in oklab, var(--card) 70%, transparent)",
+              }
             : {
                 borderColor: `color-mix(in oklab, ${farbe} 35%, var(--border))`,
                 background: `color-mix(in oklab, var(--card), ${farbe} 7%)`,

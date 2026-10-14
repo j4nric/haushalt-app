@@ -20,6 +20,8 @@ export type Einstellungen = {
   eigenePalette: Record<KategorieSchluessel, string>;
   /** Spalten der Einkaufsliste (Kacheln pro Zeile). */
   spalten: Spalten;
+  /** Überschriften der Kategorien in der Einkaufsliste zeigen (sonst nur Symbol). */
+  ueberschriften: boolean;
 };
 
 export type Spalten = 1 | 2 | 3;
@@ -123,6 +125,7 @@ const GEDECKT: Record<KategorieSchluessel, string> = {
 const STANDARD: Einstellungen = {
   thema: "frisch",
   spalten: 2,
+  ueberschriften: true,
   eigenesThema: {
     akzent: "#15803d",
     hintergrund: "#f7f7f5",
@@ -201,12 +204,17 @@ function laden(): Einstellungen {
     const spalten = SPALTEN.some((o) => o.id === roh.spalten)
       ? roh.spalten
       : STANDARD.spalten;
+    const ueberschriften =
+      typeof roh.ueberschriften === "boolean"
+        ? roh.ueberschriften
+        : STANDARD.ueberschriften;
     return {
       thema,
       palette,
       eigenesThema,
       eigenePalette,
       spalten,
+      ueberschriften,
     };
   } catch {
     return STANDARD;

@@ -1,0 +1,2 @@
+ALTER TABLE "artikel" DROP CONSTRAINT "artikel_kategorie_gueltig";--> statement-breakpoint
+ALTER TABLE "artikel" ADD CONSTRAINT "artikel_kategorie_gueltig" CHECK ("artikel"."kategorie" is null or "artikel"."kategorie" in ('brot_backwaren', 'drogerie', 'fleisch_fisch', 'getraenke', 'haushalt', 'milch_kaese', 'obst_gemuese', 'suesses_snacks', 'tiefkuehl', 'vorrat'));
