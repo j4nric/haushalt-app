@@ -627,9 +627,7 @@ function Kachel({
         className={cn(
           "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-none border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
-          erledigt
-            ? "border-dashed text-foreground/80"
-            : "bg-card shadow-xs",
+          erledigt ? "border-dashed text-foreground/80" : "bg-card shadow-xs",
           abhaken.laeuft && ABHAK_KLASSE,
         )}
         style={
