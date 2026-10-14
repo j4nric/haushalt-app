@@ -149,3 +149,41 @@ test("Neue Produkte stehen sofort im Verlauf, auch offline und im Wagen", async 
     await handy.schliessen();
   }
 });
+
+/** Öffnen des Verlaufs verschiebt nichts: Überschrift und Symbol bleiben exakt stehen. */
+test("Verlauf öffnen lässt Überschrift und Symbol an ihrem Platz", async ({
+  browserName,
+  playwright,
+}) => {
+  const handy = await geraet(playwright[browserName], "Ruhig");
+  const { page } = handy;
+  try {
+    await haushaltAnlegen(page, "Ruhig-Haushalt");
+    await hinzufuegen(page, "Tomaten");
+    await hinzufuegen(page, "Milch");
+    await page.mouse.click(5, 5);
+
+    for (const titel of ["Obst & Gemüse", "Milch & Käse"]) {
+      const lage = async () => ({
+        ueberschrift: await page
+          .getByRole("heading", { name: titel, exact: true })
+          .boundingBox(),
+        symbol: await page
+          .getByRole("button", { name: `Verlauf ${titel}` })
+          .boundingBox(),
+      });
+      const vorher = await lage();
+      await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
+      await expect(
+        page.getByRole("region", { name: `Verlauf ${titel}` }),
+      ).toBeVisible();
+      expect(await lage()).toEqual(vorher);
+      await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
+      await expect(
+        page.getByRole("region", { name: `Verlauf ${titel}` }),
+      ).toBeHidden();
+    }
+  } finally {
+    await handy.schliessen();
+  }
+});

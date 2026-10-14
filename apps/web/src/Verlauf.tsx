@@ -108,7 +108,7 @@ export function VerlaufBlock({
     <section
       ref={blockRef}
       aria-label={`Verlauf ${titel}`}
-      className="-mx-4 mt-3 px-4 pt-3 pb-4 shadow-md animate-in fade-in"
+      className="-mx-4 mt-2 px-4 pt-3 pb-4 shadow-md animate-in fade-in first:-mt-1"
       style={knalligeFlaeche(farbe)}
     >
       <h3 className="pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase">
