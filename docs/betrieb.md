@@ -15,12 +15,25 @@ Nach jedem Merge auf `main` baut GitHub Actions das Image
 `ghcr.io/j4nric/haushalt-app`, und der Job „Auf Server ausrollen“ startet es auf
 dem Server, sobald die Variablen unten gesetzt sind.
 
+## Aktueller Stand
+
+| | |
+|---|---|
+| Server | Netcup VPS 500, Debian 13, 2 vCPU, 4 GB RAM (+ 2 GB Swap), IPv4 `62.83.23.90` |
+| Adresse | https://62-83-23-90.sslip.io (sslip.io löst den Namen auf die IP auf, kostenlos) |
+| Zugang | SSH nur mit Schlüssel; Nutzer `root` und `deploy` (Docker-Gruppe) |
+| Firewall | ufw: eingehend nur 22/tcp, 80/tcp, 443/tcp, 443/udp |
+| Updates | unattended-upgrades spielt Sicherheitsupdates automatisch ein |
+
 ## 1. Server und Domain
 
-- **Server:** ein kleiner VPS mit Ubuntu 24.04 LTS, 2 vCPU und 4 GB RAM reichen
-  (z. B. Hetzner CX22 oder CAX11). SSH-Key beim Anlegen hinterlegen.
-- **Domain:** eine Domain oder Subdomain (z. B. `haushalt.example.de`) mit einem
-  **A-Record** (und ggf. AAAA) auf die IP des Servers.
+- **Server:** ein kleiner VPS mit Debian 13 oder Ubuntu 24.04, mindestens 2 vCPU und
+  4 GB RAM (PowerSync braucht bis zu 1 GB). **Mit IPv4-Adresse:** GitHub und die
+  GitHub-Actions-Runner sind nur per IPv4 erreichbar.
+- **Domain:** ohne eigene Domain `<ip-mit-bindestrichen>.sslip.io`. Mit eigener Domain
+  einen **A-Record** auf die IP des Servers setzen und `DOMAIN` in der Server-`.env`
+  sowie die Variable `DEPLOY_DOMAIN` anpassen. Achtung: Die lokalen Daten im Browser
+  hängen an der Adresse; nach einem Umzug einmal neu anmelden.
 - **Firewall:** eingehend nur 22 (SSH), 80 und 443 (TCP) sowie 443 (UDP, HTTP/3).
 
 ## 2. Server vorbereiten (einmalig, als root)
@@ -28,6 +41,11 @@ dem Server, sobald die Variablen unten gesetzt sind.
 ```bash
 # Docker installieren (offizielles Skript)
 curl -fsSL https://get.docker.com | sh
+
+# Firewall
+apt-get install -y ufw
+ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp
+ufw --force enable
 
 # Eigener Nutzer für Deployments, darf Docker verwenden
 adduser --disabled-password --gecos "" deploy
@@ -42,7 +60,19 @@ ssh-keygen -t ed25519 -N "" -C "github-actions-deploy" -f haushalt-deploy
 ```
 
 Den Inhalt von `haushalt-deploy.pub` auf dem Server in
-`/home/deploy/.ssh/authorized_keys` eintragen (`chmod 600`, Besitzer `deploy`).
+`/home/deploy/.ssh/authorized_keys` eintragen (`chmod 600`, Besitzer `deploy`), mit
+vorangestelltem `no-port-forwarding,no-agent-forwarding,no-X11-forwarding `.
+
+Passwort-Anmeldung abschalten (`/etc/ssh/sshd_config.d/10-haerten.conf`), **erst
+nachdem** die Anmeldung per Schlüssel funktioniert:
+
+```
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+```
+
+Danach `sshd -t && systemctl reload ssh`.
 
 ## 3. App einrichten (einmalig, als deploy)
 
@@ -55,18 +85,15 @@ nano .env   # DOMAIN und alle Geheimnisse setzen (Befehle stehen in der Datei)
 
 ## 4. GitHub einrichten
 
-Unter **Settings → Environments** eine Umgebung `produktion` anlegen und dort setzen:
+Unter **Settings → Secrets and variables → Actions** auf Repository-Ebene:
 
 | Art | Name | Wert |
 |---|---|---|
 | Variable | `DEPLOY_HOST` | IP oder Hostname des Servers |
 | Variable | `DEPLOY_USER` | `deploy` |
-| Variable | `DEPLOY_DOMAIN` | z. B. `haushalt.example.de` |
+| Variable | `DEPLOY_DOMAIN` | z. B. `62-83-23-90.sslip.io` |
 | Secret | `DEPLOY_SSH_KEY` | Inhalt von `haushalt-deploy` (privater Schlüssel) |
-| Secret | `DEPLOY_KNOWN_HOSTS` | Ausgabe von `ssh-keyscan <server-ip>` |
-
-Damit der Job überhaupt startet, `DEPLOY_HOST` zusätzlich als **Repository-Variable**
-anlegen (Settings → Secrets and variables → Actions → Variables).
+| Secret | `DEPLOY_KNOWN_HOSTS` | Ausgabe von `ssh-keyscan <server-ip>` (Fingerabdruck vorher prüfen!) |
 
 Danach rollt jeder Merge auf `main` automatisch aus. Den ersten Lauf kann man unter
 Actions → CI → „Re-run all jobs“ auf dem letzten `main`-Commit anstoßen.
