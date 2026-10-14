@@ -374,7 +374,12 @@ export function Einkaufsliste({
         )}
 
       {imWagen.length > 0 && (
-        <Wagen bereich={wagen} leeren={imWagenLeeren}>
+        <Wagen
+          bereich={wagen}
+          leeren={imWagenLeeren}
+          // Direkt unter „Aus dem Verlauf“ ohne Lücke anschließen.
+          anschliessend={weitereVerlaeufe.length > 0}
+        >
           {imWagen.map(kachel)}
         </Wagen>
       )}
@@ -520,10 +525,12 @@ function AusDemVerlauf({
 function Wagen({
   bereich,
   leeren,
+  anschliessend,
   children,
 }: {
   bereich: RefObject<HTMLElement | null>;
   leeren: () => void;
+  anschliessend: boolean;
   children: ReactNode;
 }) {
   const { spalten } = useEinstellungen();
@@ -531,7 +538,10 @@ function Wagen({
     <section
       ref={bereich}
       aria-label="Im Wagen"
-      className="-mx-4 mt-8 scroll-mt-16 px-4 pt-4 pb-5"
+      className={cn(
+        "-mx-4 scroll-mt-16 px-4 pt-4 pb-5",
+        anschliessend ? "mt-0" : "mt-8",
+      )}
       style={{
         background:
           "color-mix(in oklab, var(--background), var(--primary) 10%)",

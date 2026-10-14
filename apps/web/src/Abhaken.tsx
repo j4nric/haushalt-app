@@ -71,14 +71,20 @@ function zufall(saat: number) {
   };
 }
 
-/** Dichter, senkrechter Zickzack von ganz links bis ganz rechts (Breite b, Höhe h in px). */
-export function zickzackPfad(b: number, h: number) {
-  const r = zufall(7);
+/**
+ * Dichter, senkrechter Zickzack von ganz links bis ganz rechts (Breite b, Höhe h in px).
+ * Die Spitzen sind unterschiedlich hoch und tief, wie von Hand gekritzelt; jede Saat
+ * ergibt einen anderen Strich.
+ */
+export function zickzackPfad(b: number, h: number, saat = 7) {
+  const r = zufall(saat);
   const punkte: string[] = [];
   for (let i = 0; i <= ZACKEN; i++) {
-    // Erster und letzter Punkt exakt am Rand, dazwischen leichtes Zittern.
-    const x = (b * i) / ZACKEN + (i > 0 && i < ZACKEN ? r() * 2 : 0);
-    const y = (i % 2 ? h * 0.92 : h * 0.08) + r() * h * 0.08;
+    // Erster und letzter Punkt exakt am Rand, dazwischen Zittern in der Breite.
+    const x = (b * i) / ZACKEN + (i > 0 && i < ZACKEN ? r() * 4 : 0);
+    // Oben zwischen 2 % und 34 % der Höhe, unten zwischen 66 % und 98 %.
+    const ausschlag = (r() + 0.5) * h * 0.32;
+    const y = i % 2 ? h * 0.98 - ausschlag : h * 0.02 + ausschlag;
     punkte.push(`${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`);
   }
   return punkte.join(" ");
@@ -88,6 +94,8 @@ export function zickzackPfad(b: number, h: number) {
 export function KritzelStrich() {
   const svg = useRef<SVGSVGElement>(null);
   const [groesse, setGroesse] = useState<{ b: number; h: number } | null>(null);
+  // Jede Kachel bekommt ihren eigenen Strich.
+  const [saat] = useState(() => Math.floor(Math.random() * 2 ** 31));
   useLayoutEffect(() => {
     const rechteck = svg.current?.getBoundingClientRect();
     if (rechteck) {
@@ -111,7 +119,7 @@ export function KritzelStrich() {
         <path
           className="kritzel-strich"
           pathLength={1}
-          d={zickzackPfad(groesse.b, groesse.h)}
+          d={zickzackPfad(groesse.b, groesse.h, saat)}
           fill="none"
           stroke="currentColor"
           strokeOpacity={0.8}

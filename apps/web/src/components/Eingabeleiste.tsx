@@ -103,7 +103,7 @@ export function Eingabeleiste({
             autoComplete="off"
             enterKeyHint="done"
             list={vorschlaege ? "eingabe-vorschlaege" : undefined}
-            className="h-11 text-base"
+            className="h-11 rounded-full px-4 text-base"
           />
           {vorschlaege && (
             <datalist id="eingabe-vorschlaege">
@@ -115,7 +115,7 @@ export function Eingabeleiste({
           <Button
             type="submit"
             size="icon"
-            className="size-11 shrink-0"
+            className="size-11 shrink-0 rounded-full"
             aria-label={absendenLabel}
           >
             <Plus />
