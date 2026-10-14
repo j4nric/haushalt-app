@@ -25,8 +25,9 @@ export const RASTER: Record<Spalten, string> = {
 };
 
 /**
- * Kategorie-Symbol links neben dem Raster, als Knopf: klappt den Verlauf auf und zu.
- * Ein kleines Plus zeigt, dass es antippbar ist; geöffnet steht es auf einem Kreis.
+ * Kategorie-Symbol links neben dem Raster, als runder Knopf: klappt den Verlauf auf
+ * und zu. Geschlossen liegt es auf einem zarten Kreis in der Kategoriefarbe, geöffnet
+ * auf einem hellen Kreis im eingefärbten Block, mit einem kleinen X zum Schließen.
  */
 export function SymbolKnopf({
   titel,
@@ -47,34 +48,25 @@ export function SymbolKnopf({
       aria-expanded={offen}
       onClick={umschalten}
       className="relative flex size-11 items-center justify-center rounded-full transition-colors active:scale-95"
-      style={
-        offen
-          ? { background: "color-mix(in oklab, currentColor 20%, transparent)" }
-          : undefined
-      }
+      style={{
+        background: offen
+          ? "color-mix(in oklab, currentColor 20%, transparent)"
+          : `color-mix(in oklab, ${farbe} 14%, transparent)`,
+      }}
     >
       <KategorieSymbol
         kategorie={kategorie}
-        className={cn("size-7", offen && "size-6 text-current!")}
+        className={cn("size-6", offen && "text-current!")}
       />
-      <span
-        aria-hidden
-        className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full"
-        style={
-          offen
-            ? { background: "currentColor" }
-            : {
-                ...knalligeFlaeche(farbe),
-                boxShadow: "0 0 0 2px var(--background)",
-              }
-        }
-      >
-        {offen ? (
+      {offen && (
+        <span
+          aria-hidden
+          className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full"
+          style={{ background: "currentColor" }}
+        >
           <X className="size-3" strokeWidth={3} style={{ color: farbe }} />
-        ) : (
-          <Plus className="size-3" strokeWidth={3} />
-        )}
-      </span>
+        </span>
+      )}
     </button>
   );
 }
