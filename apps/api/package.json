@@ -5,6 +5,16 @@
   "description": "Hono API (Backend)",
   "type": "module",
   "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "hono": "^4.13.13",
+    "jose": "^6.2.12",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }

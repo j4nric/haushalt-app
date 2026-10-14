@@ -73,8 +73,13 @@ legt fest, welche Daten synchronisiert werden.
 | `pnpm infra:up` / `pnpm infra:down` | Postgres und PowerSync starten bzw. stoppen |
 | `pnpm infra:logs` | Logs der Dienste live verfolgen |
 | `pnpm infra:reset` | Dienste stoppen **und alle lokalen Daten löschen** |
+| `pnpm dev` | API (Port 3000) und Frontend (http://localhost:5173) starten |
+| `pnpm --filter @haushalt/web test:e2e` | Playwright-Tests, u. a. Offline-Sync (braucht `infra:up`) |
 
-Entwicklungsserver folgen mit den nächsten Schritten.
+Vor dem ersten Playwright-Lauf einmalig den Browser installieren:
+`pnpm --filter @haushalt/web exec playwright install chromium`
+
+Architekturentscheidungen stehen in [`docs/entscheidungen/`](docs/entscheidungen/).
 
 ## Arbeitsweise
 
