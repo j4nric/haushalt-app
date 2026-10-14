@@ -29,6 +29,13 @@
       "when": 1792010015262,
       "tag": "0003_artikel_archiviert",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792015822583,
+      "tag": "0004_kategorie_check_sortiert",
+      "breakpoints": true
     }
   ]
 }

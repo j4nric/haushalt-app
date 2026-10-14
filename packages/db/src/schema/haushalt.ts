@@ -114,9 +114,15 @@ export const artikel = pgTable(
       sql`${t.standardeinheit} in ('stueck', 'g', 'ml')`,
     ),
     // Neue Kategorien in kategorien.ts brauchen eine neue Migration (db:generate).
+    // Alphabetisch, damit eine andere Anzeige-Reihenfolge keine Migration auslöst.
     check(
       "artikel_kategorie_gueltig",
-      sql`${t.kategorie} is null or ${t.kategorie} in (${sql.raw(KATEGORIE_IDS.map((k) => `'${k}'`).join(", "))})`,
+      sql`${t.kategorie} is null or ${t.kategorie} in (${sql.raw(
+        [...KATEGORIE_IDS]
+          .sort()
+          .map((k) => `'${k}'`)
+          .join(", "),
+      )})`,
     ),
   ],
 );

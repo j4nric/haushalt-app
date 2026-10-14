@@ -96,7 +96,14 @@ test("Schnell-Hinzufügen aus dem Verlauf einer Kategorie", async ({
     await expect(verlauf).toBeHidden();
     await expect(eintrag(page, "Bananen")).toBeVisible();
 
-    // Kategorie ohne offene Einträge: über „Aus dem Verlauf“ erreichbar.
+    // Kategorie ohne offene Einträge: über „Aus dem Verlauf“ erreichbar – ein
+    // Akkordeon, anfangs zugeklappt.
+    const ausDemVerlauf = page.getByRole("button", { name: "Aus dem Verlauf" });
+    await expect(ausDemVerlauf).toHaveAttribute("aria-expanded", "false");
+    await expect(
+      page.getByRole("button", { name: "Verlauf Milch & Käse" }),
+    ).toBeHidden();
+    await ausDemVerlauf.click();
     await page.getByRole("button", { name: "Verlauf Milch & Käse" }).click();
     await page
       .getByRole("region", { name: "Verlauf Milch & Käse" })

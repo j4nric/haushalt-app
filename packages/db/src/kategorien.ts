@@ -4,11 +4,11 @@
  */
 export const KATEGORIEN = [
   { id: "obst_gemuese", name: "Obst & Gemüse" },
-  { id: "brot_backwaren", name: "Brot & Backwaren" },
   { id: "milch_kaese", name: "Milch & Käse" },
   { id: "fleisch_fisch", name: "Fleisch & Fisch" },
-  { id: "vorrat", name: "Vorrat & Konserven" },
+  { id: "brot_backwaren", name: "Brot & Backwaren" },
   { id: "suesses_snacks", name: "Süßes & Snacks" },
+  { id: "vorrat", name: "Vorrat & Konserven" },
   { id: "getraenke", name: "Getränke" },
   { id: "tiefkuehl", name: "Tiefkühl" },
   { id: "drogerie", name: "Drogerie" },
