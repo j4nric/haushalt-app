@@ -7,8 +7,15 @@ import {
 } from "@haushalt/db/kategorien";
 import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { Trash2 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { ShoppingCart, Trash2 } from "lucide-react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import {
@@ -26,16 +33,17 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
-import { type Spalten, useEinstellungen } from "@/einstellungen";
+import { useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import { ABHAK_KLASSE, KritzelStrich, useVerzoegertesAbhaken } from "./Abhaken";
 import {
   knalligeFlaeche,
+  RASTER,
   SymbolKnopf,
   type VerlaufArtikel,
-  VerlaufFlaeche,
+  VerlaufBlock,
 } from "./Verlauf";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
 
@@ -82,6 +90,27 @@ export function Einkaufsliste({
   const [bearbeitet, setBearbeitet] = useState<Zeile | null>(null);
   /** Kategorie, deren Verlauf aufgeklappt ist ("" = Sonstiges). */
   const [verlaufOffen, setVerlaufOffen] = useState<string | null>(null);
+  const verlaufBlock = useRef<HTMLElement>(null);
+  const wagen = useRef<HTMLElement>(null);
+
+  // Ein Tipp außerhalb des aufgeklappten Verlaufs schließt ihn. Ausgenommen sind Knöpfe,
+  // die selbst einen Verlauf öffnen („Aus dem Verlauf“), und Meldungen (Rückgängig).
+  useEffect(() => {
+    if (verlaufOffen == null) {
+      return;
+    }
+    const tippen = (e: PointerEvent) => {
+      const ziel = e.target as Element;
+      if (
+        !verlaufBlock.current?.contains(ziel) &&
+        !ziel.closest("[data-verlauf-ausloeser], [data-sonner-toaster]")
+      ) {
+        setVerlaufOffen(null);
+      }
+    };
+    document.addEventListener("pointerdown", tippen);
+    return () => document.removeEventListener("pointerdown", tippen);
+  }, [verlaufOffen]);
 
   const vorschlag = kategorieVorschlag(
     finde(bekannteArtikel, name)?.kategorie,
@@ -273,27 +302,26 @@ export function Einkaufsliste({
     <>
       {gruppen.map(([gruppe, kategorie, zeilen]) => {
         const schluessel = kategorie ?? "";
-        const offen = verlaufOffen === schluessel;
+        if (verlaufOffen === schluessel) {
+          return (
+            <VerlaufBlock
+              key={gruppe}
+              blockRef={verlaufBlock}
+              titel={gruppe}
+              kategorie={kategorie}
+              artikel={verlaufNach.get(schluessel) ?? []}
+              schliessen={() => setVerlaufOffen(null)}
+              hinzufuegen={ausVerlaufHinzufuegen}
+              ausblenden={ausVerlaufNehmen}
+            />
+          );
+        }
         return (
           <KategorieRaster
             key={gruppe}
             titel={gruppe}
             kategorie={kategorie}
-            verlauf={{
-              offen,
-              umschalten: () => setVerlaufOffen(offen ? null : schluessel),
-            }}
-            unten={
-              offen && (
-                <VerlaufFlaeche
-                  titel={gruppe}
-                  kategorie={kategorie}
-                  artikel={verlaufNach.get(schluessel) ?? []}
-                  hinzufuegen={ausVerlaufHinzufuegen}
-                  ausblenden={ausVerlaufNehmen}
-                />
-              )
-            }
+            verlaufOeffnen={() => setVerlaufOffen(schluessel)}
           >
             {zeilen.map(kachel)}
           </KategorieRaster>
@@ -320,35 +348,27 @@ export function Einkaufsliste({
               </li>
             ))}
           </ul>
-          {verlaufOffen != null && weitereVerlaeufe.includes(verlaufOffen) && (
-            <VerlaufFlaeche
-              titel={kategorieName(verlaufOffen || null)}
-              kategorie={verlaufOffen || null}
-              artikel={verlaufNach.get(verlaufOffen) ?? []}
-              hinzufuegen={ausVerlaufHinzufuegen}
-              ausblenden={ausVerlaufNehmen}
-            />
-          )}
         </section>
+      )}
+      {verlaufOffen != null && weitereVerlaeufe.includes(verlaufOffen) && (
+        <VerlaufBlock
+          blockRef={verlaufBlock}
+          titel={kategorieName(verlaufOffen || null)}
+          kategorie={verlaufOffen || null}
+          artikel={verlaufNach.get(verlaufOffen) ?? []}
+          schliessen={() => setVerlaufOffen(null)}
+          hinzufuegen={ausVerlaufHinzufuegen}
+          ausblenden={ausVerlaufNehmen}
+        />
       )}
 
       {imWagen.length > 0 && (
-        <KategorieRaster
-          titel="Im Wagen"
-          aktion={
-            <Button
-              variant="link"
-              size="sm"
-              className="h-auto p-0 normal-case"
-              onClick={imWagenLeeren}
-            >
-              Leeren
-            </Button>
-          }
-        >
+        <Wagen bereich={wagen} leeren={imWagenLeeren}>
           {imWagen.map(kachel)}
-        </KategorieRaster>
+        </Wagen>
       )}
+
+      <ZumWagenKnopf wagen={wagen} anzahl={imWagen.length} />
 
       {eintraege.length === 0 && (
         <div className="py-16 text-center text-muted-foreground">
@@ -391,51 +411,37 @@ export function Einkaufsliste({
 
 /**
  * Überschrift (in Kategoriefarbe) und ein Raster aus Kacheln. Das Symbol der Kategorie
- * steht einmal links mittig daneben; ohne Kategorie (z. B. „Im Wagen“) bleibt der
- * Platz frei, damit alle Raster bündig sind.
+ * steht einmal links mittig daneben und öffnet den Verlauf.
  */
 function KategorieRaster({
   titel,
   kategorie,
-  aktion,
-  verlauf,
-  unten,
+  verlaufOeffnen,
   children,
 }: {
   titel: string;
-  kategorie?: string | null;
-  aktion?: ReactNode;
-  /** Symbol als Knopf, der den Verlauf der Kategorie auf- und zuklappt. */
-  verlauf?: { offen: boolean; umschalten: () => void };
-  /** Unter dem Raster, bündig (aufgeklappter Verlauf). */
-  unten?: ReactNode;
+  kategorie: string | null;
+  verlaufOeffnen: () => void;
   children: ReactNode;
 }) {
   const farbe = useKategorieFarbe(kategorie);
   const { spalten } = useEinstellungen();
-  const mitKategorie = kategorie !== undefined;
   return (
     <section className="mt-5 first:mt-2">
       <h3
-        className="flex items-baseline justify-between pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide text-muted-foreground uppercase"
-        style={mitKategorie ? { color: farbe } : undefined}
+        className="pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase"
+        style={{ color: farbe }}
       >
         {titel}
-        {aktion}
       </h3>
       <div className="flex items-center gap-3">
         <div className="-ml-1.5 flex w-11 shrink-0 justify-center">
-          {mitKategorie &&
-            (verlauf ? (
-              <SymbolKnopf
-                titel={titel}
-                kategorie={kategorie}
-                offen={verlauf.offen}
-                umschalten={verlauf.umschalten}
-              />
-            ) : (
-              <KategorieSymbol kategorie={kategorie} className="size-7" />
-            ))}
+          <SymbolKnopf
+            titel={titel}
+            kategorie={kategorie}
+            offen={false}
+            umschalten={verlaufOeffnen}
+          />
         </div>
         {/* auto-rows-fr: Alle Zeilen eines Rasters so hoch wie die höchste Kachel. */}
         <ul
@@ -445,8 +451,107 @@ function KategorieRaster({
           {children}
         </ul>
       </div>
-      {unten && <div className="pl-[3.25rem]">{unten}</div>}
     </section>
+  );
+}
+
+/** Der Wagen: abgesetzt durch eine Fläche in der Akzentfarbe, Überschrift mittig. */
+function Wagen({
+  bereich,
+  leeren,
+  children,
+}: {
+  bereich: RefObject<HTMLElement | null>;
+  leeren: () => void;
+  children: ReactNode;
+}) {
+  const { spalten } = useEinstellungen();
+  return (
+    <section
+      ref={bereich}
+      aria-label="Im Wagen"
+      className="-mx-4 mt-8 scroll-mt-16 px-4 pt-4 pb-5"
+      style={{
+        background:
+          "color-mix(in oklab, var(--background), var(--primary) 10%)",
+        borderTop:
+          "1px solid color-mix(in oklab, var(--background), var(--primary) 25%)",
+      }}
+    >
+      <h3 className="flex items-center justify-center gap-2 pb-3 text-sm font-semibold tracking-wide text-primary uppercase">
+        <ShoppingCart className="size-4" /> Im Wagen
+      </h3>
+      <ul className={cn("grid auto-rows-fr gap-2", RASTER[spalten])}>
+        {children}
+      </ul>
+      <div className="pt-3 text-center">
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0"
+          onClick={leeren}
+        >
+          Wagen leeren
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Runder Knopf unten mittig: erscheint, sobald etwas gescrollt wurde und der Wagen nicht
+ * im Bild ist; ein Tipp scrollt hinunter. Ist ein Teil des Wagens sichtbar, verschwindet er.
+ */
+function ZumWagenKnopf({
+  wagen,
+  anzahl,
+}: {
+  wagen: RefObject<HTMLElement | null>;
+  anzahl: number;
+}) {
+  const [gescrollt, setGescrollt] = useState(false);
+  const [wagenSichtbar, setWagenSichtbar] = useState(false);
+
+  useEffect(() => {
+    const pruefen = () => setGescrollt(window.scrollY > 40);
+    pruefen();
+    window.addEventListener("scroll", pruefen, { passive: true });
+    return () => window.removeEventListener("scroll", pruefen);
+  }, []);
+
+  useEffect(() => {
+    const element = wagen.current;
+    if (!element || anzahl === 0) {
+      setWagenSichtbar(false);
+      return;
+    }
+    // Eingabeleiste und Navigation verdecken unten ~9 rem – die zählen nicht als sichtbar.
+    // rootMargin akzeptiert nur px oder %, daher umrechnen.
+    const beobachter = new IntersectionObserver(
+      ([e]) => setWagenSichtbar(Boolean(e?.isIntersecting)),
+      {
+        rootMargin: `0px 0px -${9 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize)}px 0px`,
+      },
+    );
+    beobachter.observe(element);
+    return () => beobachter.disconnect();
+  }, [wagen, anzahl]);
+
+  if (anzahl === 0 || !gescrollt || wagenSichtbar) {
+    return null;
+  }
+  return (
+    <button
+      type="button"
+      aria-label={`Zum Wagen (${anzahl})`}
+      onClick={() =>
+        wagen.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      }
+      className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg animate-in fade-in slide-in-from-bottom-2"
+    >
+      <ShoppingCart className="size-5" />
+      {anzahl}
+    </button>
   );
 }
 
@@ -468,6 +573,7 @@ function VerlaufKnopf({
       size="sm"
       aria-label={`Verlauf ${name}`}
       aria-expanded={offen}
+      data-verlauf-ausloeser
       onClick={umschalten}
       className="rounded-full"
       style={
@@ -484,13 +590,6 @@ function VerlaufKnopf({
     </Button>
   );
 }
-
-// Vollständige Klassennamen, damit Tailwind sie beim Bauen findet.
-const RASTER: Record<Spalten, string> = {
-  1: "grid-cols-1",
-  2: "grid-cols-2",
-  3: "grid-cols-3",
-};
 
 /** Eine Kachel: antippen = gekauft / zurück, lang drücken = bearbeiten. */
 function Kachel({

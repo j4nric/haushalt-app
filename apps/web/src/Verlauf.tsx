@@ -1,9 +1,10 @@
 import { Check, Plus, X } from "lucide-react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, Ref } from "react";
 import {
   KategorieSymbol,
   useKategorieFarbe,
 } from "@/components/KategorieSymbol";
+import { type Spalten, useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { istHexFarbe, kontrast, TEXT_HELL, textFarbeAuf } from "@/lib/farben";
 import { cn } from "@/lib/utils";
@@ -16,10 +17,16 @@ export type VerlaufArtikel = {
   auf_liste: number;
 };
 
+// Vollständige Klassennamen, damit Tailwind sie beim Bauen findet.
+export const RASTER: Record<Spalten, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
+
 /**
  * Kategorie-Symbol links neben dem Raster, als Knopf: klappt den Verlauf auf und zu.
- * Ein kleines Plus zeigt, dass es antippbar ist; geöffnet steht es auf einem Kreis
- * in der Kategoriefarbe.
+ * Ein kleines Plus zeigt, dass es antippbar ist; geöffnet steht es auf einem Kreis.
  */
 export function SymbolKnopf({
   titel,
@@ -40,7 +47,11 @@ export function SymbolKnopf({
       aria-expanded={offen}
       onClick={umschalten}
       className="relative flex size-11 items-center justify-center rounded-full transition-colors active:scale-95"
-      style={offen ? knalligeFlaeche(farbe) : undefined}
+      style={
+        offen
+          ? { background: "color-mix(in oklab, currentColor 20%, transparent)" }
+          : undefined
+      }
     >
       <KategorieSymbol
         kategorie={kategorie}
@@ -48,11 +59,18 @@ export function SymbolKnopf({
       />
       <span
         aria-hidden
-        className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full ring-2 ring-background"
-        style={knalligeFlaeche(farbe)}
+        className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full"
+        style={
+          offen
+            ? { background: "currentColor" }
+            : {
+                ...knalligeFlaeche(farbe),
+                boxShadow: "0 0 0 2px var(--background)",
+              }
+        }
       >
         {offen ? (
-          <X className="size-3" strokeWidth={3} />
+          <X className="size-3" strokeWidth={3} style={{ color: farbe }} />
         ) : (
           <Plus className="size-3" strokeWidth={3} />
         )}
@@ -62,39 +80,57 @@ export function SymbolKnopf({
 }
 
 /**
- * Aufgeklappter Verlauf einer Kategorie in kräftiger Kategoriefarbe: alle bisherigen
- * Produkte. Schon auf der Liste → ausgegraut; sonst mit Plus, ein Tipp trägt ein.
- * Lang drücken nimmt ein Produkt aus dem Verlauf.
+ * Aufgeklappter Verlauf: Die ganze Kategorie – Überschrift, Symbol und Kacheln – liegt
+ * in einem Block in kräftiger Kategoriefarbe, von Rand zu Rand. Was schon auf der Liste
+ * steht, trägt einen Haken; Vorschläge ein Plus und landen per Tipp auf der Liste.
+ * Lang drücken auf einen Vorschlag nimmt ihn aus dem Verlauf.
  */
-export function VerlaufFlaeche({
+export function VerlaufBlock({
   titel,
   kategorie,
   artikel,
+  schliessen,
   hinzufuegen,
   ausblenden,
+  blockRef,
 }: {
   titel: string;
   kategorie: string | null;
   artikel: VerlaufArtikel[];
+  schliessen: () => void;
   hinzufuegen: (a: VerlaufArtikel) => void;
   ausblenden: (a: VerlaufArtikel) => void;
+  blockRef?: Ref<HTMLElement>;
 }) {
   const farbe = useKategorieFarbe(kategorie);
+  const { spalten } = useEinstellungen();
   return (
     <section
+      ref={blockRef}
       aria-label={`Verlauf ${titel}`}
-      className="mt-2 rounded-2xl p-3 shadow-sm animate-in fade-in slide-in-from-top-1"
+      className="-mx-4 mt-3 px-4 pt-3 pb-4 shadow-md animate-in fade-in"
       style={knalligeFlaeche(farbe)}
     >
-      {artikel.length === 0 ? (
-        <p className="py-2 text-center text-sm opacity-90">
-          Noch keine Produkte in dieser Kategorie.
-        </p>
-      ) : (
-        <>
-          <ul className="flex flex-wrap gap-2">
+      <h3 className="pb-1.5 pl-[3.25rem] text-xs font-semibold tracking-wide uppercase">
+        {titel}
+      </h3>
+      <div className="flex items-center gap-3">
+        <div className="-ml-1.5 flex w-11 shrink-0 justify-center">
+          <SymbolKnopf
+            titel={titel}
+            kategorie={kategorie}
+            offen
+            umschalten={schliessen}
+          />
+        </div>
+        {artikel.length === 0 ? (
+          <p className="flex-1 py-3 text-sm opacity-90">
+            Noch keine Produkte in dieser Kategorie.
+          </p>
+        ) : (
+          <ul className={cn("grid flex-1 auto-rows-fr gap-2", RASTER[spalten])}>
             {sortiert(artikel).map((a) => (
-              <VerlaufEintrag
+              <VerlaufKachel
                 key={a.id}
                 artikel={a}
                 hinzufuegen={hinzufuegen}
@@ -102,16 +138,16 @@ export function VerlaufFlaeche({
               />
             ))}
           </ul>
-          <p className="pt-2 text-xs opacity-80">
-            Antippen = auf die Liste · lang drücken = aus dem Verlauf nehmen
-          </p>
-        </>
-      )}
+        )}
+      </div>
+      <p className="pt-3 pl-[3.25rem] text-xs opacity-85">
+        Antippen = auf die Liste · lang drücken = aus dem Verlauf nehmen
+      </p>
     </section>
   );
 }
 
-function VerlaufEintrag({
+function VerlaufKachel({
   artikel,
   hinzufuegen,
   ausblenden,
@@ -121,9 +157,12 @@ function VerlaufEintrag({
   ausblenden: (a: VerlaufArtikel) => void;
 }) {
   const aufListe = artikel.auf_liste === 1;
-  const { handler, klick } = useWischen({ lang: () => ausblenden(artikel) });
+  const { spalten } = useEinstellungen();
+  const { handler, klick } = useWischen(
+    aufListe ? {} : { lang: () => ausblenden(artikel) },
+  );
   return (
-    <li>
+    <li className="min-w-0">
       <button
         type="button"
         aria-label={
@@ -135,15 +174,25 @@ function VerlaufEintrag({
         {...handler}
         onClick={klick(() => !aufListe && hinzufuegen(artikel))}
         className={cn(
-          "flex touch-pan-y items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium select-none",
-          aufListe ? "opacity-50" : "active:scale-95",
+          "flex h-full min-h-14 w-full touch-pan-y items-center justify-center gap-1.5 border py-2 text-center font-medium select-none",
+          spalten === 3 ? "px-2 text-sm" : "px-3 text-base",
+          aufListe ? "border-solid" : "border-dashed active:scale-[0.98]",
         )}
         style={{
-          background: "color-mix(in oklab, currentColor 18%, transparent)",
+          background: aufListe
+            ? "color-mix(in oklab, currentColor 28%, transparent)"
+            : "color-mix(in oklab, currentColor 12%, transparent)",
+          borderColor: "color-mix(in oklab, currentColor 45%, transparent)",
         }}
       >
-        {aufListe ? <Check className="size-4" /> : <Plus className="size-4" />}
-        {artikel.name}
+        {aufListe ? (
+          <Check className="size-4 shrink-0" strokeWidth={3} />
+        ) : (
+          <Plus className="size-4 shrink-0" strokeWidth={3} />
+        )}
+        <span className="leading-tight break-words hyphens-auto">
+          {artikel.name}
+        </span>
       </button>
     </li>
   );
@@ -164,9 +213,9 @@ export function knalligeFlaeche(farbe: string): CSSProperties {
   };
 }
 
-/** Wählbare zuerst, schon auf der Liste danach; jeweils nach deutschem Alphabet. */
+/** Was schon auf der Liste steht, zuerst; danach die Vorschläge; jeweils deutsches Alphabet. */
 function sortiert(artikel: VerlaufArtikel[]) {
   return [...artikel].sort(
-    (a, b) => a.auf_liste - b.auf_liste || a.name.localeCompare(b.name, "de"),
+    (a, b) => b.auf_liste - a.auf_liste || a.name.localeCompare(b.name, "de"),
   );
 }
