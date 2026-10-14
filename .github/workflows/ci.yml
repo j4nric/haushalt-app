@@ -17,6 +17,27 @@ jobs:
     name: Lint, Typcheck, Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Die API-Tests laufen gegen eine echte Datenbank.
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: haushalt
+          POSTGRES_PASSWORD: ci-passwort
+          POSTGRES_DB: haushalt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U haushalt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_USER: haushalt
+      POSTGRES_PASSWORD: ci-passwort
+      POSTGRES_DB: haushalt
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
     steps:
       - uses: actions/checkout@v7
 

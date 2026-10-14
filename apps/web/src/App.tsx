@@ -1,91 +1,62 @@
-import { usePowerSync, useQuery, useStatus } from "@powersync/react";
-import { type FormEvent, useState } from "react";
-import type { Listeneintrag } from "./powersync";
+import { useQuery, useStatus } from "@powersync/react";
+import { useEffect } from "react";
+import { Anmeldung } from "./Anmeldung";
+import { authClient } from "./auth";
+import { Einkaufsliste } from "./Einkaufsliste";
+import { HaushaltEinrichten } from "./HaushaltEinrichten";
+import { HaushaltInfo } from "./HaushaltInfo";
+import { trennenUndLeeren, verbinden } from "./powersync";
+import { SyncStatus } from "./SyncStatus";
 
 export function App() {
-  const db = usePowerSync();
-  const { data: eintraege } = useQuery<Listeneintrag & { id: string }>(
-    "SELECT * FROM listeneintraege ORDER BY erledigt, erstellt_am",
-  );
-  const [neu, setNeu] = useState("");
+  const { data: sitzung, isPending } = authClient.useSession();
 
-  async function hinzufuegen(event: FormEvent) {
-    event.preventDefault();
-    const name = neu.trim();
-    if (!name) {
-      return;
-    }
-    await db.execute(
-      "INSERT INTO listeneintraege (id, name, erledigt, erstellt_am) VALUES (uuid(), ?, 0, ?)",
-      [name, new Date().toISOString()],
-    );
-    setNeu("");
+  if (isPending) {
+    return <main className="mitte">Lädt …</main>;
+  }
+  if (!sitzung) {
+    return <Anmeldung />;
+  }
+  return <Angemeldet nutzerId={sitzung.user.id} name={sitzung.user.name} />;
+}
+
+function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
+  const status = useStatus();
+  // Lokal liegen nur die eigenen Haushalte (siehe sync-config.yaml); vorerst genau einer.
+  const { data: haushalte } = useQuery<{ id: string; name: string }>(
+    "SELECT id, name FROM haushalte LIMIT 1",
+  );
+  const haushalt = haushalte[0];
+
+  useEffect(() => {
+    verbinden();
+  }, []);
+
+  async function abmelden() {
+    await trennenUndLeeren();
+    await authClient.signOut();
   }
 
   return (
     <main>
-      <h1>Einkaufsliste</h1>
+      <header>
+        <h1>{haushalt?.name ?? "Einkaufsliste"}</h1>
+        <button type="button" className="leise" onClick={abmelden}>
+          {name} abmelden
+        </button>
+      </header>
       <SyncStatus />
 
-      <form onSubmit={hinzufuegen}>
-        <input
-          value={neu}
-          onChange={(e) => setNeu(e.target.value)}
-          placeholder="Was fehlt?"
-          aria-label="Neuer Eintrag"
-        />
-        <button type="submit">Hinzufügen</button>
-      </form>
-
-      <ul>
-        {eintraege.map((eintrag) => (
-          <li key={eintrag.id} className={eintrag.erledigt ? "erledigt" : ""}>
-            <label>
-              <input
-                type="checkbox"
-                checked={eintrag.erledigt === 1}
-                onChange={() =>
-                  db.execute(
-                    "UPDATE listeneintraege SET erledigt = ? WHERE id = ?",
-                    [eintrag.erledigt ? 0 : 1, eintrag.id],
-                  )
-                }
-              />
-              {eintrag.name}
-            </label>
-            <button
-              type="button"
-              aria-label={`${eintrag.name} löschen`}
-              onClick={() =>
-                db.execute("DELETE FROM listeneintraege WHERE id = ?", [
-                  eintrag.id,
-                ])
-              }
-            >
-              ×
-            </button>
-          </li>
-        ))}
-      </ul>
-      {eintraege.length === 0 && <p className="leer">Die Liste ist leer.</p>}
+      {haushalt ? (
+        <>
+          <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
+          <HaushaltInfo haushaltId={haushalt.id} />
+        </>
+      ) : status.hasSynced ? (
+        <HaushaltEinrichten />
+      ) : (
+        <p className="leer">Daten werden geladen …</p>
+      )}
     </main>
-  );
-}
-
-function SyncStatus() {
-  const status = useStatus();
-  const laedtHoch = status.dataFlowStatus.uploading;
-  const text = status.connected
-    ? laedtHoch
-      ? "Online · lädt hoch …"
-      : "Online · synchron"
-    : "Offline · Änderungen werden lokal gespeichert";
-  return (
-    <p
-      className={`status ${status.connected ? "online" : "offline"}`}
-      data-testid="sync-status"
-    >
-      {text}
-    </p>
   );
 }

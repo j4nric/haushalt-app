@@ -1,4 +1,4 @@
-/** Liest eine Pflicht-Umgebungsvariable (aus der .env im Repo-Wurzelverzeichnis). */
+/** Liest eine Pflicht-Umgebungsvariable (lokal aus der .env im Repo-Wurzelverzeichnis). */
 function pflicht(name: string): string {
   const wert = process.env[name];
   if (!wert) {
@@ -7,9 +7,17 @@ function pflicht(name: string): string {
   return wert;
 }
 
-export const env = {
-  port: Number(process.env.API_PORT ?? 3000),
-  datenbankUrl: `postgres://${pflicht("POSTGRES_USER")}:${pflicht("POSTGRES_PASSWORD")}@localhost:${process.env.POSTGRES_PORT ?? 5432}/${pflicht("POSTGRES_DB")}`,
-  powersyncUrl: `http://localhost:${process.env.POWERSYNC_PORT ?? 8080}`,
-  powersyncJwtSecret: pflicht("POWERSYNC_JWT_SECRET"),
-};
+export function datenbankUrl(datenbank = pflicht("POSTGRES_DB")) {
+  const host = process.env.POSTGRES_HOST ?? "localhost";
+  return `postgres://${pflicht("POSTGRES_USER")}:${pflicht("POSTGRES_PASSWORD")}@${host}:${process.env.POSTGRES_PORT ?? 5432}/${datenbank}`;
+}
+
+export function ladeEnv() {
+  return {
+    port: Number(process.env.API_PORT ?? 3000),
+    datenbankUrl: datenbankUrl(),
+    authSecret: pflicht("BETTER_AUTH_SECRET"),
+    /** Adresse, unter der Browser die App (und über den Vite-Proxy das API) erreichen. */
+    webUrl: process.env.WEB_URL ?? "http://localhost:5173",
+  };
+}
