@@ -9,7 +9,24 @@ import {
   kategorieRang,
 } from "@haushalt/db/kategorien";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { type FormEvent, useState } from "react";
+import { Minus, PackageOpen, Plus } from "lucide-react";
+import { useState } from "react";
+import { Eingabeleiste } from "@/components/Eingabeleiste";
+import { Gruppe } from "@/components/Gruppe";
+import { NativeAuswahl } from "@/components/NativeAuswahl";
+import { Button } from "@/components/ui/button";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { EINHEIT_NAMEN } from "./Einkaufsliste";
 import {
   bestandSetzen,
   buchen,
@@ -24,14 +41,6 @@ type VorratsZeile = {
   mindestbestand: number | null;
   bestand: number;
   auf_liste: number;
-};
-
-type AndererArtikel = { id: string; name: string };
-
-const EINHEIT_NAMEN: Record<Einheit, string> = {
-  stueck: "Stk.",
-  g: "g",
-  ml: "ml",
 };
 
 /** Schrittweite für Plus/Minus: ein Stück bzw. 100 g / 100 ml. */
@@ -54,10 +63,12 @@ export function Vorrat({
       ORDER BY a.name`,
     [haushaltId],
   );
-  const { data: andere } = useQuery<AndererArtikel>(
+  const { data: andere } = useQuery<{ id: string; name: string }>(
     "SELECT id, name FROM artikel WHERE haushalt_id = ? AND im_vorrat = 0 ORDER BY name",
     [haushaltId],
   );
+  const [details, setDetails] = useState<string | null>(null);
+  const detailZeile = zeilen.find((z) => z.id === details) ?? null;
 
   const gruppen = gruppieren(zeilen);
   const knapp = zeilen.filter(istKnapp).length;
@@ -75,22 +86,6 @@ export function Vorrat({
     });
   }
 
-  function setzen(zeile: VorratsZeile, neu: number) {
-    return db.writeTransaction((tx) =>
-      bestandSetzen(tx, { haushaltId, artikelId: zeile.id, neu, nutzerId }),
-    );
-  }
-
-  function mindestbestandAendern(zeile: VorratsZeile, wert: number | null) {
-    return db.writeTransaction(async (tx) => {
-      await tx.execute("UPDATE artikel SET mindestbestand = ? WHERE id = ?", [
-        wert,
-        zeile.id,
-      ]);
-      await mindestbestandPruefen(tx, zeile.id, nutzerId);
-    });
-  }
-
   function imVorratFuehren(artikelId: string, an: boolean) {
     return db.execute("UPDATE artikel SET im_vorrat = ? WHERE id = ?", [
       an ? 1 : 0,
@@ -99,207 +94,283 @@ export function Vorrat({
   }
 
   return (
-    <section>
-      <NeuerVorratsartikel haushaltId={haushaltId} nutzerId={nutzerId} />
-
+    <>
       {knapp > 0 && (
-        <p className="hinweis" role="status">
+        <p
+          role="status"
+          className="mt-2 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning-foreground"
+        >
           {knapp === 1 ? "1 Artikel ist" : `${knapp} Artikel sind`} unter dem
           Mindestbestand.
         </p>
       )}
 
       {gruppen.map(([gruppe, artikel]) => (
-        <div key={gruppe} className="gruppe">
-          <h3>{gruppe}</h3>
-          <ul>
-            {artikel.map((zeile) => (
-              <VorratsEintrag
-                key={zeile.id}
-                zeile={zeile}
-                aendern={aendern}
-                setzen={setzen}
-                mindestbestandAendern={mindestbestandAendern}
-                entfernen={() => imVorratFuehren(zeile.id, false)}
-              />
-            ))}
-          </ul>
-        </div>
+        <Gruppe key={gruppe} titel={gruppe}>
+          {artikel.map((zeile) => (
+            <VorratsEintrag
+              key={zeile.id}
+              zeile={zeile}
+              aendern={aendern}
+              oeffnen={() => setDetails(zeile.id)}
+            />
+          ))}
+        </Gruppe>
       ))}
 
       {zeilen.length === 0 && (
-        <p className="leer">
-          Noch nichts im Vorrat. Abgehakte Einkäufe von Vorratsartikeln landen
-          automatisch hier, oder du trägst oben etwas ein.
-        </p>
+        <div className="flex flex-col items-center gap-2 py-16 text-center text-muted-foreground">
+          <PackageOpen className="size-10" strokeWidth={1.5} />
+          <p>Noch nichts im Vorrat.</p>
+          <p className="max-w-xs text-sm">
+            Abgehakte Einkäufe von Vorratsartikeln landen automatisch hier, oder
+            du trägst unten etwas ein.
+          </p>
+        </div>
       )}
 
       {andere.length > 0 && (
-        <details className="weitere">
-          <summary>Weitere Artikel ({andere.length}) – nicht im Vorrat</summary>
-          <ul>
+        <details className="mt-6">
+          <summary className="cursor-pointer px-1 text-sm text-muted-foreground">
+            Weitere Artikel ({andere.length}) – nicht im Vorrat
+          </summary>
+          <ul className="mt-2 divide-y rounded-xl border bg-card">
             {andere.map((a) => (
-              <li key={a.id}>
+              <li
+                key={a.id}
+                className="flex items-center justify-between py-1 pr-2 pl-4"
+              >
                 <span>{a.name}</span>
-                <button
-                  type="button"
-                  className="leise"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => imVorratFuehren(a.id, true)}
                 >
                   Im Vorrat führen
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         </details>
       )}
-    </section>
+
+      <VorratsDetails
+        zeile={detailZeile}
+        schliessen={() => setDetails(null)}
+        haushaltId={haushaltId}
+        nutzerId={nutzerId}
+        entfernen={(id) => {
+          setDetails(null);
+          imVorratFuehren(id, false);
+        }}
+      />
+
+      <NeuerVorratsartikel haushaltId={haushaltId} nutzerId={nutzerId} />
+    </>
   );
 }
 
+/** Kompakte Zeile: Name (antippen für Details), −, Bestand, +. */
 function VorratsEintrag({
   zeile,
   aendern,
-  setzen,
-  mindestbestandAendern,
-  entfernen,
+  oeffnen,
 }: {
   zeile: VorratsZeile;
   aendern: (zeile: VorratsZeile, menge: number) => void;
-  setzen: (zeile: VorratsZeile, neu: number) => void;
-  mindestbestandAendern: (zeile: VorratsZeile, wert: number | null) => void;
-  entfernen: () => void;
+  oeffnen: () => void;
 }) {
-  const [bearbeiten, setBearbeiten] = useState(false);
   const schritt = SCHRITT[zeile.standardeinheit];
   const bestand = Math.max(zeile.bestand, 0);
   const einheit = EINHEIT_NAMEN[zeile.standardeinheit];
+  const knapp = istKnapp(zeile);
 
   return (
-    <li className={istKnapp(zeile) ? "knapp" : ""}>
-      <span className="vorrat-name">
-        {zeile.name}
-        {istKnapp(zeile) && (
-          <small> · knapp{zeile.auf_liste ? ", auf der Liste" : ""}</small>
-        )}
-      </span>
-      <span className="vorrat-steuerung">
-        <button
-          type="button"
-          aria-label={`${zeile.name}: ${schritt} ${einheit} weniger`}
-          disabled={bestand <= 0}
-          onClick={() => aendern(zeile, -Math.min(schritt, bestand))}
+    <li className="flex min-h-14 items-center gap-1 pr-2">
+      <button
+        type="button"
+        onClick={oeffnen}
+        className="flex-1 self-stretch px-4 py-2 text-left"
+      >
+        <span
+          className={cn(
+            "block text-base",
+            knapp && "font-medium text-warning-foreground",
+          )}
         >
-          −
-        </button>
-        {bearbeiten ? (
-          <ZahlEingabe
-            wert={bestand}
-            label={`Bestand ${zeile.name}`}
-            fertig={(neu) => {
-              setBearbeiten(false);
-              if (neu != null && neu !== bestand) {
-                setzen(zeile, neu);
-              }
-            }}
-          />
-        ) : (
-          <button
-            type="button"
-            className="bestand"
-            aria-label={`Bestand ${zeile.name}`}
-            title="Antippen, um den Bestand zu ändern"
-            onClick={() => setBearbeiten(true)}
-          >
-            {formatiereMenge(bestand, zeile.standardeinheit)}
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label={`${zeile.name}: ${schritt} ${einheit} mehr`}
-          onClick={() => aendern(zeile, schritt)}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="leise"
-          disabled={bestand <= 0}
-          onClick={() => aendern(zeile, -bestand)}
-        >
-          Aufgebraucht
-        </button>
-      </span>
-      <span className="vorrat-mindest">
-        <span className="mindest-feld">
-          min.
-          <ZahlEingabe
-            key={zeile.mindestbestand ?? "leer"}
-            wert={zeile.mindestbestand}
-            label={`Mindestbestand ${zeile.name}`}
-            fertig={(neu) => {
-              if (neu !== zeile.mindestbestand) {
-                mindestbestandAendern(zeile, neu && neu > 0 ? neu : null);
-              }
-            }}
-            leerErlaubt
-            immer
-          />
-          {einheit}
+          {zeile.name}
         </span>
-        <button
-          type="button"
-          className="leise"
-          aria-label={`${zeile.name} nicht mehr im Vorrat führen`}
-          onClick={entfernen}
-        >
-          ×
-        </button>
-      </span>
+        {knapp && (
+          <span className="text-xs text-warning-foreground">
+            knapp{zeile.auf_liste ? ", auf der Liste" : ""}
+          </span>
+        )}
+      </button>
+      <Button
+        variant="outline"
+        size="icon"
+        className="size-10 rounded-full"
+        aria-label={`${zeile.name}: ${schritt} ${einheit} weniger`}
+        disabled={bestand <= 0}
+        onClick={() => aendern(zeile, -Math.min(schritt, bestand))}
+      >
+        <Minus />
+      </Button>
+      <button
+        type="button"
+        onClick={oeffnen}
+        aria-label={`Bestand ${zeile.name}`}
+        className={cn(
+          "min-w-16 text-center text-base font-medium tabular-nums",
+          bestand <= 0 && "text-muted-foreground",
+        )}
+      >
+        {formatiereMenge(bestand, zeile.standardeinheit)}
+      </button>
+      <Button
+        variant="outline"
+        size="icon"
+        className="size-10 rounded-full"
+        aria-label={`${zeile.name}: ${schritt} ${einheit} mehr`}
+        onClick={() => aendern(zeile, schritt)}
+      >
+        <Plus />
+      </Button>
     </li>
   );
 }
 
-/** Zahlenfeld, das seinen Wert beim Verlassen oder mit Enter übernimmt. */
-function ZahlEingabe({
-  wert,
-  label,
-  fertig,
-  leerErlaubt = false,
-  immer = false,
+/** Bestand genau setzen, Mindestbestand, aufbrauchen, aus dem Vorrat nehmen. */
+function VorratsDetails({
+  zeile,
+  schliessen,
+  haushaltId,
+  nutzerId,
+  entfernen,
 }: {
-  wert: number | null;
-  label: string;
-  fertig: (neu: number | null) => void;
-  leerErlaubt?: boolean;
-  immer?: boolean;
+  zeile: VorratsZeile | null;
+  schliessen: () => void;
+  haushaltId: string;
+  nutzerId: string;
+  entfernen: (artikelId: string) => void;
 }) {
-  const [text, setText] = useState(wert == null ? "" : String(wert));
-  function uebernehmen() {
-    const roh = text.trim().replace(",", ".");
-    if (roh === "") {
-      fertig(leerErlaubt ? null : wert);
-      return;
-    }
-    const zahl = Number(roh);
-    fertig(Number.isFinite(zahl) && zahl >= 0 ? zahl : wert);
-  }
+  const db = usePowerSync();
+  const einheit = zeile ? EINHEIT_NAMEN[zeile.standardeinheit] : "";
+
   return (
-    <input
-      className="zahl"
-      inputMode="decimal"
-      aria-label={label}
-      value={text}
-      // biome-ignore lint/a11y/noAutofocus: Feld erscheint erst nach Antippen
-      autoFocus={!immer}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={uebernehmen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.currentTarget.blur();
-        }
-      }}
-    />
+    <Drawer
+      open={zeile != null}
+      onOpenChange={(offen) => !offen && schliessen()}
+    >
+      <DrawerContent>
+        {zeile && (
+          <form
+            key={zeile.id}
+            className="mx-auto w-full max-w-lg"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const daten = new FormData(e.currentTarget);
+              const bestand = zahl(daten.get("bestand"));
+              const mindestbestand = zahl(daten.get("mindestbestand"));
+              await db.writeTransaction(async (tx) => {
+                await tx.execute(
+                  "UPDATE artikel SET mindestbestand = ? WHERE id = ?",
+                  [
+                    mindestbestand && mindestbestand > 0
+                      ? mindestbestand
+                      : null,
+                    zeile.id,
+                  ],
+                );
+                if (bestand != null && bestand !== Math.max(zeile.bestand, 0)) {
+                  await bestandSetzen(tx, {
+                    haushaltId,
+                    artikelId: zeile.id,
+                    neu: bestand,
+                    nutzerId,
+                  });
+                } else {
+                  await mindestbestandPruefen(tx, zeile.id, nutzerId);
+                }
+              });
+              schliessen();
+            }}
+          >
+            <DrawerHeader>
+              <DrawerTitle>{zeile.name}</DrawerTitle>
+              <DrawerDescription>
+                {kategorieName(zeile.kategorie)}
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="grid grid-cols-2 gap-3 px-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="details-bestand">Bestand ({einheit})</Label>
+                <Input
+                  id="details-bestand"
+                  name="bestand"
+                  inputMode="decimal"
+                  defaultValue={Math.max(zeile.bestand, 0)}
+                  aria-label={`Bestand setzen ${zeile.name}`}
+                  className="h-11 text-base"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="details-mindest">
+                  Mindestbestand ({einheit})
+                </Label>
+                <Input
+                  id="details-mindest"
+                  name="mindestbestand"
+                  inputMode="decimal"
+                  placeholder="keiner"
+                  defaultValue={zeile.mindestbestand ?? ""}
+                  aria-label={`Mindestbestand ${zeile.name}`}
+                  className="h-11 text-base"
+                />
+              </div>
+              <p className="col-span-2 text-xs text-muted-foreground">
+                Fällt der Bestand unter den Mindestbestand, kommt der Artikel
+                automatisch auf die Einkaufsliste.
+              </p>
+            </div>
+            <DrawerFooter>
+              <Button type="submit" className="h-11">
+                Speichern
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11"
+                  disabled={zeile.bestand <= 0}
+                  onClick={async () => {
+                    await db.writeTransaction((tx) =>
+                      bestandSetzen(tx, {
+                        haushaltId,
+                        artikelId: zeile.id,
+                        neu: 0,
+                        nutzerId,
+                      }),
+                    );
+                    schliessen();
+                  }}
+                >
+                  Aufgebraucht
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-11 text-muted-foreground"
+                  onClick={() => entfernen(zeile.id)}
+                >
+                  Nicht im Vorrat führen
+                </Button>
+              </div>
+            </DrawerFooter>
+          </form>
+        )}
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -317,13 +388,9 @@ function NeuerVorratsartikel({
   const [einheit, setEinheit] = useState<Einheit>("stueck");
   const [kategorie, setKategorie] = useState("vorrat");
 
-  async function eintragen(event: FormEvent) {
-    event.preventDefault();
+  async function eintragen() {
     const artikelName = name.trim();
-    if (!artikelName) {
-      return;
-    }
-    const zahl = menge.trim() === "" ? 0 : Number(menge.replace(",", "."));
+    const bestand = zahl(menge) ?? 0;
     await db.writeTransaction(async (tx) => {
       const vorhanden = await tx.getOptional<{ id: string }>(
         "SELECT id FROM artikel WHERE haushalt_id = ? AND lower(name) = lower(?)",
@@ -349,8 +416,13 @@ function NeuerVorratsartikel({
           ],
         );
       }
-      if (Number.isFinite(zahl) && zahl > 0) {
-        await bestandSetzen(tx, { haushaltId, artikelId, neu: zahl, nutzerId });
+      if (bestand > 0) {
+        await bestandSetzen(tx, {
+          haushaltId,
+          artikelId,
+          neu: bestand,
+          nutzerId,
+        });
       }
     });
     setName("");
@@ -358,48 +430,58 @@ function NeuerVorratsartikel({
   }
 
   return (
-    <form className="eingabe" onSubmit={eintragen}>
-      <input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Was ist da?"
-        aria-label="Vorratsartikel"
-        className="name"
-      />
-      <input
-        value={menge}
-        onChange={(e) => setMenge(e.target.value)}
-        inputMode="decimal"
-        placeholder="Menge"
-        aria-label="Bestand"
-        className="menge"
-      />
-      <select
-        value={einheit}
-        onChange={(e) => setEinheit(e.target.value as Einheit)}
-        aria-label="Einheit"
-      >
-        {EINHEITEN.map((e) => (
-          <option key={e} value={e}>
-            {EINHEIT_NAMEN[e]}
-          </option>
-        ))}
-      </select>
-      <select
-        value={kategorie}
-        onChange={(e) => setKategorie(e.target.value)}
-        aria-label="Kategorie"
-        className="kategorie"
-      >
-        {KATEGORIEN.map((k) => (
-          <option key={k.id} value={k.id}>
-            {k.name}
-          </option>
-        ))}
-      </select>
-      <button type="submit">Eintragen</button>
-    </form>
+    <Eingabeleiste
+      wert={name}
+      aendern={setName}
+      absenden={eintragen}
+      platzhalter="Was ist da?"
+      label="Vorratsartikel"
+      absendenLabel="Eintragen"
+      details={
+        <>
+          <Input
+            value={menge}
+            onChange={(e) => setMenge(e.target.value)}
+            inputMode="decimal"
+            placeholder="Menge"
+            aria-label="Bestand"
+            className="h-11 text-base"
+          />
+          <NativeAuswahl
+            value={einheit}
+            onChange={(e) => setEinheit(e.target.value as Einheit)}
+            aria-label="Einheit"
+          >
+            {EINHEITEN.map((e) => (
+              <option key={e} value={e}>
+                {EINHEIT_NAMEN[e]}
+              </option>
+            ))}
+          </NativeAuswahl>
+          <NativeAuswahl
+            value={kategorie}
+            onChange={(e) => setKategorie(e.target.value)}
+            aria-label="Kategorie"
+          >
+            {KATEGORIEN.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.name}
+              </option>
+            ))}
+          </NativeAuswahl>
+        </>
+      }
+    />
   );
+}
+
+/** Eingabe als Zahl ≥ 0 lesen (Komma oder Punkt); leer oder ungültig → null. */
+function zahl(wert: FormDataEntryValue | string | null): number | null {
+  const roh = String(wert ?? "")
+    .trim()
+    .replace(",", ".");
+  const z = roh === "" ? null : Number(roh);
+  return z != null && Number.isFinite(z) && z >= 0 ? z : null;
 }
 
 function istKnapp(zeile: VorratsZeile) {

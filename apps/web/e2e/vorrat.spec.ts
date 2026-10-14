@@ -6,6 +6,7 @@ import {
   geraet,
   haushaltAnlegen,
   hinzufuegen,
+  vorratEintragen,
   zumVorrat,
   zurListe,
 } from "./hilfen";
@@ -43,8 +44,10 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
     await expect(bestand(page, "Nudeln")).toHaveText("2 Stk.");
 
     // Mindestbestand 3 bei Bestand 2 → 1 Stück kommt automatisch auf die Liste.
+    await bestand(page, "Nudeln").click();
     await page.getByLabel("Mindestbestand Nudeln").fill("3");
     await page.getByLabel("Mindestbestand Nudeln").press("Enter");
+    await expect(page.getByLabel("Mindestbestand Nudeln")).toBeHidden();
     await expect(
       page.getByRole("listitem").filter({ hasText: "Nudeln" }),
     ).toContainText("knapp, auf der Liste");
@@ -75,12 +78,10 @@ test("Offline-Verbrauch auf zwei Geräten geht nicht verloren", async ({
   const ben = await geraet(browserType, "Ben");
   try {
     await haushaltAnlegen(anna.page, "Kaffeehaushalt");
-    await einladen(anna.page, ben.page, "Kaffeehaushalt");
+    await einladen(anna.page, ben.page, "Kaffeehaushalt", "Ben");
 
     await zumVorrat(anna.page);
-    await anna.page.getByLabel("Vorratsartikel").fill("Kaffee");
-    await anna.page.getByLabel("Bestand", { exact: true }).fill("5");
-    await anna.page.getByRole("button", { name: "Eintragen" }).click();
+    await vorratEintragen(anna.page, "Kaffee", "5");
     await expect(bestand(anna.page, "Kaffee")).toHaveText("5 Stk.");
     await zumVorrat(ben.page);
     await expect(bestand(ben.page, "Kaffee")).toHaveText("5 Stk.");

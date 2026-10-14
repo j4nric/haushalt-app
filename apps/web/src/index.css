@@ -1,0 +1,101 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Dunkelmodus folgt der Einstellung des Geräts (keine eigene Umschaltung). */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+/*
+ * Farben: neutral, Grün als Akzent (wie das App-Icon).
+ * Namen folgen der shadcn-Konvention, damit alle Komponenten sie nutzen.
+ */
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.2 0.006 145);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.006 145);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.006 145);
+  --primary: oklch(0.527 0.154 150.07);
+  --primary-foreground: oklch(0.985 0.02 150);
+  --secondary: oklch(0.955 0.012 150);
+  --secondary-foreground: oklch(0.3 0.06 150);
+  --muted: oklch(0.96 0.004 145);
+  --muted-foreground: oklch(0.52 0.012 145);
+  --accent: oklch(0.95 0.03 150);
+  --accent-foreground: oklch(0.3 0.08 150);
+  --destructive: oklch(0.577 0.245 27.33);
+  --warning: oklch(0.67 0.16 60);
+  --warning-foreground: oklch(0.3 0.08 60);
+  --border: oklch(0.91 0.006 145);
+  --input: oklch(0.88 0.008 145);
+  --ring: oklch(0.6 0.15 150);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.16 0.008 150);
+    --foreground: oklch(0.96 0.006 145);
+    --card: oklch(0.2 0.01 150);
+    --card-foreground: oklch(0.96 0.006 145);
+    --popover: oklch(0.22 0.01 150);
+    --popover-foreground: oklch(0.96 0.006 145);
+    --primary: oklch(0.72 0.17 149.6);
+    --primary-foreground: oklch(0.18 0.04 150);
+    --secondary: oklch(0.26 0.02 150);
+    --secondary-foreground: oklch(0.92 0.02 150);
+    --muted: oklch(0.24 0.01 150);
+    --muted-foreground: oklch(0.7 0.012 145);
+    --accent: oklch(0.28 0.04 150);
+    --accent-foreground: oklch(0.92 0.04 150);
+    --destructive: oklch(0.65 0.2 25);
+    --warning: oklch(0.78 0.15 70);
+    --warning-foreground: oklch(0.92 0.06 70);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.6 0.15 150);
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Verhindert Zoom-Sprünge bei Eingabefeldern auf dem iPhone. */
+    -webkit-text-size-adjust: 100%;
+  }
+}
