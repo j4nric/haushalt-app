@@ -79,3 +79,15 @@ schlägt. Es wird vor dem ersten Rendern angewendet (kein Aufblitzen der Standar
   Der Strich endete vor dem rechten Rand.
 - Kacheln der Liste ohne Eckenradius (Papierzettel).
 - Bei „Bewegung reduzieren“ nur Ausblenden.
+
+## Verlauf als Block, Wagen, „Zum Wagen“ (Nachtrag)
+
+- Aufgeklappter Verlauf: Die ganze Kategorie (Überschrift, Symbol, Kacheln) liegt in
+  einem Block in Kategoriefarbe, von Rand zu Rand. Kacheln im gewählten Raster: schon
+  auf der Liste → Haken (vorne), Vorschläge → Plus. Ein Tipp außerhalb schließt ihn
+  (ausgenommen „Aus dem Verlauf“-Knöpfe und Meldungen mit Rückgängig).
+- Wagen als eigener Abschnitt: Fläche leicht in Akzentfarbe, Überschrift mittig mit
+  Wagen-Symbol, „Wagen leeren“ darunter.
+- Knopf „Zum Wagen“ unten mittig (mit Anzahl), sobald gescrollt wurde und der Wagen
+  nicht sichtbar ist; Eingabeleiste und Navigation zählen dabei als verdeckt. Ein Tipp
+  scrollt sanft zum Wagen.

@@ -45,6 +45,8 @@ test("Schnell-Hinzufügen aus dem Verlauf einer Kategorie", async ({
 }) => {
   const handy = await geraet(playwright[browserName], "Verlauf");
   const { page } = handy;
+  const daneben = () =>
+    page.getByRole("heading", { name: "Verlauf-Haushalt" }).click();
   try {
     await haushaltAnlegen(page, "Verlauf-Haushalt");
     // Früherer Einkauf: eingetragen, gekauft, Wagen geleert.
@@ -53,27 +55,29 @@ test("Schnell-Hinzufügen aus dem Verlauf einer Kategorie", async ({
       await eintrag(page, name).getByRole("checkbox").click();
       await expect(eintrag(page, name).getByRole("checkbox")).toBeChecked();
     }
-    await page.getByRole("button", { name: "Leeren" }).click();
+    await page.getByRole("button", { name: "Wagen leeren" }).click();
     await expect(page.getByText("Die Liste ist leer.")).toBeVisible();
 
-    // Neuer Einkauf: Tomaten stehen drauf; die Plus-Kachel öffnet den Verlauf.
+    // Neuer Einkauf: Tomaten stehen drauf; das Symbol öffnet den Verlauf als Block.
     await hinzufuegen(page, "Tomaten");
     await page.getByRole("button", { name: "Verlauf Obst & Gemüse" }).click();
     const verlauf = page.getByRole("region", { name: "Verlauf Obst & Gemüse" });
+    await expect(
+      verlauf.getByRole("heading", { name: "Obst & Gemüse" }),
+    ).toBeVisible();
     await expect(
       verlauf.getByRole("button", {
         name: "Tomaten steht schon auf der Liste",
       }),
     ).toBeVisible();
     await verlauf.getByRole("button", { name: "Bananen hinzufügen" }).click();
-    await expect(eintrag(page, "Bananen")).toBeVisible();
     await expect(
       verlauf.getByRole("button", {
         name: "Bananen steht schon auf der Liste",
       }),
     ).toBeVisible();
 
-    // Lang drücken nimmt aus dem Verlauf – mit Rückgängig.
+    // Lang drücken nimmt aus dem Verlauf – Rückgängig lässt den Block offen.
     await langDruecken(
       page,
       verlauf.getByRole("button", { name: "Äpfel hinzufügen" }),
@@ -86,12 +90,18 @@ test("Schnell-Hinzufügen aus dem Verlauf einer Kategorie", async ({
       verlauf.getByRole("button", { name: "Äpfel hinzufügen" }),
     ).toBeVisible();
 
+    // Ein Tipp daneben schließt den Block; Bananen steht jetzt als Kachel auf der Liste.
+    await daneben();
+    await expect(verlauf).toBeHidden();
+    await expect(eintrag(page, "Bananen")).toBeVisible();
+
     // Kategorie ohne offene Einträge: über „Aus dem Verlauf“ erreichbar.
     await page.getByRole("button", { name: "Verlauf Milch & Käse" }).click();
     await page
       .getByRole("region", { name: "Verlauf Milch & Käse" })
       .getByRole("button", { name: "Milch hinzufügen" })
       .click();
+    await daneben();
     await expect(eintrag(page, "Milch")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Milch & Käse" }),
@@ -135,6 +145,44 @@ test("Neue Produkte stehen sofort im Verlauf, auch offline und im Wagen", async 
 
     // Vorschläge beim Tippen enthalten beide.
     await expect(page.locator("#eingabe-vorschlaege option")).toHaveCount(2);
+  } finally {
+    await handy.schliessen();
+  }
+});
+
+/** Öffnen des Verlaufs verschiebt nichts: Überschrift und Symbol bleiben exakt stehen. */
+test("Verlauf öffnen lässt Überschrift und Symbol an ihrem Platz", async ({
+  browserName,
+  playwright,
+}) => {
+  const handy = await geraet(playwright[browserName], "Ruhig");
+  const { page } = handy;
+  try {
+    await haushaltAnlegen(page, "Ruhig-Haushalt");
+    await hinzufuegen(page, "Tomaten");
+    await hinzufuegen(page, "Milch");
+    await page.mouse.click(5, 5);
+
+    for (const titel of ["Obst & Gemüse", "Milch & Käse"]) {
+      const lage = async () => ({
+        ueberschrift: await page
+          .getByRole("heading", { name: titel, exact: true })
+          .boundingBox(),
+        symbol: await page
+          .getByRole("button", { name: `Verlauf ${titel}` })
+          .boundingBox(),
+      });
+      const vorher = await lage();
+      await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
+      await expect(
+        page.getByRole("region", { name: `Verlauf ${titel}` }),
+      ).toBeVisible();
+      expect(await lage()).toEqual(vorher);
+      await page.getByRole("button", { name: `Verlauf ${titel}` }).click();
+      await expect(
+        page.getByRole("region", { name: `Verlauf ${titel}` }),
+      ).toBeHidden();
+    }
   } finally {
     await handy.schliessen();
   }
