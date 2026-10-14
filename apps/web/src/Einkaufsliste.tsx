@@ -628,13 +628,18 @@ function Kachel({
           "relative flex h-full min-h-14 w-full touch-pan-y flex-col items-center justify-center rounded-none border py-2 text-center transition-colors select-none active:scale-[0.98]",
           kompakt ? "px-2.5" : "px-3",
           erledigt
-            ? "border-dashed bg-transparent text-muted-foreground"
+            ? "border-dashed text-foreground/80"
             : "bg-card shadow-xs",
           abhaken.laeuft && ABHAK_KLASSE,
         )}
         style={
           erledigt
-            ? undefined
+            ? {
+                // Im Wagen zurückgenommen, aber gut lesbar: kräftige Strichlinie, zarte Fläche.
+                borderColor:
+                  "color-mix(in oklab, var(--foreground) 40%, transparent)",
+                background: "color-mix(in oklab, var(--card) 70%, transparent)",
+              }
             : {
                 borderColor: `color-mix(in oklab, ${farbe} 35%, var(--border))`,
                 background: `color-mix(in oklab, var(--card), ${farbe} 7%)`,

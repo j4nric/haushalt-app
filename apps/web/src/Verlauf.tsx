@@ -140,9 +140,6 @@ export function VerlaufBlock({
           </ul>
         )}
       </div>
-      <p className="pt-3 pl-[3.25rem] text-xs opacity-85">
-        Antippen = auf die Liste · lang drücken = aus dem Verlauf nehmen
-      </p>
     </section>
   );
 }
