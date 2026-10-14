@@ -1,0 +1,10 @@
+{
+  "name": "haushalt-app",
+  "private": true,
+  "description": "Gemeinsame, offline-fähige Einkaufsliste, Vorrat und Rezepte für den Haushalt",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {}
+}

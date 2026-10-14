@@ -1,0 +1,24 @@
+# Abhängigkeiten
+node_modules/
+
+# Build-Ausgaben
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Umgebungsvariablen (Vorlage: .env.example)
+.env
+.env.*
+!.env.example
+
+# Tests
+playwright-report/
+test-results/
+
+# System und Editor
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
