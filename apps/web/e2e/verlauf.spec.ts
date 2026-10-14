@@ -99,3 +99,42 @@ test("Schnell-Hinzufügen aus dem Verlauf einer Kategorie", async ({
     await handy.schliessen();
   }
 });
+
+/**
+ * Ein neu eingetragenes Produkt gehört sofort zum Verlauf und zu den Vorschlägen –
+ * auch wenn es schon im Wagen liegt und ohne Netz (kein Abgleich mit dem Server).
+ */
+test("Neue Produkte stehen sofort im Verlauf, auch offline und im Wagen", async ({
+  browserName,
+  playwright,
+}) => {
+  const handy = await geraet(playwright[browserName], "Sofort");
+  const { page } = handy;
+  try {
+    await haushaltAnlegen(page, "Sofort-Haushalt");
+    handy.netz.offline();
+    await expect(page.getByTestId("sync-status")).toHaveText(/Offline/);
+
+    await hinzufuegen(page, "Tomaten");
+    await hinzufuegen(page, "Gurke");
+    await eintrag(page, "Gurke").getByRole("checkbox").click();
+    await expect(eintrag(page, "Gurke").getByRole("checkbox")).toBeChecked();
+
+    // Verlauf der Kategorie: Gurke (im Wagen) ist wählbar, Tomaten (offen) ausgegraut.
+    await page.getByRole("button", { name: "Verlauf Obst & Gemüse" }).click();
+    const verlauf = page.getByRole("region", { name: "Verlauf Obst & Gemüse" });
+    await expect(
+      verlauf.getByRole("button", { name: "Gurke hinzufügen" }),
+    ).toBeVisible();
+    await expect(
+      verlauf.getByRole("button", {
+        name: "Tomaten steht schon auf der Liste",
+      }),
+    ).toBeVisible();
+
+    // Vorschläge beim Tippen enthalten beide.
+    await expect(page.locator("#eingabe-vorschlaege option")).toHaveCount(2);
+  } finally {
+    await handy.schliessen();
+  }
+});

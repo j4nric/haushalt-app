@@ -65,11 +65,13 @@ export function Einkaufsliste({
       ORDER BY l.erstellt_am`,
     [haushaltId],
   );
+  // Die lokale Datenbank kennt keine Standardwerte der Server-Spalten: Ein gerade erst
+  // angelegter Artikel hat archiviert = NULL, bis der Server-Stand zurückkommt.
   const { data: bekannteArtikel } = useQuery<VerlaufArtikel>(
     `SELECT a.id, a.name, a.kategorie,
             EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
        FROM artikel a
-      WHERE a.haushalt_id = ? AND a.archiviert = 0
+      WHERE a.haushalt_id = ? AND COALESCE(a.archiviert, 0) = 0
       ORDER BY a.name`,
     [haushaltId],
   );
@@ -117,8 +119,8 @@ export function Einkaufsliste({
       if (!artikelId) {
         artikelId = crypto.randomUUID();
         await tx.execute(
-          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, erstellt_am)
-           VALUES (?, ?, ?, ?, 'stueck', ?, ?)`,
+          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, erstellt_am)
+           VALUES (?, ?, ?, ?, 'stueck', ?, 0, ?)`,
           [
             artikelId,
             haushaltId,
