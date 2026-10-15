@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Holt täglich die Server-Backups auf diesen Mac (siehe docs/betrieb.md).
+     REPO wird beim Installieren durch den Pfad zum Repository ersetzt. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>de.haushalt-app.backups</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>REPO/scripts/backups-holen.sh</string>
+  </array>
+  <!-- Täglich 10:00; schläft der Mac, läuft es beim Aufwachen nach. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>10</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>HOME/Library/Logs/haushalt-backups.log</string>
+  <key>StandardErrorPath</key>
+  <string>HOME/Library/Logs/haushalt-backups.log</string>
+</dict>
+</plist>

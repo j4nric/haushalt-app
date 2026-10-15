@@ -107,8 +107,74 @@ docker compose logs -f app        # Logs der App
 docker compose logs -f powersync  # Logs des Sync-Dienstes
 ```
 
-## Offen: Backups
+## Backups
 
-Noch nicht eingerichtet. Vor dem echten Einsatz mindestens ein tägliches
-`pg_dump` der Datenbank `haushalt` auf einen anderen Speicherort (z. B. Hetzner
-Storage Box) einplanen.
+Zwei Stufen: täglich ein Dump auf dem Server, täglich eine Kopie auf einen anderen
+Rechner (hier: Jans Mac). Gesichert wird die App-Datenbank `haushalt` – mit allen
+Listen, Vorräten, Rezepten, Fotos und Plänen. `powersync_storage` nicht: Den Zustand
+baut PowerSync aus der App-Datenbank selbst neu auf.
+
+| | Wo | Wann | Aufbewahrung |
+|---|---|---|---|
+| Dump | Server, `/home/deploy/backups/haushalt-JJJJ-MM-TT_HHMM.dump` | täglich 03:30 (systemd-Timer, holt Verpasstes nach) | 7 Tage |
+| Kopie | Mac, `~/Backups/haushalt-app/` | täglich 10:00 (launchd, holt nach dem Aufwachen nach) | 30 Tage |
+
+- `infra/production/backup.sh` erzeugt den Dump (`pg_dump`, Custom-Format), prüft ihn
+  mit `pg_restore --list` auf die wichtigsten Tabellen und legt ihn erst dann ab
+  (Rechte 600).
+- `scripts/backups-holen.sh` holt per `rsync` ab und meldet sich per Mitteilung, wenn
+  das Abholen scheitert oder das neueste Backup älter als 48 Stunden ist. Log:
+  `~/Library/Logs/haushalt-backups.log`.
+- Der Mac nutzt einen **eigenen Schlüssel** `~/.ssh/haushalt-backup`, der auf dem
+  Server nur lesen darf, und nur `~/backups`:
+  `restrict,command="/usr/bin/rrsync -ro /home/deploy/backups" ssh-ed25519 …`
+  (in `/home/deploy/.ssh/authorized_keys`; braucht das Paket `rsync`).
+
+### Einrichten (einmalig)
+
+Auf dem Server als root:
+
+```bash
+apt-get install -y rsync
+cp /home/deploy/haushalt-app/infra/production/systemd/haushalt-backup.* /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now haushalt-backup.timer
+systemctl start haushalt-backup.service   # einmal sofort
+```
+
+Auf dem Mac (im Repository):
+
+```bash
+ssh-keygen -t ed25519 -N "" -C haushalt-backup -f ~/.ssh/haushalt-backup
+# öffentlichen Schlüssel mit der restrict/rrsync-Zeile oben beim Nutzer deploy eintragen
+sed -e "s#REPO#$PWD#" -e "s#HOME#$HOME#g" scripts/de.haushalt-app.backups.plist \
+  > ~/Library/LaunchAgents/de.haushalt-app.backups.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/de.haushalt-app.backups.plist
+```
+
+### Prüfen
+
+```bash
+systemctl list-timers haushalt-backup.timer          # Server: nächster Lauf
+journalctl -u haushalt-backup.service -n 20          # Server: letzte Läufe
+~/haushalt-app/infra/production/backup-pruefen.sh    # Server: Probe-Wiederherstellung
+```
+
+`backup-pruefen.sh` spielt das neueste Backup in eine Wegwerf-Datenbank ein,
+vergleicht die Zeilenzahlen mit der laufenden Datenbank und löscht sie wieder.
+Am besten ab und zu laufen lassen – ein Backup ist erst gut, wenn es sich
+wiederherstellen lässt.
+
+### Im Ernstfall wiederherstellen
+
+```bash
+cd ~/haushalt-app/infra/production
+docker compose stop app powersync
+docker compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"'
+docker compose exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner' < ~/backups/haushalt-JJJJ-MM-TT_HHMM.dump
+docker compose up -d
+```
+
+Ein Backup vom Mac vorher mit `scp` nach `~/backups/` auf den Server kopieren.
+Danach synchronisieren sich die Geräte neu; was ein Gerät seit dem Backup offline
+geändert hat, lädt es beim nächsten Verbinden hoch.
