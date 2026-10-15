@@ -23,6 +23,7 @@ import {
   zutatenAlsText,
   zutatenAusText,
 } from "./aktionen";
+import { geteiltenLinkAbholen } from "./geteilt";
 
 type Import = {
   titel: string;
@@ -286,12 +287,29 @@ function LinkImport({ uebernehmen }: { uebernehmen: (r: Import) => void }) {
     };
   }, []);
 
-  async function importieren() {
+  // Per „Teilen“ hergeschickt: Link übernehmen und gleich holen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nur beim Öffnen
+  useEffect(() => {
+    const geteilt = geteiltenLinkAbholen();
+    if (geteilt === undefined) {
+      return;
+    }
+    if (!geteilt) {
+      toast("Im Geteilten war kein Link – Rezept von Hand eintragen.");
+      return;
+    }
+    setUrl(geteilt);
+    if (navigator.onLine) {
+      importieren(geteilt);
+    }
+  }, []);
+
+  async function importieren(link = url) {
     setLaeuft(true);
     const antwort = await fetch("/api/rezepte/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({ url: link }),
     }).catch(() => null);
     setLaeuft(false);
     const inhalt = await antwort?.json().catch(() => ({}));
@@ -334,7 +352,7 @@ function LinkImport({ uebernehmen }: { uebernehmen: (r: Import) => void }) {
           type="button"
           className="h-10 shrink-0 rounded-full"
           disabled={!url.trim() || laeuft || !online}
-          onClick={importieren}
+          onClick={() => importieren()}
         >
           {laeuft ? <LoaderCircle className="animate-spin" /> : "Holen"}
         </Button>

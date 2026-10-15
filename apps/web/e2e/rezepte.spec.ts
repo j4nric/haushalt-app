@@ -13,7 +13,7 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
     await haushaltAnlegen(page, "Koch-Haushalt");
     await zuBereich(page, "Rezepte");
     await expect(page.getByText("Noch keine Rezepte")).toBeVisible();
-    await page.getByRole("button", { name: "Erstes Rezept" }).click();
+    await page.getByRole("button", { name: "Eigenes Rezept" }).click();
 
     await page.getByLabel("Titel").fill("Spaghetti Pomodoro");
     await page.getByLabel("Portionen").fill("2");
@@ -177,7 +177,7 @@ test.describe("Import per Link", () => {
     try {
       await haushaltAnlegen(page, "Import-Haushalt");
       await zuBereich(page, "Rezepte");
-      await page.getByRole("button", { name: "Erstes Rezept" }).click();
+      await page.getByRole("button", { name: "Eigenes Rezept" }).click();
       await page.getByLabel("Link zum Rezept").fill(`${basis}/linsensuppe`);
       await page.getByRole("button", { name: "Holen" }).click();
       await expect(page.getByLabel("Titel")).toHaveValue("Linsensuppe");
@@ -206,6 +206,34 @@ test.describe("Import per Link", () => {
       await page.getByLabel("Link zum Rezept").fill("kein link");
       await page.getByRole("button", { name: "Holen" }).click();
       await expect(page.getByText("Das ist kein gültiger Link")).toBeVisible();
+    } finally {
+      await handy.schliessen();
+    }
+  });
+
+  test("„Teilen → Haushalt“ importiert den geteilten Link", async ({
+    browserName,
+    playwright,
+  }) => {
+    const handy = await geraet(playwright[browserName], "Teilen");
+    const { page } = handy;
+    try {
+      await haushaltAnlegen(page, "Teilen-Haushalt");
+      // Viele Apps schicken den Link nur im Text, mit etwas drumherum.
+      await page.goto(
+        `/teilen?title=Rezept&text=${encodeURIComponent(`Schau mal: ${basis}/linsensuppe 😋`)}`,
+      );
+      await expect(page.getByLabel("Titel")).toHaveValue("Linsensuppe");
+      await expect(page).toHaveURL(/\/#rezepte\/neu$/);
+      await page.getByRole("button", { name: "Speichern" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Linsensuppe" }),
+      ).toBeVisible();
+
+      // Ohne Link: Hinweis, und der Editor ist offen.
+      await page.goto("/teilen?text=Nur%20ein%20Text");
+      await expect(page.getByText("Im Geteilten war kein Link")).toBeVisible();
+      await expect(page.getByLabel("Titel")).toHaveValue("");
     } finally {
       await handy.schliessen();
     }

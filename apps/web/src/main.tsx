@@ -7,6 +7,7 @@ import { Toaster } from "./components/ui/sonner";
 import { themaAnwenden } from "./einstellungen";
 import { haushaltWaehlen } from "./haushaltwahl";
 import { db } from "./powersync";
+import { geteiltenLinkMerken } from "./rezepte/geteilt";
 import "./index.css";
 
 // Farbschema aus den gespeicherten Einstellungen sofort anwenden (vor dem ersten Rendern).
@@ -24,6 +25,16 @@ function oeffnen(url: URL) {
   }
   history.replaceState(null, "", `${url.pathname}${url.hash}`);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
+}
+// Aus einer anderen App geteilt („Teilen → Haushalt“): den Link merken und den
+// Rezept-Import öffnen. Manche Apps schicken ihn als `url`, viele nur im `text`.
+if (location.pathname === "/teilen") {
+  const p = new URLSearchParams(location.search);
+  const link = [p.get("url"), p.get("text"), p.get("title")]
+    .join(" ")
+    .match(/https?:\/\/\S+/)?.[0];
+  geteiltenLinkMerken(link ?? null);
+  history.replaceState(null, "", "/#rezepte/neu");
 }
 if (new URLSearchParams(location.search).has("haushalt")) {
   oeffnen(new URL(location.href));

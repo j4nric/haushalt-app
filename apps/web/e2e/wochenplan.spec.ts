@@ -11,7 +11,7 @@ import {
 
 async function rezept(page: Page, titel: string, zutaten: string) {
   await page
-    .getByRole("button", { name: /Erstes Rezept|Neues Rezept/ })
+    .getByRole("button", { name: /Eigenes Rezept|Neues Rezept/ })
     .click();
   await page.getByLabel("Titel").fill(titel);
   await page.getByLabel("Portionen").fill("2");
