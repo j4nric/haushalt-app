@@ -1,5 +1,3 @@
-import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
-import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import {
   type Zutat,
   type ZutatZeile,
@@ -7,8 +5,8 @@ import {
   zerlegeZeile,
 } from "@haushalt/db/zutaten";
 import type { AbstractPowerSyncDatabase, Transaction } from "@powersync/web";
-import { ersterBuchstabeGross } from "@/lib/farben";
 import { heute } from "@/lib/plan";
+import { artikelFindenOderAnlegen, aufListeSetzen } from "../listenaktionen";
 import { mindestbestandPruefen } from "../vorratsaktionen";
 
 /**
@@ -234,50 +232,25 @@ export async function zutatenAufListe(
     zutaten,
   }: { haushaltId: string; nutzerId: string; zutaten: ListenZutat[] },
 ): Promise<number> {
-  const jetzt = new Date().toISOString();
   return db.writeTransaction(async (tx) => {
     let neu = 0;
     for (const z of zutaten) {
-      const name = ersterBuchstabeGross(z.name.trim());
-      const vorhanden = await tx.getOptional<{ id: string }>(
-        "SELECT id FROM artikel WHERE haushalt_id = ? AND lower(name) = lower(?)",
-        [haushaltId, name],
-      );
-      let artikelId = vorhanden?.id;
-      if (!artikelId) {
-        artikelId = crypto.randomUUID();
-        const kategorie = erkenneKategorie(name)[0] ?? null;
-        await tx.execute(
-          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, erstellt_am)
-           VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-          [
-            artikelId,
-            haushaltId,
-            name,
-            kategorie,
-            z.einheit ?? "stueck",
-            standardmaessigImVorrat(kategorie) ? 1 : 0,
-            jetzt,
-          ],
-        );
+      const artikel = await artikelFindenOderAnlegen(tx, {
+        haushaltId,
+        name: z.name,
+        standardeinheit: z.einheit,
+      });
+      if (
+        await aufListeSetzen(tx, {
+          haushaltId,
+          nutzerId,
+          artikelId: artikel.id,
+          menge: z.menge,
+          einheit: z.einheit,
+        })
+      ) {
+        neu++;
       }
-      await tx.execute(
-        "UPDATE artikel SET archiviert = 0 WHERE id = ? AND archiviert = 1",
-        [artikelId],
-      );
-      const offen = await tx.getOptional(
-        "SELECT 1 FROM listeneintraege WHERE artikel_id = ? AND erledigt = 0",
-        [artikelId],
-      );
-      if (offen) {
-        continue;
-      }
-      await tx.execute(
-        `INSERT INTO listeneintraege (id, haushalt_id, artikel_id, menge, einheit, erledigt, erstellt_von, erstellt_am)
-         VALUES (uuid(), ?, ?, ?, ?, 0, ?, ?)`,
-        [haushaltId, artikelId, z.menge, z.einheit, nutzerId, jetzt],
-      );
-      neu++;
     }
     return neu;
   });
