@@ -2,6 +2,7 @@ import type { Db } from "@haushalt/db";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type postgres from "postgres";
+import { fotoStatistik, ungenutzteFotosLoeschen } from "./aufraeumen";
 import type { Auth } from "./auth";
 import { neuerCode, normalisiereCode } from "./einladungscode";
 import { ImportFehler, rezeptAusHtml, seiteHolen } from "./rezept-import";
@@ -240,7 +241,15 @@ export function erstelleApp({
              (select count(*)::int from rezepte) as rezepte,
              (select count(*)::int from listeneintraege) as eintraege
     `;
-    return c.json({ nutzer, zahlen });
+    return c.json({ nutzer, zahlen, fotos: await fotoStatistik(sql) });
+  });
+
+  /** Admin: ungenutzte Fotos sofort löschen (Frist 1 h statt täglich mit 24 h). */
+  app.post("/admin/fotos-aufraeumen", async (c) => {
+    if (!istAdmin(c.get("nutzer").email, adminEmails)) {
+      return c.json({ fehler: "Nur für Admins" }, 403);
+    }
+    return c.json(await ungenutzteFotosLoeschen(sql, 1));
   });
 
   /** Nimmt die lokalen Änderungen eines Geräts entgegen (PowerSync-Upload). */

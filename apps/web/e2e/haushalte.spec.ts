@@ -95,6 +95,8 @@ test("Admin sieht alle Konten mit Haushalten, andere nicht", async ({
     const gast = admin.page.getByRole("listitem").filter({ hasText: /^Gast/ });
     await expect(gast.first()).toContainText("Gast-Haushalt");
     await expect(gast.first()).toContainText("1 Mitglied");
+    // Foto-Aufräumen ist da (hier ohne ungenutzte Fotos → Knopf aus).
+    await expect(admin.page.getByText(/\d+ Fotos/)).toBeVisible();
   } finally {
     await admin.schliessen();
     await nutzer.schliessen();

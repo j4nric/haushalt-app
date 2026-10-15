@@ -109,6 +109,15 @@ ADMIN_EMAILS=j4n.ric@gmail.com
 
 Nach einer Änderung: `docker compose up -d app`.
 
+## Fotos aufräumen
+
+Das API löscht kurz nach dem Start und dann täglich Fotos, die kein Rezept mehr als
+Bild verwendet (ersetzt, entfernt, Rezept gelöscht) und die älter als 24 Stunden
+sind. Die Frist schützt frisch hochgeladene Fotos, deren Rezept noch nicht
+gespeichert oder noch nicht vom Gerät hochgeladen ist. Im Admin-Panel stehen die
+Zahlen; „Jetzt aufräumen“ löscht sofort (Frist 1 Stunde). Im Log:
+`docker compose logs app | grep Aufgeräumt`.
+
 ## Nützliche Befehle auf dem Server
 
 ```bash
