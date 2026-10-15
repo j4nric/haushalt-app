@@ -121,10 +121,32 @@ export const artikel = pgTable(
     packungEinheit: text("packung_einheit", { enum: EINHEITEN }),
     /** Eine der Packungen im Vorrat ist offen (nur markiert, nicht gezählt). */
     angebrochen: boolean("angebrochen").notNull().default(false),
+    /**
+     * Fertige Gerichte im Vorrat: „fertig“ = gekauft (TK-Pizza, Lasagne), „rest“ =
+     * selbst gekocht und übrig (Bestand = Portionen). Sonst ein normales Produkt.
+     */
+    gericht: text("gericht", { enum: ["fertig", "rest"] }),
+    /** Wo es liegt – für Gerichte: Kühlschrank oder eingefroren. */
+    lagerort: text("lagerort", { enum: ["kuehlschrank", "tk"] }),
+    /** Seit wann es dort liegt (Reste: gekocht bzw. eingefroren am). */
+    eingelagertAm: timestamp("eingelagert_am", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    /** Rest von welchem Rezept (ohne Fremdschlüssel – das Rezept darf weg). */
+    restVon: uuid("rest_von"),
     erstelltAm: erstelltAm(),
   },
   (t) => [
     index().on(t.haushaltId),
+    check(
+      "artikel_gericht_gueltig",
+      sql`${t.gericht} is null or ${t.gericht} in ('fertig', 'rest')`,
+    ),
+    check(
+      "artikel_lagerort_gueltig",
+      sql`${t.lagerort} is null or ${t.lagerort} in ('kuehlschrank', 'tk')`,
+    ),
     check(
       "artikel_packung_vollstaendig",
       sql`(${t.packungMenge} is null) = (${t.packungEinheit} is null) and (${t.packungMenge} is null or ${t.packungMenge} > 0)`,

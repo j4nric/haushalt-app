@@ -29,3 +29,23 @@ it("formatiert Restzeiten", () => {
   expect(formatiereRestzeit(3700)).toBe("1:01:40");
   expect(formatiereRestzeit(-3)).toBe("0:00");
 });
+
+describe("findeZeitangaben – mehr Schreibweisen", () => {
+  it.each([
+    [
+      "Eine Minute rühren, dann 30 Sekunden ruhen lassen.",
+      [
+        ["Eine Minute", 60],
+        ["30 Sekunden", 30],
+      ],
+    ],
+    ["Etwa 5 bis 7 Minuten braten", [["5 bis 7 Minuten", 420]]],
+    ["Zwei Stunden schmoren", [["Zwei Stunden", 7200]]],
+    ["Keine Minute zu lang!", []],
+    ["200 g Mehl, 2 Minzblätter, 180 Grad", []],
+  ])("%s", (schritt, erwartet) => {
+    expect(findeZeitangaben(schritt).map((z) => [z.text, z.sekunden])).toEqual(
+      erwartet,
+    );
+  });
+});

@@ -4,6 +4,7 @@ import { findeNachName } from "@haushalt/db/namen";
 import { type Packung, standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import type { Transaction } from "@powersync/web";
 import { ersterBuchstabeGross } from "@/lib/farben";
+import { istFertiggericht } from "./vorrat/gerichte";
 
 /**
  * Bausteine für alles, was etwas auf die Einkaufsliste setzt (Eingabe, Verlauf,
@@ -39,9 +40,11 @@ export async function artikelFindenOderAnlegen(
     id: string;
     name: string;
     kategorie: string | null;
-  }>("SELECT id, name, kategorie FROM artikel WHERE haushalt_id = ?", [
-    a.haushaltId,
-  ]);
+  }>(
+    // Reste („Linsen-Dal“ im Kühlschrank) sind keine Einkaufsartikel.
+    "SELECT id, name, kategorie FROM artikel WHERE haushalt_id = ? AND COALESCE(gericht, '') != 'rest'",
+    [a.haushaltId],
+  );
   const vorhanden = findeNachName(
     new Map(alle.map((x) => [x.name.trim().toLowerCase(), x])),
     name,
@@ -58,9 +61,10 @@ export async function artikelFindenOderAnlegen(
     a.kategorie === undefined
       ? (erkenneKategorie(a.erkennenAls ?? name)[0] ?? null)
       : a.kategorie || null;
+  const fertig = istFertiggericht(name, kategorie);
   await tx.execute(
-    `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, angebrochen, packung_menge, packung_einheit, erstellt_am)
-     VALUES (?, ?, ?, ?, 'stueck', ?, 0, 0, ?, ?, ?)`,
+    `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, angebrochen, packung_menge, packung_einheit, gericht, lagerort, erstellt_am)
+     VALUES (?, ?, ?, ?, 'stueck', ?, 0, 0, ?, ?, ?, ?, ?)`,
     [
       id,
       a.haushaltId,
@@ -69,6 +73,9 @@ export async function artikelFindenOderAnlegen(
       standardmaessigImVorrat(kategorie) ? 1 : 0,
       a.packung?.menge ?? null,
       a.packung?.einheit ?? null,
+      // TK-Pizza & Co. landen im Vorrat gleich bei den Gerichten.
+      fertig ? "fertig" : null,
+      fertig ? "tk" : null,
       new Date().toISOString(),
     ],
   );

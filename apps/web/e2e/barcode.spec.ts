@@ -1,38 +1,20 @@
-import { createServer, type Server } from "node:http";
 import { expect, test } from "@playwright/test";
 import { barcodeVideo, ean13 } from "./barcode-video";
 import { bestand, eintrag, geraet, haushaltAnlegen, zuBereich } from "./hilfen";
+import { produktAttrappe } from "./produkt-attrappe";
 
 // Pro Lauf ein neuer Code, damit der Zwischenspeicher des Servers nicht stört.
 const CODE = ean13(`40${String(Date.now()).slice(-10)}`);
 
-let attrappe: Server;
-test.beforeAll(async () => {
-  attrappe = createServer((anfrage, antwort) => {
-    const passt = anfrage.url?.startsWith(`/api/v2/product/${CODE}.json`);
-    antwort.writeHead(passt ? 200 : 404, {
-      "content-type": "application/json",
-    });
-    antwort.end(
-      JSON.stringify(
-        passt
-          ? {
-              status: 1,
-              product: {
-                product_name_de: "Frische Vollmilch 3,5 %",
-                brands: "Milbona",
-                quantity: "1 l",
-              },
-            }
-          : { status: 0 },
-      ),
-    );
-  });
-  await new Promise<void>((fertig) =>
-    attrappe.listen(4180, "127.0.0.1", fertig),
-  );
-});
-test.afterAll(() => attrappe.close());
+test.beforeAll(() =>
+  produktAttrappe({
+    [CODE]: {
+      product_name_de: "Frische Vollmilch 3,5 %",
+      brands: "Milbona",
+      quantity: "1 l",
+    },
+  }),
+);
 
 test("Barcode: unbekannt benennen, wieder scannen = abhaken, im Vorrat einbuchen", async ({
   browserName,

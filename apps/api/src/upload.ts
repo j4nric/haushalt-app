@@ -148,6 +148,20 @@ const zeitpunkt = (wert: unknown) => {
   }
   return wert;
 };
+/** Einer der erlaubten Werte oder nichts. */
+const wahl = (spalte: string, werte: readonly string[]) => (wert: unknown) => {
+  if (wert == null) {
+    return null;
+  }
+  if (!werte.includes(wert as string)) {
+    throw new UngueltigeOperation(
+      `Unbekannter Wert für ${spalte}: ${String(wert)}`,
+    );
+  }
+  return wert as string;
+};
+const optionalerZeitpunkt = (wert: unknown) =>
+  wert == null ? null : zeitpunkt(wert);
 
 /**
  * Nur diese Tabellen und Spalten dürfen Clients schreiben. `fest` markiert
@@ -167,6 +181,10 @@ const ERLAUBT = {
     packung_menge: { umwandeln: menge },
     packung_einheit: { umwandeln: einheit(false) },
     angebrochen: { umwandeln: bool },
+    gericht: { umwandeln: wahl("gericht", ["fertig", "rest"]) },
+    lagerort: { umwandeln: wahl("lagerort", ["kuehlschrank", "tk"]) },
+    eingelagert_am: { umwandeln: optionalerZeitpunkt },
+    rest_von: { umwandeln: optionaleUuid("rest_von") },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },
   // Buchungen sind unveränderlich: alle Spalten `fest`, also nur PUT und DELETE.

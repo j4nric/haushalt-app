@@ -18,16 +18,33 @@ const EINHEIT_SEKUNDEN: [RegExp, number][] = [
   [/^m/i, 60],
 ];
 
-const MUSTER =
-  /(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|bis)\s*(\d+(?:[.,]\d+)?))?\s*(Stunden|Stunde|Std\.?|Minuten|Minute|Min\.?|Sekunden|Sek\.?)(?![a-zäöü])/gi;
+// Zahl oder Zahlwort („eine Minute“, „zwei Stunden“).
+const ZAHL = String.raw`\d+(?:[.,]\d+)?|eine[nr]?|ein|zwei|drei|vier|fünf|zehn`;
+const MUSTER = new RegExp(
+  String.raw`(?<![a-zäöü])(${ZAHL})(?:\s*(?:-|–|bis)\s*(${ZAHL}))?\s*(Stunden|Stunde|Std\.?|Minuten|Minute|Min\.?|Sekunden|Sek\.?)(?![a-zäöü])`,
+  "gi",
+);
+const ZAHLWORT: Record<string, number> = {
+  ein: 1,
+  eine: 1,
+  einen: 1,
+  einer: 1,
+  zwei: 2,
+  drei: 3,
+  vier: 4,
+  fünf: 5,
+  zehn: 10,
+};
+const zahl = (text: string) =>
+  ZAHLWORT[text.toLowerCase()] ?? Number(text.replace(",", "."));
 
 export function findeZeitangaben(text: string): Zeitangabe[] {
   const ergebnis: Zeitangabe[] = [];
   for (const treffer of text.matchAll(MUSTER)) {
-    const zahl = Number((treffer[2] ?? treffer[1] ?? "").replace(",", "."));
+    const wert = zahl(treffer[2] ?? treffer[1] ?? "");
     const faktor =
       EINHEIT_SEKUNDEN.find(([m]) => m.test(treffer[3] ?? ""))?.[1] ?? 60;
-    const sekunden = Math.round(zahl * faktor);
+    const sekunden = Math.round(wert * faktor);
     if (sekunden > 0 && sekunden <= 24 * 3600) {
       ergebnis.push({
         start: treffer.index,

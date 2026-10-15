@@ -239,3 +239,59 @@ export async function artikelLoeschen(tx: Transaction, artikelId: string) {
   }
   await tx.execute("DELETE FROM artikel WHERE id = ?", [artikelId]);
 }
+
+/**
+ * Reste nach dem Kochen einlagern: ein eigener Eintrag im Vorrat (Bestand =
+ * Portionen), im Kühlschrank oder eingefroren. Auf Wunsch gleich für morgen geplant.
+ */
+export async function restEinlagern(
+  tx: Transaction,
+  r: {
+    haushaltId: string;
+    nutzerId: string;
+    titel: string;
+    rezeptId: string | null;
+    portionen: number;
+    lagerort: "kuehlschrank" | "tk";
+    morgenEinplanen?: string | null;
+  },
+): Promise<string> {
+  const id = crypto.randomUUID();
+  const jetzt = new Date().toISOString();
+  await tx.execute(
+    `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, angebrochen, gericht, lagerort, eingelagert_am, rest_von, erstellt_am)
+     VALUES (?, ?, ?, ?, 'stueck', 1, 1, 0, 'rest', ?, ?, ?, ?)`,
+    [
+      id,
+      r.haushaltId,
+      r.titel,
+      r.lagerort === "tk" ? "tiefkuehl" : null,
+      r.lagerort,
+      jetzt,
+      r.rezeptId,
+      jetzt,
+    ],
+  );
+  await buchen(tx, {
+    haushaltId: r.haushaltId,
+    artikelId: id,
+    menge: r.portionen,
+    grund: "korrektur",
+    nutzerId: r.nutzerId,
+  });
+  if (r.morgenEinplanen) {
+    await tx.execute(
+      `INSERT INTO plan_eintraege (id, haushalt_id, datum, rezept_id, titel, portionen, erledigt, erstellt_von, erstellt_am)
+       VALUES (uuid(), ?, ?, NULL, ?, ?, 0, ?, ?)`,
+      [
+        r.haushaltId,
+        r.morgenEinplanen,
+        `Reste: ${r.titel}`,
+        r.portionen,
+        r.nutzerId,
+        jetzt,
+      ],
+    );
+  }
+  return id;
+}

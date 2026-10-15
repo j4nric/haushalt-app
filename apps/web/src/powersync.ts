@@ -37,6 +37,10 @@ export const schema = new Schema({
     packung_menge: column.real,
     packung_einheit: column.text,
     angebrochen: column.integer,
+    gericht: column.text,
+    lagerort: column.text,
+    eingelagert_am: column.text,
+    rest_von: column.text,
     erstellt_am: column.text,
   }),
   vorratsbuchungen: new Table(

@@ -21,10 +21,10 @@ const REZEPTE: SammlungsRezept[] = [
 Salz
 Pfeffer
 (1 TL Kurkuma)`,
-    schritte: `Reis nach Packungsangabe kochen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen.
 Hähnchen in mundgerechte Stücke, Zwiebel und Paprika in Streifen schneiden, Knoblauch und Ingwer fein hacken.
-Hähnchen im Öl rundum anbraten, salzen und herausnehmen.
-Zwiebel, Paprika, Knoblauch und Ingwer im selben Topf 3 Minuten braten, Currypulver kurz mitrösten.
+Hähnchen im Öl rundum 4–5 Minuten anbraten, salzen und herausnehmen.
+Zwiebel, Paprika, Knoblauch und Ingwer im selben Topf 3 Minuten braten, Currypulver 30 Sekunden mitrösten.
 Kokosmilch angießen und 5 Minuten köcheln lassen.
 Hähnchen zurück in die Soße geben, 5 Minuten ziehen lassen und abschmecken.
 Mit Reis anrichten, nach Wunsch mit Limettensaft beträufeln.`,
@@ -51,10 +51,10 @@ Muskat
     schritte: `Kartoffeln schälen, grob raspeln, kräftig ausdrücken und mit Salz und Muskat würzen.
 Kartoffelmasse in einer Pfanne in 3 EL Öl flach drücken und von jeder Seite 8–10 Minuten goldbraun braten.
 Champignons in Scheiben schneiden, Zwiebel fein würfeln.
-Fleisch im restlichen Öl in einer zweiten Pfanne portionsweise scharf anbraten und herausnehmen.
-Zwiebel und Champignons in der Butter anbraten, mit Wein und Brühe ablöschen.
-Sahne zugeben, sämig einkochen und abschmecken.
-Fleisch nur noch kurz in der Soße erwärmen und mit der Rösti servieren.`,
+Fleisch im restlichen Öl in einer zweiten Pfanne portionsweise je 2 Minuten scharf anbraten und herausnehmen.
+Zwiebel und Champignons in der Butter 5 Minuten anbraten, mit Wein und Brühe ablöschen.
+Sahne zugeben, 5 Minuten sämig einkochen und abschmecken.
+Fleisch 1 Minute in der Soße erwärmen und mit der Rösti servieren.`,
   },
   {
     id: "frikadellen-kartoffelpueree",
@@ -76,7 +76,7 @@ Pfeffer
 1 TL Paprikapulver, edelsüß
 Muskat`,
     schritte: `Kartoffeln schälen, würfeln und in Salzwasser etwa 20 Minuten weich kochen.
-Brötchen in Wasser einweichen und gut ausdrücken, Zwiebel fein würfeln.
+Brötchen 10 Minuten in Wasser einweichen und gut ausdrücken, Zwiebel fein würfeln.
 Hackfleisch mit Brötchen, Zwiebel, Ei, Senf, Salz, Pfeffer und Paprikapulver verkneten.
 Aus der Masse 6 flache Frikadellen formen und im Öl bei mittlerer Hitze von jeder Seite 5–6 Minuten braten.
 Milch mit Butter erwärmen, Kartoffeln abgießen und mit der Milch zu Püree stampfen.
@@ -99,8 +99,8 @@ Püree mit Salz und Muskat abschmecken und mit den Frikadellen servieren.`,
     gewuerze: `Salz
 Pfeffer
 Paprikapulver`,
-    schritte: `Kartoffeln mit Schale etwa 20 Minuten kochen, abgießen, abkühlen lassen, pellen und in Scheiben schneiden.
-Kartoffelscheiben in 3 EL Öl knusprig braten, Zwiebel in Würfeln dazugeben, mit Salz, Pfeffer und Paprikapulver würzen.
+    schritte: `Kartoffeln mit Schale etwa 20 Minuten kochen, abgießen, 10 Minuten abkühlen lassen, pellen und in Scheiben schneiden.
+Kartoffelscheiben in 3 EL Öl 10–12 Minuten knusprig braten, Zwiebel in Würfeln für die letzten 3 Minuten dazugeben, mit Salz, Pfeffer und Paprikapulver würzen.
 Schnitzel flach klopfen, salzen und pfeffern.
 Schnitzel nacheinander in Mehl, verquirltem Ei und Semmelbröseln wenden.
 Schnitzel im restlichen heißen Öl von jeder Seite 3–4 Minuten goldbraun braten.
@@ -127,9 +127,9 @@ Mit den Bratkartoffeln und nach Wunsch Zitronenspalten servieren.`,
 Salz
 Pfeffer`,
     schritte: `Zwiebeln grob würfeln, Paprika in Stücke schneiden.
-Fleisch im Öl in einem Schmortopf portionsweise kräftig anbraten.
-Zwiebeln dazugeben und mitbraten, bis sie Farbe nehmen.
-Tomatenmark und Paprikapulver unterrühren, kurz rösten und mit Rotwein und Brühe ablöschen.
+Fleisch im Öl in einem Schmortopf portionsweise je 3–4 Minuten kräftig anbraten.
+Zwiebeln dazugeben und 5 Minuten mitbraten, bis sie Farbe nehmen.
+Tomatenmark und Paprikapulver unterrühren, 1 Minute rösten und mit Rotwein und Brühe ablöschen.
 Kümmel und Majoran zugeben, zugedeckt bei kleiner Hitze etwa 1,5 Stunden schmoren.
 Paprika zugeben und weitere 30 Minuten schmoren, bis das Fleisch zart ist.
 Kartoffeln schälen, in Salzwasser 20 Minuten kochen und zum Gulasch servieren.`,
@@ -158,11 +158,11 @@ Kartoffeln schälen, in Salzwasser 20 Minuten kochen und zum Gulasch servieren.`
 Salz
 Pfeffer`,
     schritte: `Zwiebel, Knoblauch und Paprika würfeln.
-Hackfleisch im Öl krümelig braten, Zwiebel und Knoblauch mitbraten.
-Tomatenmark und Gewürze unterrühren und kurz anrösten.
+Hackfleisch im Öl 5 Minuten krümelig braten, Zwiebel und Knoblauch 2 Minuten mitbraten.
+Tomatenmark und Gewürze unterrühren und 1 Minute anrösten.
 Tomaten und Paprika zugeben und 20 Minuten offen köcheln lassen.
 Bohnen und Mais abspülen, untermischen und 5 Minuten mitkochen.
-Reis nach Packungsangabe garen und das Chili mit Reis und nach Wunsch Schmand servieren.`,
+Reis in Salzwasser 15–18 Minuten garen und das Chili mit Reis und nach Wunsch Schmand servieren.`,
   },
   {
     id: "haehnchenschenkel-ofenkartoffeln",
@@ -230,7 +230,7 @@ Pfeffer
 1 TL Dill
 Prise Zucker`,
     schritte: `Kartoffeln schälen, vierteln und in Salzwasser etwa 20 Minuten kochen.
-Butter in einem Topf schmelzen, Mehl einrühren und kurz anschwitzen.
+Butter in einem Topf schmelzen, Mehl einrühren und 1 Minute anschwitzen.
 Brühe und Sahne nach und nach einrühren, aufkochen und 3 Minuten köcheln lassen.
 Senf, Dill und Zucker unterrühren, mit Salz und Pfeffer abschmecken.
 Fisch in Stücke schneiden, salzen, mit Zitronensaft beträufeln und im Öl von jeder Seite 2–3 Minuten braten.
@@ -278,11 +278,11 @@ Weitere 15 Minuten backen, bis der Fisch gerade durch ist, und mit Petersilie be
     gewuerze: `Salz
 Pfeffer
 ½ TL Chiliflocken`,
-    schritte: `Reis nach Packungsangabe kochen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen.
 Garnelen abspülen und trocken tupfen, Knoblauch in feine Scheiben schneiden.
 Zucchini würfeln, Tomaten halbieren.
 Zucchini im Öl 4 Minuten braten, Garnelen und Knoblauch zugeben und 3 Minuten braten, bis die Garnelen rosa sind.
-Tomaten kurz mitschwenken, mit Zitronensaft, Chili, Salz und Pfeffer abschmecken.
+Tomaten 1 Minute mitschwenken, mit Zitronensaft, Chili, Salz und Pfeffer abschmecken.
 Mit gehackter Petersilie bestreuen und mit Reis servieren.`,
   },
   {
@@ -302,12 +302,12 @@ Mit gehackter Petersilie bestreuen und mit Reis servieren.`,
 Pfeffer
 1 TL Paprikapulver, edelsüß
 (Petersilie)`,
-    schritte: `Reis nach Packungsangabe kochen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen.
 Putenbrust in Streifen, Champignons in Scheiben schneiden, Zwiebel würfeln.
-Fleisch im Öl rundum anbraten, mit Salz, Pfeffer und Paprikapulver würzen und herausnehmen.
+Fleisch im Öl rundum 4 Minuten anbraten, mit Salz, Pfeffer und Paprikapulver würzen und herausnehmen.
 Zwiebel und Champignons in der Pfanne 5 Minuten braten.
 Mit Brühe und Sahne ablöschen und 3 Minuten einkochen lassen.
-Fleisch zurück in die Soße geben, kurz erhitzen und mit Reis servieren.`,
+Fleisch zurück in die Soße geben, 1–2 Minuten erhitzen und mit Reis servieren.`,
   },
   {
     id: "koenigsberger-klopse",
@@ -331,13 +331,13 @@ Pfeffer
 1 TL Senf
 1 Lorbeerblatt
 Prise Zucker`,
-    schritte: `Brötchen einweichen und ausdrücken, Zwiebel fein würfeln.
+    schritte: `Brötchen 10 Minuten einweichen und ausdrücken, Zwiebel fein würfeln.
 Hackfleisch mit Brötchen, Zwiebel, Ei, Senf, Salz und Pfeffer verkneten und 8 Klopse formen.
 Brühe mit Lorbeer aufkochen, Klopse hineinlegen und bei kleiner Hitze 15 Minuten gar ziehen lassen.
 Kartoffeln schälen und in Salzwasser etwa 20 Minuten kochen.
-Klopse herausnehmen, Butter schmelzen, Mehl einrühren und mit 500 ml der Brühe glatt rühren.
+Klopse herausnehmen, Butter schmelzen, Mehl einrühren, 1 Minute anschwitzen und mit 500 ml der Brühe glatt rühren.
 Sahne und Kapern zugeben, 5 Minuten köcheln und mit Zitronensaft, Zucker und Salz abschmecken.
-Klopse in der Soße erwärmen und mit den Kartoffeln servieren.`,
+Klopse 5 Minuten in der Soße erwärmen und mit den Kartoffeln servieren.`,
   },
   {
     id: "haehnchen-fajitas",
@@ -364,7 +364,7 @@ Hähnchen mit 1 EL Öl, den Gewürzen und etwas Limettensaft mischen.
 Hähnchen in einer heißen Pfanne 5 Minuten scharf anbraten und herausnehmen.
 Paprika und Zwiebel im restlichen Öl 4 Minuten bissfest braten, Hähnchen wieder untermischen.
 Avocado zerdrücken und mit Limettensaft und Salz abschmecken.
-Tortillas kurz in einer trockenen Pfanne erwärmen und mit Füllung, Schmand, Avocado und Käse belegen.`,
+Tortillas je 30 Sekunden pro Seite in einer trockenen Pfanne erwärmen und mit Füllung, Schmand, Avocado und Käse belegen.`,
   },
   {
     id: "teriyaki-lachs-reis",
@@ -384,11 +384,11 @@ Tortillas kurz in einer trockenen Pfanne erwärmen und mit Füllung, Schmand, Av
 (2 Frühlingszwiebeln)`,
     gewuerze: `(1 EL Sesam)
 Pfeffer`,
-    schritte: `Reis nach Packungsangabe kochen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen.
 Brokkoli in Röschen teilen und in den letzten 5 Minuten über dem Reis dämpfen oder in Salzwasser garen.
 Sojasauce, Honig, geriebenen Knoblauch und Ingwer mit Stärke und 3 EL Wasser verrühren.
 Lachs in Würfel schneiden und im Öl von allen Seiten 3–4 Minuten braten.
-Soße angießen und unter Schwenken einkochen, bis der Lachs glänzend überzogen ist.
+Soße angießen und 2 Minuten unter Schwenken einkochen, bis der Lachs glänzend überzogen ist.
 Mit Reis und Brokkoli anrichten, mit Sesam und Frühlingszwiebelringen bestreuen.`,
   },
   {
@@ -411,9 +411,9 @@ Pfeffer
 (Petersilie)`,
     schritte: `Schweinefilet in 2 cm dicke Medaillons schneiden und leicht flach drücken.
 Medaillons im Öl von jeder Seite 2–3 Minuten braten, salzen, pfeffern und warm stellen.
-Bandnudeln nach Packungsangabe kochen.
-Zwiebel würfeln und Champignons in Scheiben in der Butter anbraten.
-Mit Brühe und Sahne ablöschen, Thymian zugeben und sämig einkochen lassen.
+Bandnudeln in Salzwasser 8–10 Minuten kochen.
+Zwiebel würfeln und Champignons in Scheiben in der Butter 5 Minuten anbraten.
+Mit Brühe und Sahne ablöschen, Thymian zugeben und 5 Minuten sämig einkochen lassen.
 Medaillons mit ihrem Saft in die Soße legen, 2 Minuten ziehen lassen und mit den Nudeln servieren.`,
   },
   {
@@ -440,10 +440,10 @@ Pfeffer
 2 Wacholderbeeren`,
     schritte: `Rouladen flach auslegen, salzen, pfeffern und mit Senf bestreichen.
 Mit Speck, Gurkenstreifen und einer halben Zwiebel in Streifen belegen, aufrollen und mit Küchengarn oder Rouladennadeln fixieren.
-Rouladen im Öl im Schmortopf rundum kräftig anbraten und herausnehmen.
-Restliche Zwiebel und Möhre gewürfelt anbraten, Tomatenmark kurz mitrösten und mit Rotwein und Brühe ablöschen.
+Rouladen im Öl im Schmortopf rundum 8–10 Minuten kräftig anbraten und herausnehmen.
+Restliche Zwiebel und Möhre gewürfelt 5 Minuten anbraten, Tomatenmark 1 Minute mitrösten und mit Rotwein und Brühe ablöschen.
 Rouladen mit Lorbeer und Wacholder zurück in den Topf legen und zugedeckt etwa 1,5 Stunden schmoren.
-Kartoffeln kochen und Rotkohl erwärmen.
+Kartoffeln in Salzwasser 20 Minuten kochen und Rotkohl 10 Minuten erwärmen.
 Soße nach Wunsch pürieren, abschmecken und alles zusammen servieren.`,
   },
   {
@@ -467,9 +467,9 @@ Pfeffer`,
     schritte: `Fleisch in dünne Streifen schneiden und mit 1 EL Öl, Gyrosgewürz und Oregano mischen.
 Gurke grob raspeln, gut ausdrücken und mit Joghurt, gepresstem Knoblauch und Salz zu Tzatziki verrühren.
 Zwiebeln in Ringe, Paprika in Streifen schneiden.
-Fleisch im restlichen Öl in einer großen Pfanne portionsweise scharf anbraten.
+Fleisch im restlichen Öl in einer großen Pfanne portionsweise je 3–4 Minuten scharf anbraten.
 Zwiebeln und Paprika zugeben und 4 Minuten mitbraten, mit Salz und Pfeffer abschmecken.
-Fladenbrot kurz im Ofen aufbacken und mit Gyros und Tzatziki servieren.`,
+Fladenbrot bei 180 °C 5 Minuten im Ofen aufbacken und mit Gyros und Tzatziki servieren.`,
   },
   {
     id: "haehnchen-suess-sauer",
@@ -491,12 +491,12 @@ Fladenbrot kurz im Ofen aufbacken und mit Gyros und Tzatziki servieren.`,
     gewuerze: `1 EL Zucker
 Salz
 Pfeffer`,
-    schritte: `Reis nach Packungsangabe kochen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen.
 Hähnchen würfeln und mit 1 TL Stärke und 1 EL Sojasauce mischen.
 Paprika und Zwiebel in Stücke, Möhre in dünne Scheiben schneiden.
 150 ml Ananassaft mit Ketchup, Essig, restlicher Sojasauce, Zucker und Stärke verrühren.
-Hähnchen im Öl goldbraun braten, Gemüse zugeben und 4 Minuten mitbraten.
-Ananas und Soße zugeben, aufkochen lassen, bis sie bindet, und mit Reis servieren.`,
+Hähnchen im Öl 5 Minuten goldbraun braten, Gemüse zugeben und 4 Minuten mitbraten.
+Ananas und Soße zugeben, aufkochen und 2 Minuten köcheln lassen, bis sie bindet, und mit Reis servieren.`,
   },
   {
     id: "thunfisch-bowl",
@@ -517,7 +517,7 @@ Ananas und Soße zugeben, aufkochen lassen, bis sie bindet, und mit Reis servier
     gewuerze: `(1 EL Sesam)
 (Chiliflocken)
 Salz`,
-    schritte: `Reis nach Packungsangabe kochen, mit Essig und einer Prise Salz würzen und etwas abkühlen lassen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen, mit Essig und einer Prise Salz würzen und 10 Minuten abkühlen lassen.
 Gurke und Avocado in Würfel schneiden, Möhre raspeln, Frühlingszwiebeln in Ringe schneiden.
 Thunfisch abtropfen lassen und zerpflücken, Mais abspülen.
 Mayonnaise mit 1 EL Sojasauce glatt rühren.
@@ -543,7 +543,7 @@ Pfeffer`,
 Forellen waschen, trocken tupfen, innen und außen salzen und pfeffern und mit Zitronensaft beträufeln.
 Forellen in Mehl wenden und überschüssiges Mehl abklopfen.
 Öl und 20 g Butter erhitzen, Forellen darin von jeder Seite 5–6 Minuten goldbraun braten.
-Restliche Butter in einem kleinen Topf aufschäumen und gehackte Petersilie zugeben.
+Restliche Butter in einem kleinen Topf 1–2 Minuten aufschäumen und gehackte Petersilie zugeben.
 Kartoffeln in einem Teil der Petersilienbutter schwenken, Fisch mit dem Rest übergießen und mit Zitronenspalten servieren.`,
   },
   {
@@ -587,10 +587,10 @@ Matjes trocken tupfen und mit der Soße und den Pellkartoffeln servieren.`,
     gewuerze: `Salz
 Pfeffer
 1 TL Thymian`,
-    schritte: `Reis nach Packungsangabe kochen, Bohnen putzen und in Salzwasser 8 Minuten garen.
+    schritte: `Reis in Salzwasser 15–18 Minuten kochen, Bohnen putzen und in Salzwasser 8 Minuten garen.
 Hähnchenbrust waagerecht halbieren, salzen, pfeffern und mit Thymian würzen.
 Hähnchen im Öl von jeder Seite 4–5 Minuten braten und herausnehmen.
-Knoblauch fein hacken und kurz anbraten, mit Brühe, Zitronensaft, etwas Zitronenschale und Honig ablöschen.
+Knoblauch fein hacken und 1 Minute anbraten, mit Brühe, Zitronensaft, etwas Zitronenschale und Honig ablöschen.
 Soße 3 Minuten einkochen lassen und die Butter einrühren.
 Hähnchen in der Soße wenden und mit Bohnen und Reis servieren.`,
   },
@@ -617,8 +617,8 @@ Salz
 Pfeffer`,
     schritte: `Zwiebel und Knoblauch fein würfeln.
 Hackfleisch mit der Hälfte der Zwiebel, Ei, Semmelbröseln, Kreuzkümmel, Paprikapulver, Salz und Pfeffer verkneten und walnussgroße Bällchen formen.
-Bällchen im Öl rundum anbraten und herausnehmen.
-Restliche Zwiebel und Knoblauch im Bratfett andünsten, Passata und Zimt zugeben.
+Bällchen im Öl rundum 5 Minuten anbraten und herausnehmen.
+Restliche Zwiebel und Knoblauch im Bratfett 3 Minuten andünsten, Passata und Zimt zugeben.
 Bällchen in die Soße legen und zugedeckt 15 Minuten köcheln lassen.
 Couscous mit heißer Brühe übergießen, 5 Minuten quellen lassen und auflockern.
 Mit Couscous anrichten und mit Petersilie bestreuen.`,
@@ -642,8 +642,8 @@ Mit Couscous anrichten und mit Petersilie bestreuen.`,
 1 TL Oregano
 Salz
 Pfeffer`,
-    schritte: `Backofen auf 180 °C Umluft vorheizen, 60 g Reis 10 Minuten vorkochen, den übrigen Reis als Beilage garen.
-Zwiebel würfeln und im Öl glasig dünsten.
+    schritte: `Backofen auf 180 °C Umluft vorheizen, 60 g Reis 10 Minuten vorkochen, den übrigen Reis als Beilage 15–18 Minuten garen.
+Zwiebel würfeln und im Öl 3 Minuten glasig dünsten.
 Hackfleisch mit vorgekochtem Reis, Zwiebel, Ei, Paprikapulver, Salz und Pfeffer vermengen.
 Paprika oben aufschneiden, entkernen und mit der Masse füllen, Deckel wieder aufsetzen.
 Passata mit Brühe, Oregano, Salz und Pfeffer in eine Auflaufform geben und die Paprika hineinsetzen.

@@ -1,6 +1,7 @@
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
 import { zerlegeZeile } from "@haushalt/db/zutaten";
 import { describe, expect, it } from "vitest";
+import { findeZeitangaben } from "../../lib/timer";
 import { SAMMLUNG } from "./index";
 import { SCHLAGWOERTER } from "./typ";
 
@@ -12,7 +13,7 @@ const zeilen = (text: string) =>
 
 describe("Startsammlung", () => {
   it("hat genug Rezepte", () => {
-    expect(SAMMLUNG.length).toBeGreaterThanOrEqual(100);
+    expect(SAMMLUNG.length).toBeGreaterThanOrEqual(200);
   });
 
   it("hat eindeutige ids und Titel", () => {
@@ -47,6 +48,14 @@ describe("Startsammlung", () => {
         ).toEqual([]);
       }
       expect(zeilen(r.schritte).length).toBeGreaterThanOrEqual(3);
+      // Garzeiten stehen als Zeit im Schritt („20 Minuten köcheln“) – daraus werden
+      // im Kochmodus antippbare Timer.
+      if (r.dauer >= 15) {
+        expect(
+          zeilen(r.schritte).some((s) => findeZeitangaben(s).length > 0),
+          `Keine Zeitangabe in den Schritten von ${r.id}`,
+        ).toBe(true);
+      }
 
       const zutaten = zeilen(r.zutaten);
       expect(zutaten.length).toBeGreaterThanOrEqual(3);

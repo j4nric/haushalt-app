@@ -1,34 +1,18 @@
-import { createServer, type Server } from "node:http";
 import { devices, expect, test } from "@playwright/test";
 import { ean13 } from "./barcode-video";
 import { haushaltAnlegen, zuBereich } from "./hilfen";
+import { produktAttrappe } from "./produkt-attrappe";
 
 const CODE = ean13(`41${String(Date.now()).slice(-10)}`);
-let attrappe: Server;
-test.beforeAll(async () => {
-  attrappe = createServer((anfrage, antwort) => {
-    const passt = anfrage.url?.startsWith(`/api/v2/product/${CODE}.json`);
-    antwort.writeHead(passt ? 200 : 404, {
-      "content-type": "application/json",
-    });
-    antwort.end(
-      JSON.stringify(
-        passt
-          ? {
-              status: 1,
-              product: {
-                product_name_de: "Senf mittelscharf",
-                brands: "Develey",
-                quantity: "250 ml",
-              },
-            }
-          : { status: 0 },
-      ),
-    );
-  });
-  await new Promise<void>((f) => attrappe.listen(4180, "127.0.0.1", f));
-});
-test.afterAll(() => attrappe.close());
+test.beforeAll(() =>
+  produktAttrappe({
+    [CODE]: {
+      product_name_de: "Senf mittelscharf",
+      brands: "Develey",
+      quantity: "250 ml",
+    },
+  }),
+);
 
 /**
  * Auf dem iPhone scrollte beim Tippen im Scan-Dialog die lange Vorrat-Liste dahinter

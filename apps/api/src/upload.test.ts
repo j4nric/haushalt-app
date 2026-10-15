@@ -554,3 +554,35 @@ describe("Kassenbons", () => {
     ).toEqual([{ text: "STEINOFEN PIZZA" }]);
   });
 });
+
+describe("Gerichte im Vorrat", () => {
+  it("speichert Reste und Fertiggerichte, nur mit gültiger Art und Lagerort", async () => {
+    const anna = await t.nutzer("Anna");
+    const haushalt = await anna.haushaltAnlegen();
+    const rest = neueId();
+    const put = artikelPut(rest, haushalt, "Linsen-Dal");
+    const ok = await anna.hochladen([
+      {
+        ...put,
+        opData: {
+          ...put.opData,
+          gericht: "rest",
+          lagerort: "tk",
+          eingelagert_am: jetzt(),
+          rest_von: neueId(),
+          im_vorrat: 1,
+        },
+      },
+    ]);
+    expect(ok.status, await ok.text()).toBe(200);
+    const [a] =
+      await t.sql`select gericht, lagerort from artikel where id = ${rest}`;
+    expect(a).toEqual({ gericht: "rest", lagerort: "tk" });
+
+    const patch = (opData: Record<string, unknown>) =>
+      anna.hochladen([{ op: "PATCH", table: "artikel", id: rest, opData }]);
+    expect((await patch({ gericht: "suppe" })).status).toBe(400);
+    expect((await patch({ lagerort: "keller" })).status).toBe(400);
+    expect((await patch({ gericht: null, lagerort: null })).status).toBe(200);
+  });
+});

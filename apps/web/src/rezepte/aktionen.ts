@@ -5,12 +5,14 @@ import {
   zerlegeZeile,
 } from "@haushalt/db/zutaten";
 import type { AbstractPowerSyncDatabase, Transaction } from "@powersync/web";
-import { heute } from "@/lib/plan";
+import { heute, tagePlus } from "@/lib/plan";
 import { artikelFindenOderAnlegen, aufListeSetzen } from "../listenaktionen";
 import {
   angebrochenSetzen,
+  artikelLoeschen,
   bestandVon,
   mindestbestandPruefen,
+  restEinlagern,
 } from "../vorratsaktionen";
 
 /**
@@ -286,6 +288,7 @@ export async function kochenAbschliessen(
     rezeptId,
     planEintragId,
     abbuchen,
+    reste = null,
   }: {
     haushaltId: string;
     nutzerId: string;
@@ -293,10 +296,18 @@ export async function kochenAbschliessen(
     planEintragId: string | null;
     /** Ganze verbrauchte Packungen und ob danach eine offen ist. */
     abbuchen: { artikelId: string; menge: number; angebrochen: boolean }[];
+    /** Übrig gebliebene Portionen – als Gericht in den Vorrat. */
+    reste?: {
+      titel: string;
+      portionen: number;
+      lagerort: "kuehlschrank" | "tk";
+      morgen: boolean;
+    } | null;
   },
 ): Promise<{ anzahl: number; zuruecknehmen: () => Promise<unknown> }> {
   const gekochtId = crypto.randomUUID();
   const buchungen: string[] = [];
+  let restId: string | null = null;
   /** „angebrochen“ vor dem Kochen – fürs Zurücknehmen. */
   const vorher = new Map<string, number>();
   const jetzt = new Date();
@@ -345,6 +356,17 @@ export async function kochenAbschliessen(
         [gekochtId, eintrag],
       );
     }
+    if (reste && reste.portionen > 0) {
+      restId = await restEinlagern(tx, {
+        haushaltId,
+        nutzerId,
+        titel: reste.titel,
+        rezeptId,
+        portionen: reste.portionen,
+        lagerort: reste.lagerort,
+        morgenEinplanen: reste.morgen ? tagePlus(heute(jetzt), 1) : null,
+      });
+    }
     const { n } = await tx.get<{ n: number }>(
       "SELECT COUNT(*) AS n FROM gekocht WHERE rezept_id = ?",
       [rezeptId],
@@ -366,6 +388,13 @@ export async function kochenAbschliessen(
           "UPDATE plan_eintraege SET erledigt = 0, gekocht_id = NULL WHERE gekocht_id = ?",
           [gekochtId],
         );
+        if (restId) {
+          await artikelLoeschen(tx, restId);
+          await tx.execute(
+            "DELETE FROM plan_eintraege WHERE titel = ? AND rezept_id IS NULL AND erledigt = 0 AND datum = ?",
+            [`Reste: ${reste?.titel ?? ""}`, tagePlus(heute(jetzt), 1)],
+          );
+        }
       }),
   };
 }

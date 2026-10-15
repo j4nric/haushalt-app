@@ -27,6 +27,7 @@ import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { Button } from "@/components/ui/button";
 import { Wischzeile } from "@/components/Wischzeile";
 import { cn } from "@/lib/utils";
+import { zeitWert } from "@/lib/zeit";
 import { BonImport } from "./kassenbon/BonImport";
 import { artikelFindenOderAnlegen, aufListeSetzen } from "./listenaktionen";
 import { BarcodeScan, type GescannterArtikel } from "./scanner/BarcodeScan";
@@ -35,11 +36,13 @@ import {
   gruppieren,
   istKnapp,
   istLeer,
+  istSichtbar,
   stueck,
   VORRAT_ABFRAGE,
   type VorratsZeile,
   vorratVon,
 } from "./vorrat/daten";
+import { LAGERORT_NAME, restAlter } from "./vorrat/gerichte";
 import { Inventur } from "./vorrat/Inventur";
 import {
   bestandSetzen,
@@ -58,7 +61,10 @@ export function Vorrat({
   nutzerId: string;
 }) {
   const db = usePowerSync();
-  const { data: zeilen } = useQuery<VorratsZeile>(VORRAT_ABFRAGE, [haushaltId]);
+  const { data: alleZeilen } = useQuery<VorratsZeile>(VORRAT_ABFRAGE, [
+    haushaltId,
+  ]);
+  const zeilen = alleZeilen.filter(istSichtbar);
   const { data: andere } = useQuery<{ id: string; name: string }>(
     "SELECT id, name FROM artikel WHERE haushalt_id = ? AND COALESCE(im_vorrat, 0) = 0 ORDER BY name",
     [haushaltId],
@@ -80,7 +86,14 @@ export function Vorrat({
         (filter === "leer" && istLeer(z))) &&
       (!suche || z.name.toLowerCase().includes(suche)),
   );
-  const gruppen = gruppieren(sichtbar);
+  const gruppen = gruppieren(sichtbar.filter((z) => !z.gericht));
+  // Eigener Bereich oben: Reste (älteste zuerst – die sollten zuerst weg) und Fertiggerichte.
+  const reste = sichtbar
+    .filter((z) => z.gericht === "rest")
+    .sort((a, b) =>
+      (a.eingelagert_am ?? "").localeCompare(b.eingelagert_am ?? ""),
+    );
+  const fertiggerichte = sichtbar.filter((z) => z.gericht === "fertig");
   const weitere = andere.filter(
     (a) => !suche || a.name.toLowerCase().includes(suche),
   );
@@ -200,6 +213,28 @@ export function Vorrat({
           </fieldset>
         )}
       </div>
+
+      {[
+        ["Reste", reste],
+        ["Fertiggerichte", fertiggerichte],
+      ].map(
+        ([titel, liste]) =>
+          (liste as VorratsZeile[]).length > 0 && (
+            <Gruppe key={titel as string} titel={titel as string}>
+              {(liste as VorratsZeile[]).map((zeile) => (
+                <VorratsEintrag
+                  key={zeile.id}
+                  zeile={zeile}
+                  plus={() => plus(zeile)}
+                  minus={() => minus(zeile)}
+                  aufgebraucht={() => aufgebraucht(zeile)}
+                  aufDieListe={() => aufDieListe(zeile)}
+                  oeffnen={() => setDetails(zeile.id)}
+                />
+              ))}
+            </Gruppe>
+          ),
+      )}
 
       {gruppen.map(([gruppe, kategorie, artikel]) => (
         <Gruppe key={gruppe} titel={gruppe} kategorie={kategorie}>
@@ -325,8 +360,20 @@ function VorratsEintrag({
   const knapp = istKnapp(zeile);
   const leer = istLeer(zeile);
   const offen = vorrat.angebrochen && vorrat.bestand > 0;
+  const rest = zeile.gericht === "rest";
+  const alter = rest
+    ? restAlter(
+        zeile.eingelagert_am ? zeitWert(zeile.eingelagert_am) : null,
+        zeile.lagerort,
+      )
+    : null;
   const zusatz = [
-    bestandBeschreibung(vorrat),
+    zeile.gericht && zeile.lagerort ? LAGERORT_NAME[zeile.lagerort] : "",
+    alter?.text ?? "",
+    rest
+      ? `${stueck(vorrat.bestand)} ${vorrat.bestand === 1 ? "Portion" : "Portionen"}`
+      : "",
+    rest ? "" : bestandBeschreibung(vorrat),
     knapp ? `knapp${zeile.auf_liste ? ", auf der Liste" : ""}` : "",
     !knapp && zeile.auf_liste ? "auf der Liste" : "",
   ]
@@ -339,18 +386,22 @@ function VorratsEintrag({
         leer
           ? undefined
           : {
-              text: "Aufgebraucht",
+              text: rest ? "Aufgegessen" : "Aufgebraucht",
               symbol: <PackageX className="size-5" />,
               farbe: "bg-destructive",
               ausfuehren: aufgebraucht,
             }
       }
-      rechts={{
-        text: "Auf die Liste",
-        symbol: <ShoppingCart className="size-5" />,
-        farbe: "bg-primary",
-        ausfuehren: aufDieListe,
-      }}
+      rechts={
+        rest
+          ? undefined
+          : {
+              text: "Auf die Liste",
+              symbol: <ShoppingCart className="size-5" />,
+              farbe: "bg-primary",
+              ausfuehren: aufDieListe,
+            }
+      }
     >
       <div
         data-testid={`vorrat-${zeile.name}`}

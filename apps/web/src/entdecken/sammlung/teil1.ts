@@ -22,10 +22,10 @@ Pfeffer
 1 TL Oregano
 1 Prise Zucker`,
     schritte: `Zwiebel, Möhre und Knoblauch fein würfeln.
-Hackfleisch im Olivenöl krümelig anbraten, Gemüse kurz mitbraten.
-Tomatenmark einrühren und kurz anrösten.
+Hackfleisch im Olivenöl 5 Minuten krümelig anbraten, Gemüse 2 Minuten mitbraten.
+Tomatenmark einrühren und 1 Minute anrösten.
 Tomaten zugeben, würzen und zugedeckt 25 Minuten köcheln lassen.
-Spaghetti nach Packungsangabe in Salzwasser kochen.
+Spaghetti in Salzwasser 9–11 Minuten kochen.
 Soße abschmecken und mit den Spaghetti und Parmesan servieren.`,
   },
   {
@@ -41,8 +41,8 @@ Soße abschmecken und mit den Spaghetti und Parmesan servieren.`,
 1 TL Olivenöl`,
     gewuerze: `Salz
 Pfeffer, frisch gemahlen`,
-    schritte: `Spaghetti in reichlich Salzwasser bissfest kochen.
-Speck im Olivenöl knusprig auslassen.
+    schritte: `Spaghetti in reichlich Salzwasser 9–11 Minuten bissfest kochen.
+Speck im Olivenöl 4–5 Minuten knusprig auslassen.
 Eier mit Parmesan und viel Pfeffer verquirlen.
 Spaghetti abgießen, dabei eine Tasse Nudelwasser auffangen.
 Nudeln zum Speck geben, Pfanne vom Herd nehmen.
@@ -65,8 +65,8 @@ Eiermasse und etwas Nudelwasser unterrühren, bis eine cremige Soße entsteht.`,
 Pfeffer
 1 TL Oregano
 Basilikum, zum Bestreuen`,
-    schritte: `Penne nach Packungsangabe kochen.
-Zwiebel und Knoblauch fein würfeln und im Olivenöl glasig dünsten.
+    schritte: `Penne in Salzwasser 10–12 Minuten kochen.
+Zwiebel und Knoblauch fein würfeln und im Olivenöl 3 Minuten glasig dünsten.
 Tomaten zugeben, würzen und 10 Minuten köcheln lassen.
 Ricotta einrühren, bis die Soße cremig ist.
 Penne untermischen und mit Basilikum und Parmesan servieren.`,
@@ -93,9 +93,9 @@ Penne untermischen und mit Basilikum und Parmesan servieren.`,
 Pfeffer
 1 TL Oregano
 1 Prise Muskat`,
-    schritte: `Zwiebel und Möhre würfeln, mit dem Hackfleisch im Olivenöl anbraten.
+    schritte: `Zwiebel und Möhre würfeln, mit dem Hackfleisch im Olivenöl 5–6 Minuten anbraten.
 Tomatenmark und Tomaten zugeben, würzen und 20 Minuten köcheln lassen.
-Butter schmelzen, Mehl anschwitzen, Milch einrühren und zu einer Béchamel aufkochen, mit Salz und Muskat würzen.
+Butter schmelzen, Mehl anschwitzen, Milch einrühren und unter Rühren 3–4 Minuten zu einer Béchamel köcheln, mit Salz und Muskat würzen.
 Ofen auf 180 °C Umluft vorheizen.
 Fleischsoße, Lasagneplatten und Béchamel abwechselnd in eine Auflaufform schichten.
 Mit Béchamel abschließen, mit Mozzarella und Parmesan belegen.
@@ -117,8 +117,8 @@ Pfeffer
 1 Prise Muskat
 Schnittlauch, zum Bestreuen`,
     schritte: `Ofen auf 180 °C Umluft vorheizen.
-Zwiebeln in Ringe schneiden und in der Hälfte der Butter goldbraun braten.
-Spätzle in der restlichen Butter erwärmen und würzen.
+Zwiebeln in Ringe schneiden und in der Hälfte der Butter 8–10 Minuten goldbraun braten.
+Spätzle in der restlichen Butter 3–4 Minuten erwärmen und würzen.
 Spätzle und Käse abwechselnd in eine Auflaufform schichten.
 10 Minuten im Ofen backen, bis der Käse geschmolzen ist.
 Mit Röstzwiebeln und Schnittlauch servieren.`,
@@ -142,8 +142,8 @@ Mit Röstzwiebeln und Schnittlauch servieren.`,
     gewuerze: `Salz
 Pfeffer`,
     schritte: `Zwiebel fein würfeln, Zucchini und Möhre klein schneiden.
-Zwiebel im Olivenöl glasig dünsten, Reis zugeben und kurz mitrösten.
-Mit Weißwein ablöschen und einkochen lassen.
+Zwiebel im Olivenöl 3 Minuten glasig dünsten, Reis zugeben und 1 Minute mitrösten.
+Mit Weißwein ablöschen und 2 Minuten einkochen lassen.
 Nach und nach heiße Brühe angießen und unter Rühren 20 Minuten garen.
 Nach 10 Minuten Möhre und Zucchini, kurz vor Schluss die Erbsen zugeben.
 Butter und Parmesan unterrühren, abschmecken und 2 Minuten ruhen lassen.`,
@@ -167,9 +167,9 @@ Butter und Parmesan unterrühren, abschmecken und 2 Minuten ruhen lassen.`,
 Pfeffer
 1 Zweig Thymian
 Petersilie, zum Bestreuen`,
-    schritte: `Champignons in Scheiben schneiden und in 1 EL Olivenöl kräftig anbraten, beiseitestellen.
-Zwiebel und Knoblauch würfeln und im restlichen Öl glasig dünsten.
-Reis zugeben, kurz rösten und mit Weißwein ablöschen.
+    schritte: `Champignons in Scheiben schneiden und in 1 EL Olivenöl 5 Minuten kräftig anbraten, beiseitestellen.
+Zwiebel und Knoblauch würfeln und im restlichen Öl 3 Minuten glasig dünsten.
+Reis zugeben, 1 Minute rösten, mit Weißwein ablöschen und 2 Minuten einkochen lassen.
 Brühe nach und nach angießen und 20 Minuten unter Rühren garen.
 Pilze, Butter und Parmesan unterrühren.
 Abschmecken und mit Petersilie bestreut servieren.`,
@@ -191,11 +191,11 @@ Abschmecken und mit Petersilie bestreut servieren.`,
     gewuerze: `Salz
 Pfeffer
 1 TL Ingwer, gerieben`,
-    schritte: `Reis kochen und gut abkühlen lassen (am besten vom Vortag).
+    schritte: `Reis in 400 ml Salzwasser 12–15 Minuten garen und mindestens 30 Minuten abkühlen lassen (am besten vom Vortag).
 Paprika und Möhre fein würfeln, Frühlingszwiebeln in Ringe schneiden.
-Eier in 1 EL Öl zu Rührei braten und herausnehmen.
+Eier in 1 EL Öl 2 Minuten zu Rührei braten und herausnehmen.
 Gemüse im restlichen Öl 4 Minuten scharf anbraten.
-Reis zugeben und unter Wenden braten, bis er leicht knusprig ist.
+Reis zugeben und unter Wenden 5 Minuten braten, bis er leicht knusprig ist.
 Rührei und Sojasoße untermischen und abschmecken.`,
   },
   {
@@ -214,9 +214,9 @@ Rührei und Sojasoße untermischen und abschmecken.`,
     gewuerze: `Salz
 2 TL Currypulver
 1 Prise Chili`,
-    schritte: `Reis nach Packungsangabe kochen.
+    schritte: `Reis in Salzwasser 12–15 Minuten garen.
 Hähnchen in Streifen, Gemüse in Würfel schneiden.
-Hähnchen im Öl rundum anbraten, herausnehmen.
+Hähnchen im Öl 4–5 Minuten rundum anbraten, herausnehmen.
 Zwiebel, Paprika und Zucchini 5 Minuten braten, Curry darüberstäuben.
 Mit Kokosmilch ablöschen, Hähnchen zugeben und 5 Minuten köcheln lassen.
 Reis untermischen und abschmecken.`,
@@ -267,7 +267,7 @@ Pfeffer
 Petersilie, zum Bestreuen`,
     schritte: `Zwiebel, Paprika und Zucchini würfeln.
 Gemüse im Olivenöl 5 Minuten anbraten.
-Tomatenmark und Gewürze einrühren, kurz mitrösten.
+Tomatenmark und Gewürze einrühren, 1 Minute mitrösten.
 Bulgur zugeben, mit Brühe ablöschen und zugedeckt 12 Minuten quellen lassen.
 Abschmecken, Feta darüberbröseln und mit Petersilie servieren.`,
   },
@@ -290,8 +290,8 @@ Pfeffer
 1 TL Oregano
 Basilikum, zum Bestreuen`,
     schritte: `Ofen auf 200 °C Umluft vorheizen.
-Penne 3 Minuten kürzer als angegeben kochen.
-Zwiebel und Knoblauch im Olivenöl andünsten, Tomaten und Sahne zugeben und würzen.
+Penne in Salzwasser 7–8 Minuten vorkochen.
+Zwiebel und Knoblauch im Olivenöl 3 Minuten andünsten, Tomaten und Sahne zugeben, würzen und 5 Minuten köcheln lassen.
 Nudeln mit der Soße mischen und in eine Auflaufform geben.
 Mit Mozzarella und Parmesan belegen und 20 Minuten goldbraun backen.`,
   },
@@ -308,7 +308,7 @@ Mit Mozzarella und Parmesan belegen und 20 Minuten goldbraun backen.`,
     gewuerze: `Salz
 Pfeffer
 Basilikum, zum Bestreuen`,
-    schritte: `Spaghetti nach Packungsangabe in Salzwasser kochen.
+    schritte: `Spaghetti in Salzwasser 9–11 Minuten kochen.
 Kirschtomaten halbieren.
 Nudeln abgießen, etwas Nudelwasser auffangen und mit Pesto und einem Schuss Nudelwasser vermischen.
 Tomaten unterheben, mit Basilikum und Parmesan servieren.`,
@@ -336,7 +336,7 @@ Pfeffer
     schritte: `Zwiebel, Möhre, Sellerie und Knoblauch fein würfeln.
 Gemüse im Olivenöl 5 Minuten anbraten, Tomatenmark einrühren.
 Linsen, Tomaten und Brühe zugeben und 20 Minuten köcheln lassen, bis die Linsen weich sind.
-Spaghetti nach Packungsangabe kochen.
+Spaghetti in Salzwasser 9–11 Minuten kochen.
 Soße kräftig abschmecken und mit den Spaghetti servieren.`,
   },
   {
@@ -361,7 +361,7 @@ Pfeffer
 1 Prise Safran
 Petersilie, zum Bestreuen`,
     schritte: `Hähnchen in Würfel schneiden, Paprika, Zwiebel und Knoblauch würfeln.
-Hähnchen im Olivenöl in einer großen Pfanne anbraten, Gemüse kurz mitbraten.
+Hähnchen im Olivenöl in einer großen Pfanne 5 Minuten anbraten, Gemüse 2 Minuten mitbraten.
 Reis und Gewürze zugeben und unter Rühren 2 Minuten rösten.
 Brühe angießen und ohne Rühren 18 Minuten leise köcheln lassen.
 Garnelen und Erbsen darauflegen und weitere 5 Minuten garen.
@@ -383,10 +383,10 @@ Mit Zitronenspalten und Petersilie servieren.`,
     gewuerze: `Salz
 Pfeffer
 1 Prise Muskat`,
-    schritte: `Gnocchi im Olivenöl rundum goldbraun braten.
+    schritte: `Gnocchi im Olivenöl 6–8 Minuten rundum goldbraun braten.
 Knoblauch fein hacken, Tomaten halbieren und beides 2 Minuten mitbraten.
-Spinat zugeben und zusammenfallen lassen.
-Sahne und Parmesan einrühren und kurz köcheln lassen.
+Spinat zugeben und 1–2 Minuten zusammenfallen lassen.
+Sahne und Parmesan einrühren und 2 Minuten köcheln lassen.
 Mit Salz, Pfeffer und Muskat abschmecken.`,
   },
   {
@@ -406,9 +406,9 @@ Pfeffer
 1 TL Senf
 1 Prise Muskat`,
     schritte: `Ofen auf 200 °C Umluft vorheizen.
-Hörnchennudeln bissfest kochen und abgießen.
-Butter schmelzen, Mehl anschwitzen und nach und nach die Milch einrühren.
-Soße aufkochen, zwei Drittel des Käses darin schmelzen und würzen.
+Hörnchennudeln in Salzwasser 7–8 Minuten bissfest kochen und abgießen.
+Butter schmelzen, Mehl 1 Minute anschwitzen und nach und nach die Milch einrühren.
+Soße 3 Minuten köcheln lassen, zwei Drittel des Käses darin schmelzen und würzen.
 Nudeln untermischen, in eine Form geben, mit restlichem Käse und Paniermehl bestreuen.
 10 Minuten überbacken, bis die Oberfläche knusprig ist.`,
   },
@@ -429,11 +429,11 @@ Nudeln untermischen, in eine Form geben, mit restlichem Käse und Paniermehl bes
 2 EL Rapsöl`,
     gewuerze: `1 TL Ingwer, gerieben
 1 Prise Chili`,
-    schritte: `Nudeln nach Packungsangabe garen und abgießen.
+    schritte: `Nudeln in kochendem Wasser 3–4 Minuten garen und abgießen.
 Chinakohl, Champignons und Möhre in Streifen, Frühlingszwiebeln in Ringe schneiden.
 Gemüse mit Knoblauch und Ingwer im Öl 4 Minuten scharf anbraten.
 Sojasoße und Ahornsirup verrühren.
-Nudeln und Soße in die Pfanne geben und kurz durchschwenken.
+Nudeln und Soße in die Pfanne geben und 1–2 Minuten durchschwenken.
 Mit Frühlingszwiebeln bestreut servieren.`,
   },
   {
@@ -451,8 +451,8 @@ Mit Frühlingszwiebeln bestreut servieren.`,
     gewuerze: `Salz
 Pfeffer
 1 Prise Muskat`,
-    schritte: `Tortellini nach Packungsangabe kochen.
-Schinken in der Butter kurz anbraten.
+    schritte: `Tortellini in Salzwasser 4–5 Minuten kochen.
+Schinken in der Butter 2 Minuten anbraten.
 Sahne und Erbsen zugeben und 3 Minuten köcheln lassen.
 Parmesan einrühren und mit Salz, Pfeffer und Muskat abschmecken.
 Tortellini untermischen und sofort servieren.`,
@@ -476,8 +476,8 @@ Tortellini untermischen und sofort servieren.`,
 Pfeffer
 1 Prise Muskat
 1 TL Oregano`,
-    schritte: `Spinat auftauen und gut ausdrücken.
-Zwiebel und Knoblauch würfeln, im Olivenöl andünsten und den Spinat kurz mitdünsten.
+    schritte: `Spinat in einem Sieb 2 Stunden auftauen lassen (oder in der Mikrowelle 5 Minuten) und gut ausdrücken.
+Zwiebel und Knoblauch würfeln, im Olivenöl 3 Minuten andünsten und den Spinat 2 Minuten mitdünsten.
 Spinat mit Ricotta und der Hälfte des Parmesans mischen, mit Salz, Pfeffer und Muskat würzen.
 Ofen auf 180 °C Umluft vorheizen, Tomaten mit Oregano und Salz würzen.
 Tomatensoße, Lasagneplatten und Spinatmasse abwechselnd schichten, mit Tomatensoße abschließen.
@@ -504,7 +504,7 @@ Pfeffer
 Basilikum, zum Bestreuen`,
     schritte: `Zucchini und Paprika würfeln, Knoblauch hacken.
 Gemüse im Olivenöl 4 Minuten anbraten.
-Orzo zugeben, kurz mitrösten und mit Brühe ablöschen.
+Orzo zugeben, 1 Minute mitrösten und mit Brühe ablöschen.
 Unter gelegentlichem Rühren 10 Minuten garen, bis die Brühe aufgenommen ist.
 Halbierte Tomaten, etwas Zitronenabrieb und Saft unterheben.
 Mit zerbröseltem Feta und Basilikum servieren.`,
@@ -528,8 +528,8 @@ Pfeffer
 1 Prise Muskat
 Salbei, zum Bestreuen`,
     schritte: `Kürbis entkernen und mit Schale in kleine Würfel schneiden, Zwiebel fein würfeln.
-Zwiebel im Olivenöl glasig dünsten, Kürbis und Reis zugeben und kurz mitrösten.
-Mit Weißwein ablöschen und einkochen lassen.
+Zwiebel im Olivenöl 3 Minuten glasig dünsten, Kürbis und Reis zugeben und 1 Minute mitrösten.
+Mit Weißwein ablöschen und 2 Minuten einkochen lassen.
 Brühe nach und nach angießen und 20–25 Minuten unter Rühren garen.
 Butter und Parmesan unterrühren, mit Salz, Pfeffer und Muskat abschmecken.
 Mit Salbei bestreut servieren.`,
@@ -551,9 +551,9 @@ Mit Salbei bestreut servieren.`,
 Pfeffer
 Basilikum, zum Bestreuen`,
     schritte: `Holzige Enden vom Spargel abschneiden, Stangen schräg in Stücke schneiden.
-Bandnudeln nach Packungsangabe kochen.
+Bandnudeln in Salzwasser 6–8 Minuten kochen.
 Spargel in Olivenöl und Butter 5 Minuten bissfest braten.
-Sahne, Zitronenabrieb und etwas Saft zugeben und kurz einkochen lassen.
+Sahne, Zitronenabrieb und etwas Saft zugeben und 2 Minuten einkochen lassen.
 Nudeln und Parmesan untermischen, abschmecken und mit Basilikum servieren.`,
   },
   {
@@ -573,12 +573,12 @@ Nudeln und Parmesan untermischen, abschmecken und mit Basilikum servieren.`,
 1 EL Honig
 2 EL Rapsöl`,
     gewuerze: `1 TL Ingwer, gerieben`,
-    schritte: `Nudeln nach Packungsangabe einweichen oder kochen.
+    schritte: `Mie-Nudeln in kochendem Wasser 4–5 Minuten garen und abgießen.
 Hähnchen in feine Streifen schneiden, Paprika und Möhre in Streifen, Brokkoli in kleine Röschen teilen.
-Hähnchen im Öl scharf anbraten und herausnehmen.
+Hähnchen im Öl 4 Minuten scharf anbraten und herausnehmen.
 Gemüse mit Ingwer und Knoblauch 4 Minuten unter Rühren braten.
 Sojasoße und Honig verrühren, mit Nudeln und Hähnchen in die Pfanne geben.
-Alles gut durchschwenken und sofort servieren.`,
+Alles 1–2 Minuten durchschwenken und sofort servieren.`,
   },
   {
     id: "lachs-spinat-pasta",
@@ -596,10 +596,10 @@ Alles gut durchschwenken und sofort servieren.`,
     gewuerze: `Salz
 Pfeffer
 Dill, zum Bestreuen`,
-    schritte: `Penne nach Packungsangabe kochen.
-Lachs würfeln, salzen und im Olivenöl kurz rundum anbraten, herausnehmen.
-Knoblauch hacken, kurz andünsten und mit Sahne ablöschen.
-Spinat zugeben und zusammenfallen lassen, mit Zitronensaft abschmecken.
+    schritte: `Penne in Salzwasser 10–12 Minuten kochen.
+Lachs würfeln, salzen und im Olivenöl 3 Minuten rundum anbraten, herausnehmen.
+Knoblauch hacken, 1 Minute andünsten, mit Sahne ablöschen und 2 Minuten köcheln lassen.
+Spinat zugeben und 1–2 Minuten zusammenfallen lassen, mit Zitronensaft abschmecken.
 Lachs und Nudeln vorsichtig unterheben und mit Dill servieren.`,
   },
 ];

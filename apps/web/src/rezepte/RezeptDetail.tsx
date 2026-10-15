@@ -31,7 +31,7 @@ import { kochstatistik } from "@/lib/zeit";
 import type { Rezept } from "@/rezepte/daten";
 import { RezeptBild } from "@/rezepte/RezeptBild";
 import { Einplanen } from "../plan/Einplanen";
-import { Abbuchen, type Abbuchung, useAbbuchbar } from "./Abbuchen";
+import { Abbuchen, type Abbuchung, type Reste, useAbbuchbar } from "./Abbuchen";
 import { AufDieListe } from "./AufDieListe";
 import {
   favoritUmschalten,
@@ -110,7 +110,7 @@ export function RezeptDetail({
 
   const zurueck = () => (plan ? plan.zurueck() : gehe([id]));
 
-  async function abschliessen(abbuchen: Abbuchung[]) {
+  async function abschliessen(abbuchen: Abbuchung[], reste: Reste | null) {
     setAbbuchenOffen(false);
     const { anzahl, zuruecknehmen } = await kochenAbschliessen(db, {
       haushaltId,
@@ -118,6 +118,7 @@ export function RezeptDetail({
       rezeptId: id,
       planEintragId: plan?.eintragId ?? null,
       abbuchen,
+      reste: reste && rezept ? { ...reste, titel: rezept.titel } : null,
     });
     zurueck();
     toast.success(
@@ -126,6 +127,9 @@ export function RezeptDetail({
         : `Guten Appetit! 🍽️ Zum ${anzahl}. Mal gekocht`) +
         (abbuchen.length > 0
           ? ` · ${abbuchen.length} aus dem Vorrat abgebucht`
+          : "") +
+        (reste
+          ? ` · ${reste.portionen} ${reste.portionen === 1 ? "Portion" : "Portionen"} Reste ${reste.lagerort === "tk" ? "eingefroren" : "im Kühlschrank"}`
           : ""),
       { action: { label: "Rückgängig", onClick: () => zuruecknehmen() } },
     );
@@ -140,9 +144,7 @@ export function RezeptDetail({
           faktor={faktor}
           portionen={aktuellePortionen}
           schliessen={zurueck}
-          fertigGekocht={() =>
-            abbuchbar.length > 0 ? setAbbuchenOffen(true) : abschliessen([])
-          }
+          fertigGekocht={() => setAbbuchenOffen(true)}
         />
         <Abbuchen
           offen={abbuchenOffen}
