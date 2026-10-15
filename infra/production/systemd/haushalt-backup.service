@@ -1,0 +1,9 @@
+[Unit]
+Description=Backup der Haushalt-Datenbank
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+ExecStart=/home/deploy/haushalt-app/infra/production/backup.sh
