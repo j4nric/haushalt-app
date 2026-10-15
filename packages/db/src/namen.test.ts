@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findeNachName, namensVarianten } from "./namen";
+import { findeImVorrat, findeNachName, namensVarianten } from "./namen";
 
 describe("namensVarianten", () => {
   it("findet Singular und Plural in beide Richtungen", () => {
@@ -31,5 +31,32 @@ describe("findeNachName", () => {
     expect(findeNachName(vorrat, "Ei")).toBe(2);
     expect(findeNachName(vorrat, "Reis")).toBe(3);
     expect(findeNachName(vorrat, "Mehl")).toBeUndefined();
+  });
+});
+
+describe("findeImVorrat", () => {
+  const vorrat = (...namen: string[]) =>
+    new Map(namen.map((n) => [n.toLowerCase(), n]));
+
+  it("Öl im Vorrat reicht für Olivenöl und Rapsöl im Rezept", () => {
+    expect(findeImVorrat(vorrat("Öl"), "Olivenöl")).toBe("Öl");
+    expect(findeImVorrat(vorrat("Öl"), "Rapsöl")).toBe("Öl");
+  });
+
+  it("eine Sorte im Vorrat reicht für den Oberbegriff im Rezept", () => {
+    expect(findeImVorrat(vorrat("Rapsöl"), "Öl")).toBe("Rapsöl");
+    expect(findeImVorrat(vorrat("Weizenmehl"), "Mehl")).toBe("Weizenmehl");
+  });
+
+  it("verschiedene Sorten passen nicht, andere Wörter auch nicht", () => {
+    expect(findeImVorrat(vorrat("Sesamöl"), "Olivenöl")).toBeUndefined();
+    expect(findeImVorrat(vorrat("Reis"), "Milchreis")).toBeUndefined();
+    expect(findeImVorrat(vorrat("Milchreis"), "Reis")).toBeUndefined();
+  });
+
+  it("der genaue Name hat Vorrang", () => {
+    expect(findeImVorrat(vorrat("Öl", "Olivenöl"), "Olivenöl")).toBe(
+      "Olivenöl",
+    );
   });
 });

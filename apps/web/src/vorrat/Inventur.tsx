@@ -153,8 +153,7 @@ function Runde({
           </p>
           <h3 className="text-2xl font-semibold">{zeile.name}</h3>
           <p className="text-sm text-muted-foreground">
-            {bestandBeschreibung({ ...vorher, angebrochen: false }) ||
-              (vorher.packung ? "" : "Stück")}
+            {bestandBeschreibung(vorher) || (vorher.packung ? "" : "Stück")}
           </p>
         </div>
         <Zaehler

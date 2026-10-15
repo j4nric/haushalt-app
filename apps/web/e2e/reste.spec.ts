@@ -40,7 +40,7 @@ test("Reste verwerten: Rezepte mit den meisten Resten zuerst", async ({
 
     await page
       .getByRole("toolbar", { name: "Filter" })
-      .getByRole("button", { name: "♻️ Reste verwerten" })
+      .getByRole("button", { name: "Reste verwerten" })
       .click();
     const reste = page.getByRole("region", { name: "Reste verwerten" });
     await reste.getByLabel("Rest hinzufügen").fill("Zucchini");

@@ -73,10 +73,10 @@ test("Favoriten, Schlagwörter, kochbar, gekocht, Statistik, Glücksrad, Foto", 
       .first()
       .click();
     const filter = page.getByRole("toolbar", { name: "Filter" });
-    await filter.getByRole("button", { name: "⭐ Favoriten" }).click();
+    await filter.getByRole("button", { name: "Favoriten" }).click();
     await expect(karte(page, "Pfannkuchen")).toBeVisible();
     await expect(karte(page, "Nudelauflauf")).toHaveCount(0);
-    await filter.getByRole("button", { name: "⭐ Favoriten" }).click();
+    await filter.getByRole("button", { name: "Favoriten" }).click();
 
     // Schlagwort-Filter.
     await filter.getByRole("button", { name: "#schnell" }).click();
@@ -84,14 +84,14 @@ test("Favoriten, Schlagwörter, kochbar, gekocht, Statistik, Glücksrad, Foto", 
     await expect(karte(page, "Pfannkuchen")).toHaveCount(0);
     await filter.getByRole("button", { name: "#schnell" }).click();
 
-    // Was kann ich kochen? Nudeln und Tomaten sind da, die Zwiebel fehlt.
-    await filter.getByRole("button", { name: /Was kann ich kochen/ }).click();
-    await expect(page.getByRole("listitem").first()).toContainText("67 % da");
+    // Beste Übereinstimmung: Nudeln und Tomaten sind da, die Zwiebel fehlt.
+    await filter.getByRole("button", { name: "Beste Übereinstimmung" }).click();
+    await expect(page.getByRole("listitem").first()).toContainText("67 %");
     await expect(page.getByRole("listitem").first()).toContainText(
       "Fehlt: Zwiebel",
     );
-    await expect(karte(page, "Pfannkuchen")).toContainText("0 % da");
-    await filter.getByRole("button", { name: /Was kann ich kochen/ }).click();
+    await expect(karte(page, "Pfannkuchen")).toContainText("0 %");
+    await filter.getByRole("button", { name: "Beste Übereinstimmung" }).click();
 
     // Kochen → „Fertig gekocht“ → Statistik.
     await page.getByRole("button", { name: /Nudelauflauf/ }).click();
@@ -107,10 +107,10 @@ test("Favoriten, Schlagwörter, kochbar, gekocht, Statistik, Glücksrad, Foto", 
       .click();
     await expect(page.getByText("Euer Lieblingsgericht")).toBeVisible();
     await expect(page.getByText("Nudelauflauf · 1× gekocht")).toBeVisible();
-    await filter.getByRole("button", { name: "🕒 Zuletzt gekocht" }).click();
+    await filter.getByRole("button", { name: "Zuletzt gekocht" }).click();
     await expect(karte(page, "Nudelauflauf")).toContainText("zuletzt heute");
     await expect(karte(page, "Pfannkuchen")).toHaveCount(0);
-    await filter.getByRole("button", { name: "🕒 Zuletzt gekocht" }).click();
+    await filter.getByRole("button", { name: "Zuletzt gekocht" }).click();
 
     // Glücksrad dreht und führt zu einem Rezept.
     await page.getByRole("button", { name: /Glücksrad/ }).click();

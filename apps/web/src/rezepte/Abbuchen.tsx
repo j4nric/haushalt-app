@@ -1,4 +1,4 @@
-import { findeNachName } from "@haushalt/db/namen";
+import { findeImVorrat } from "@haushalt/db/namen";
 import { bestandKurz, verbrauchNachRezept } from "@haushalt/db/vorrat";
 import { mengeFuerListe } from "@haushalt/db/zutaten";
 import { useQuery } from "@powersync/react";
@@ -45,7 +45,7 @@ export function useAbbuchbar(
   const { data: artikel } = useQuery<ArtikelStand>(ARTIKEL_STAND, [haushaltId]);
   const nachName = new Map(artikel.map((a) => [a.name, a]));
   return zutaten.flatMap((z) => {
-    const a = findeNachName(nachName, z.name);
+    const a = findeImVorrat(nachName, z.name);
     if (!a?.im_vorrat || a.bestand <= 0) {
       return [];
     }

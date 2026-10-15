@@ -1,6 +1,6 @@
-import { findeNachName } from "@haushalt/db/namen";
+import { findeImVorrat } from "@haushalt/db/namen";
 import { istGrundzutat, zerlegeZeile } from "@haushalt/db/zutaten";
-import type { ArtikelStand } from "@/lib/kochbar";
+import { type ArtikelStand, verfuegbarkeit } from "../lib/kochbar";
 import type { SammlungsRezept } from "./sammlung/typ";
 
 /**
@@ -15,7 +15,23 @@ export type Vorschlag = {
   /** Zutaten, die im Vorrat sind (Namen wie im Rezept). */
   ausVorrat: string[];
   saison: boolean;
+  /** Wie viel der zählenden Zutaten im Vorrat ist (wie bei den eigenen Rezepten). */
+  prozent: number;
 };
+
+/** Zutaten und Gewürze als Rezept-Zutaten – für „Was ist im Vorrat?“. */
+export function rezeptZutaten(r: SammlungsRezept) {
+  const zeilen = (text: string, gewuerz: number) =>
+    text
+      .split("\n")
+      .map((z) => z.trim())
+      .filter(Boolean)
+      .map((z) => {
+        const zutat = zerlegeZeile(z);
+        return { ...zutat, gewuerz, optional: zutat.optional ? 1 : 0 };
+      });
+  return [...zeilen(r.zutaten, 0), ...zeilen(r.gewuerze, 1)];
+}
 
 /** Zutatennamen eines Rezepts (ohne Gewürze, Optionales und Salz/Öl & Co.). */
 export function hauptzutaten(r: SammlungsRezept): string[] {
@@ -65,7 +81,7 @@ export function vorschlagen(
     .filter((r) => !vorhandeneTitel.has(r.titel.toLowerCase()))
     .map((rezept) => {
       const ausVorrat = hauptzutaten(rezept).filter((name) => {
-        const a = findeNachName(artikel, name);
+        const a = findeImVorrat(artikel, name);
         return Boolean(a?.im_vorrat && a.bestand > 0);
       });
       const saisonal = rezept.saison.length > 0;
@@ -74,7 +90,8 @@ export function vorschlagen(
         ausVorrat.length * 1.5 +
         (saison ? 3 : saisonal ? -4 : 0) +
         zufall() * 2.5;
-      return { rezept, punkte, ausVorrat, saison };
+      const { prozent } = verfuegbarkeit(rezeptZutaten(rezept), artikel);
+      return { rezept, punkte, ausVorrat, saison, prozent };
     })
     .sort((a, b) => b.punkte - a.punkte);
 }

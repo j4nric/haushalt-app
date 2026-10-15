@@ -81,19 +81,24 @@ test("Vorrat pflegen: Packungen, Kategorie, Filter, Wischen, Inventur", async ({
     await expect(zeile(page, "Mehl")).toContainText("à 1 kg");
 
     // Direkt eintragen: „Eier 10“ bucht 10 Stück, „Kaffee“ eine Packung.
+    // Danach gehen gleich die Details auf – eingetragen ist es schon.
     await eintippen(page, "Vorratsartikel", "Eier 10", "Eintragen");
+    const eier = page.getByRole("dialog", { name: "Eier" });
+    await expect(
+      eier.getByRole("textbox", { name: "Bestand Eier", exact: true }),
+    ).toHaveValue("10");
+    await page.keyboard.press("Escape");
+    await expect(eier).toBeHidden();
     await eintippen(page, "Vorratsartikel", "Kaffee", "Eintragen");
-    await expect(bestand(page, "Eier")).toHaveText("10");
-    await expect(bestand(page, "Kaffee")).toHaveText("1");
+    await expect(page.getByRole("dialog", { name: "Kaffee" })).toBeVisible();
 
     // Details: Kategorie und Name ändern, eine Packung ist offen.
-    await bestand(page, "Kaffee").click();
     await page.getByLabel("Kategorie").selectOption({ label: "Getränke" });
     await page.getByLabel("Name").fill("Kaffeebohnen");
     await page.getByRole("switch", { name: /angebrochen/ }).click();
     await page.getByRole("button", { name: "Speichern" }).click();
     await expect(page.getByRole("heading", { name: "Getränke" })).toBeVisible();
-    await expect(zeile(page, "Kaffeebohnen")).toContainText("1 offen");
+    await expect(zeile(page, "Kaffeebohnen")).toContainText("offen");
     // Einen Namen, den es schon gibt, nimmt er nicht.
     await bestand(page, "Kaffeebohnen").click();
     await page.getByLabel("Name").fill("Ei");
@@ -153,6 +158,16 @@ test("Vorrat pflegen: Packungen, Kategorie, Filter, Wischen, Inventur", async ({
     ).toBeVisible();
     await page.getByRole("button", { name: "Fertig" }).click();
     await expect(bestand(page, "Kaffeebohnen")).toHaveText("2");
+
+    // Produkt ganz löschen – mit Rückfrage.
+    await bestand(page, "Eier").click();
+    await page.getByRole("button", { name: "Produkt löschen" }).click();
+    await page
+      .getByRole("alertdialog", { name: "Produkt löschen?" })
+      .getByRole("button", { name: "Löschen" })
+      .click();
+    await expect(page.getByText("Eier gelöscht")).toBeVisible();
+    await expect(zeile(page, "Eier")).toHaveCount(0);
 
     await zurListe(page);
     // Per Wischen wieder auf die Liste – offen, nicht im Wagen.

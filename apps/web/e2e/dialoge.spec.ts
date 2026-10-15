@@ -76,6 +76,11 @@ test("Scan-Dialog auf dem iPhone: Seite dahinter gesperrt, Name änderbar, nicht
     await name.fill("Senf");
     await neu.getByRole("button", { name: /In den Vorrat/ }).tap();
     await expect(neu).toBeHidden();
+    // Gleich danach die Details von „Senf“ – schließen.
+    const details = page.getByRole("dialog", { name: "Senf" });
+    await expect(details).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(details).toBeHidden();
     await expect(page.getByRole("button", { name: "Bestand Senf" })).toHaveText(
       "1",
     );

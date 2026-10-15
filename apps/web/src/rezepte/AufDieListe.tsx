@@ -1,5 +1,5 @@
 import { formatiereMenge } from "@haushalt/db/einheiten";
-import { findeNachName } from "@haushalt/db/namen";
+import { findeImVorrat } from "@haushalt/db/namen";
 import { istGrundzutat } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { ShoppingCart } from "lucide-react";
@@ -55,7 +55,7 @@ export function AufDieListe({
     (a, b) => Number(a.optional) - Number(b.optional),
   );
   const vorschlaege: Vorschlag[] = sortiert.map((p) => {
-    const a = findeNachName(nachName, p.name);
+    const a = findeImVorrat(nachName, p.name);
     let grund: string | null = a?.auf_liste
       ? "steht schon drauf"
       : imVorrat(p.zutat, a);

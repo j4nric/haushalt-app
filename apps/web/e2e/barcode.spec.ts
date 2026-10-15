@@ -77,12 +77,16 @@ test("Barcode: unbekannt benennen, wieder scannen = abhaken, im Vorrat einbuchen
 
     // 3. Im Vorrat: Die Packung (1 l) wird eingebucht, Milch wird Vorratsartikel.
     await zuBereich(page, "Vorrat");
+    // Danach schließt der Scanner und die Details von Milch gehen auf.
     await page.getByRole("button", { name: "Barcode scannen" }).click();
-    await expect(page.getByRole("dialog", { name: /Scannen/ })).toContainText(
-      "+1 Milch (1 l) im Vorrat",
-      { timeout: 20_000 },
-    );
-    await page.getByRole("button", { name: "Scanner schließen" }).click();
+    await expect(page.getByText("+1 Milch (1 l) im Vorrat")).toBeVisible({
+      timeout: 20_000,
+    });
+    const details = page.getByRole("dialog", { name: "Milch" });
+    await expect(
+      details.getByRole("textbox", { name: "Bestand Milch", exact: true }),
+    ).toHaveValue("1");
+    await page.keyboard.press("Escape");
     await expect(bestand(page, "Milch")).toBeVisible();
   } finally {
     await handy.schliessen();

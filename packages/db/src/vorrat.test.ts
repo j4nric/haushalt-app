@@ -126,10 +126,8 @@ describe("Rezepte und Vorrat", () => {
   });
 
   it("beschreibt den Bestand", () => {
-    expect(bestandBeschreibung(vorrat(2, true))).toBe("à 500 g · 1 offen");
-    expect(
-      bestandBeschreibung({ bestand: 3, angebrochen: false, packung: null }),
-    ).toBe("");
+    expect(bestandBeschreibung(vorrat(2, true))).toBe("à 500 g");
+    expect(bestandBeschreibung({ packung: null })).toBe("");
   });
 });
 

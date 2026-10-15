@@ -1,4 +1,4 @@
-import { findeNachName } from "@haushalt/db/namen";
+import { findeImVorrat } from "@haushalt/db/namen";
 import { bestandKurz, packungVon, reichtVorrat } from "@haushalt/db/vorrat";
 import {
   istGrundzutat,
@@ -70,7 +70,7 @@ export function verfuegbarkeit(
 ): Verfuegbarkeit {
   const zaehlend = zutaten.filter(zaehltFuerKochbar);
   const fehlt = zaehlend
-    .filter((z) => !imVorrat(z, findeNachName(artikel, z.name)))
+    .filter((z) => !imVorrat(z, findeImVorrat(artikel, z.name)))
     .map((z) => z.name);
   const prozent =
     zaehlend.length === 0

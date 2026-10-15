@@ -290,6 +290,7 @@ export function Vorrat({
         nutzerId={nutzerId}
         name={eingabe}
         setName={setEingabe}
+        oeffnen={setDetails}
       />
     </>
   );
@@ -317,6 +318,7 @@ function VorratsEintrag({
   const vorrat = vorratVon(zeile);
   const knapp = istKnapp(zeile);
   const leer = istLeer(zeile);
+  const offen = vorrat.angebrochen && vorrat.bestand > 0;
   const zusatz = [
     bestandBeschreibung(vorrat),
     knapp ? `knapp${zeile.auf_liste ? ", auf der Liste" : ""}` : "",
@@ -366,13 +368,17 @@ function VorratsEintrag({
             >
               {zeile.name}
             </span>
-            {zusatz && (
+            {(zusatz || offen) && (
               <span
                 className={cn(
                   "text-xs",
                   knapp ? "text-warning-foreground" : "text-muted-foreground",
                 )}
               >
+                {offen && (
+                  <span className="font-semibold text-primary">offen</span>
+                )}
+                {offen && zusatz && " · "}
                 {zusatz}
               </span>
             )}
@@ -422,11 +428,14 @@ function NeuerVorratsartikel({
   nutzerId,
   name,
   setName,
+  oeffnen,
 }: {
   haushaltId: string;
   nutzerId: string;
   name: string;
   setName: (name: string) => void;
+  /** Nach dem Eintragen oder Scannen gleich die Details zeigen. */
+  oeffnen: (artikelId: string) => void;
 }) {
   const db = usePowerSync();
   const { data: bekannte } = useQuery<{
@@ -452,7 +461,7 @@ function NeuerVorratsartikel({
     const gewaehlt = manuell;
     setName("");
     setManuell(null);
-    const meldung = await db.writeTransaction(async (tx) => {
+    const artikelId = await db.writeTransaction(async (tx) => {
       const artikel = await artikelFindenOderAnlegen(tx, {
         haushaltId,
         name: eingabe.name,
@@ -494,9 +503,10 @@ function NeuerVorratsartikel({
         nutzerId,
       });
       await mindestbestandPruefen(tx, artikel.id, nutzerId);
-      return `+${stueck(menge)} ${artikel.name} im Vorrat`;
+      return artikel.id;
     });
-    toast.success(meldung);
+    // Eingetragen ist es schon – die Details sind zum Feinjustieren da.
+    oeffnen(artikelId);
   }
 
   return (
@@ -522,6 +532,7 @@ function NeuerVorratsartikel({
           aktion={(a) =>
             scanEinbuchen(db, { haushaltId, nutzerId, artikel: a })
           }
+          danach={(a) => oeffnen(a.id)}
         />
       }
     />

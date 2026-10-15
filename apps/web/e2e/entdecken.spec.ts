@@ -13,6 +13,10 @@ test("Entdecken: Vorschläge zum Vorrat, übernehmen, filtern", async ({
     await zuBereich(page, "Vorrat");
     await page.getByLabel("Vorratsartikel").fill("Spaghetti");
     await page.getByRole("button", { name: "Eintragen" }).click();
+    // Eingetragen – die Details gehen gleich auf, Speichern ist nicht nötig.
+    await expect(page.getByRole("dialog", { name: "Spaghetti" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
     await expect(
       page.getByRole("button", { name: "Bestand Spaghetti" }),
     ).toHaveText("1");
@@ -21,7 +25,9 @@ test("Entdecken: Vorschläge zum Vorrat, übernehmen, filtern", async ({
     // Direkt nach dem Bereichswechsel kann ein Klick in der Übergangs-Animation
     // untergehen (unter Last in der CI) – dann noch einmal.
     await expect(async () => {
-      const knopf = page.getByRole("button", { name: "✨ Rezepte entdecken" });
+      const knopf = page
+        .getByRole("button", { name: "Rezepte entdecken" })
+        .last();
       if (await knopf.isVisible()) {
         await knopf.click();
       }
@@ -55,12 +61,30 @@ test("Entdecken: Vorschläge zum Vorrat, übernehmen, filtern", async ({
       page.getByRole("button", { name: /^Spaghetti Bolognese/ }),
     ).toHaveCount(0);
 
+    // Sortiert nach Übereinstimmung: oben steht, was am meisten im Vorrat hat.
+    await page.getByLabel("Sammlung durchsuchen").fill("");
+    await page
+      .getByRole("button", { name: "Beste Übereinstimmung", exact: true })
+      .click();
+    const prozente = await page
+      .getByRole("region", { name: "Alle Vorschläge" })
+      .getByText(/^\d+ %/)
+      .allTextContents();
+    const zahlen = prozente.map((p) => Number.parseInt(p, 10));
+    expect(zahlen.length).toBeGreaterThan(10);
+    expect(zahlen).toEqual([...zahlen].sort((a, b) => b - a));
+    await page
+      .getByRole("button", { name: "Beste Übereinstimmung", exact: true })
+      .click();
+
     // Filter: vegetarisch zeigt keine Carbonara.
     await page.getByLabel("Sammlung durchsuchen").fill("Spaghetti");
     await expect(
       page.getByRole("button", { name: /^Spaghetti Carbonara/ }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "🌱 Vegetarisch" }).click();
+    await page
+      .getByRole("button", { name: "Vegetarisch", exact: true })
+      .click();
     await expect(
       page.getByRole("button", { name: /^Spaghetti Carbonara/ }),
     ).toHaveCount(0);

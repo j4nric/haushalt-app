@@ -1,7 +1,8 @@
 import { useQuery } from "@powersync/react";
-import { LoaderCircle, Plus, Search } from "lucide-react";
+import { LoaderCircle, Plus, Search, Sparkles } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { useUnterseite } from "@/Ansicht";
+import { Uebereinstimmung } from "@/components/Uebereinstimmung";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -207,7 +208,7 @@ function Uebersicht({
         </p>
         <div className="mt-2 flex flex-col gap-2">
           <Button className="rounded-full" onClick={() => gehe(["entdecken"])}>
-            ✨ Rezepte entdecken
+            <Sparkles /> Rezepte entdecken
           </Button>
           <Button
             variant="outline"
@@ -224,6 +225,15 @@ function Uebersicht({
   return (
     <div className="space-y-3 pt-2">
       <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-11 shrink-0 rounded-full"
+          aria-label="Rezepte entdecken"
+          onClick={() => gehe(["entdecken"])}
+        >
+          <Sparkles />
+        </Button>
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -251,14 +261,11 @@ function Uebersicht({
         aria-label="Filter"
         className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]"
       >
-        <FilterChip an={false} umschalten={() => gehe(["entdecken"])}>
-          ✨ Entdecken
-        </FilterChip>
         <FilterChip
           an={auswahl.favoriten}
           umschalten={() => setAuswahl({ favoriten: !auswahl.favoriten })}
         >
-          ⭐ Favoriten
+          Favoriten
         </FilterChip>
         <FilterChip
           an={auswahl.sortierung === "kochbar"}
@@ -268,7 +275,7 @@ function Uebersicht({
             })
           }
         >
-          🥘 Was kann ich kochen?
+          Beste Übereinstimmung
         </FilterChip>
         <FilterChip
           an={auswahl.reste !== null}
@@ -276,7 +283,7 @@ function Uebersicht({
             setAuswahl({ reste: auswahl.reste === null ? [] : null })
           }
         >
-          ♻️ Reste verwerten
+          Reste verwerten
         </FilterChip>
         <FilterChip
           an={auswahl.sortierung === "zuletzt"}
@@ -286,7 +293,7 @@ function Uebersicht({
             })
           }
         >
-          🕒 Zuletzt gekocht
+          Zuletzt gekocht
         </FilterChip>
         {alleSchlagwoerter.map((w) => {
           const an = auswahl.schlagwoerter.includes(w);
@@ -382,27 +389,21 @@ function Uebersicht({
                             <span className="sr-only">Favorit</span>
                           </span>
                         ) : null}
-                        {auswahl.sortierung === "kochbar" && v && (
-                          <span
-                            className={cn(
-                              "absolute top-2 right-2 rounded-full px-2 py-0.5 text-xs font-semibold",
-                              v.prozent === 100
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-background/90",
-                            )}
-                          >
-                            {v.prozent} % da
-                          </span>
-                        )}
                       </span>
                       <span className="flex flex-1 flex-col gap-0.5 p-3">
                         <span className="leading-tight font-semibold">
                           {r.titel}
                         </span>
+                        {v && (
+                          <Uebereinstimmung
+                            prozent={v.prozent}
+                            className="mt-1"
+                          />
+                        )}
                         <span className="text-xs text-muted-foreground">
                           {auswahl.sortierung === "kochbar" && v
                             ? v.fehlt.length === 0
-                              ? "Alles im Vorrat 🎉"
+                              ? "Alles im Vorrat"
                               : `Fehlt: ${v.fehlt.join(", ")}`
                             : auswahl.sortierung === "zuletzt" &&
                                 r.zuletzt_gekocht
