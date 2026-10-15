@@ -164,6 +164,9 @@ const ERLAUBT = {
     im_vorrat: { umwandeln: bool },
     archiviert: { umwandeln: bool },
     mindestbestand: { umwandeln: menge },
+    packung_menge: { umwandeln: menge },
+    packung_einheit: { umwandeln: einheit(false) },
+    angebrochen: { umwandeln: bool },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },
   // Buchungen sind unveränderlich: alle Spalten `fest`, also nur PUT und DELETE.

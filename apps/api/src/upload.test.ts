@@ -354,6 +354,38 @@ describe("Vorrat", () => {
     ).toBe(400);
   });
 
+  it("speichert Packungsgröße und „angebrochen“ – nur vollständig und gültig", async () => {
+    const mehl = neueId();
+    await anna.hochladen([artikelPut(mehl, haushalt, "Mehl")]);
+    const patch = (opData: Record<string, unknown>) =>
+      anna.hochladen([{ op: "PATCH", table: "artikel", id: mehl, opData }]);
+
+    expect(
+      (
+        await patch({
+          packung_menge: 500,
+          packung_einheit: "g",
+          angebrochen: 1,
+        })
+      ).status,
+    ).toBe(200);
+    const [a] =
+      await t.sql`select packung_menge, packung_einheit, angebrochen from artikel where id = ${mehl}`;
+    expect(a).toEqual({
+      packung_menge: 500,
+      packung_einheit: "g",
+      angebrochen: true,
+    });
+
+    expect((await patch({ packung_menge: -1 })).status).toBe(400);
+    expect((await patch({ packung_einheit: "Dose" })).status).toBe(400);
+    // Nur eins von beiden: verletzt die Regel „beide oder keins“.
+    expect((await patch({ packung_einheit: null })).status).toBe(400);
+    expect(
+      (await patch({ packung_menge: null, packung_einheit: null })).status,
+    ).toBe(200);
+  });
+
   it("lehnt einen Mindestbestand von 0 oder kleiner ab", () => {
     expect(() =>
       parseOperationen({

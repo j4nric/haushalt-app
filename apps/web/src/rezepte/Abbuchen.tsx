@@ -1,7 +1,8 @@
-import { formatiereMenge } from "@haushalt/db/einheiten";
 import { findeNachName } from "@haushalt/db/namen";
+import { bestandKurz, verbrauchNachRezept } from "@haushalt/db/vorrat";
+import { mengeFuerListe } from "@haushalt/db/zutaten";
 import { useQuery } from "@powersync/react";
-import { ChefHat } from "lucide-react";
+import { ChefHat, Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,25 +13,30 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
-import type { ArtikelStand } from "@/lib/kochbar";
-import { alsPosten } from "@/lib/plan";
+import { type ArtikelStand, vorratVon } from "@/lib/kochbar";
+import { cn } from "@/lib/utils";
 import { ARTIKEL_STAND } from "@/rezepte/daten";
 import type { GespeicherteZutat } from "./aktionen";
 
-const EINHEIT_KURZ = { stueck: "Stk.", g: "g", ml: "ml" } as const;
+/** Ganze verbrauchte Packungen und ob danach eine offen ist. */
+export type Abbuchung = {
+  artikelId: string;
+  menge: number;
+  angebrochen: boolean;
+};
 
-export type Abbuchung = { artikelId: string; menge: number };
+type Wahl = { ganze: number; angebrochen: boolean };
 
 type Zeile = {
   artikel: ArtikelStand;
   name: string;
-  vorschlag: number | null;
+  /** Aus dem Rezept errechnet; `null` = ließ sich nicht umrechnen. */
+  vorschlag: Wahl | null;
   /** Optional im Rezept – vielleicht gar nicht verwendet, daher abgewählt. */
   optional: boolean;
 };
 
-/** Welche Zutaten im Vorrat geführt werden – mit vorgeschlagener Verbrauchsmenge. */
+/** Welche Zutaten im Vorrat geführt werden – mit vorgeschlagenem Verbrauch. */
 export function useAbbuchbar(
   haushaltId: string,
   zutaten: GespeicherteZutat[],
@@ -43,21 +49,21 @@ export function useAbbuchbar(
     if (!a?.im_vorrat || a.bestand <= 0) {
       return [];
     }
-    const p = alsPosten(z, faktor);
-    // Nur vorschlagen, wenn die Einheiten zusammenpassen; nie mehr als vorhanden.
-    const vorschlag =
-      p.listenEinheit === a.standardeinheit && p.zutat.menge != null
-        ? Math.min(p.zutat.menge, a.bestand)
-        : null;
     return [
-      { artikel: a, name: z.name, vorschlag, optional: Boolean(z.optional) },
+      {
+        artikel: a,
+        name: z.name,
+        vorschlag: verbrauchNachRezept(mengeFuerListe(z, faktor), vorratVon(a)),
+        optional: Boolean(z.optional),
+      },
     ];
   });
 }
 
 /**
- * Nach dem Kochen: Was davon wurde aus dem Vorrat verbraucht? Vorbelegt mit den
- * Mengen aus dem Rezept (nach Portionen), änderbar; Unklares ist abgewählt.
+ * Nach dem Kochen: Was davon wurde aus dem Vorrat verbraucht? Gezählt in ganzen
+ * Packungen bzw. Stück; ein Rest macht eine Packung „offen“. Vorbelegt aus dem
+ * Rezept (nach Portionen), änderbar; Unklares und Optionales ist abgewählt.
  */
 export function Abbuchen({
   offen,
@@ -70,12 +76,15 @@ export function Abbuchen({
   schliessen: () => void;
   bestaetigen: (abbuchen: Abbuchung[]) => void;
 }) {
-  const [mengen, setMengen] = useState<Record<string, string> | null>(null);
+  const [wahl, setWahl] = useState<Record<string, Wahl> | null>(null);
   const [aus, setAus] = useState<Set<string> | null>(null);
   const werte =
-    mengen ??
+    wahl ??
     Object.fromEntries(
-      zeilen.map((z) => [z.artikel.id, z.vorschlag?.toString() ?? ""]),
+      zeilen.map((z) => [
+        z.artikel.id,
+        z.vorschlag ?? { ganze: 0, angebrochen: true },
+      ]),
     );
   const abgewaehlt =
     aus ??
@@ -85,18 +94,39 @@ export function Abbuchen({
         .map((z) => z.artikel.id),
     );
 
+  function aendern(id: string, neu: Partial<Wahl>) {
+    const bisher = werte[id] ?? { ganze: 0, angebrochen: false };
+    setWahl({ ...werte, [id]: { ...bisher, ...neu } });
+  }
+
+  function zuruecksetzen() {
+    setWahl(null);
+    setAus(null);
+  }
+
   function fertig() {
     bestaetigen(
       zeilen
         .filter((z) => !abgewaehlt.has(z.artikel.id))
-        .map((z) => ({
-          artikelId: z.artikel.id,
-          menge: Number((werte[z.artikel.id] ?? "").replace(",", ".")),
-        }))
-        .filter((a) => a.menge > 0),
+        .map((z) => {
+          const w = werte[z.artikel.id] ?? { ganze: 0, angebrochen: false };
+          return {
+            artikelId: z.artikel.id,
+            menge: w.ganze,
+            angebrochen: w.angebrochen,
+          };
+        })
+        .filter(
+          (a) =>
+            a.menge > 0 ||
+            a.angebrochen !==
+              Boolean(
+                zeilen.find((z) => z.artikel.id === a.artikelId)?.artikel
+                  .angebrochen,
+              ),
+        ),
     );
-    setMengen(null);
-    setAus(null);
+    zuruecksetzen();
   }
 
   return (
@@ -105,8 +135,7 @@ export function Abbuchen({
       onOpenChange={(o) => {
         if (!o) {
           schliessen();
-          setMengen(null);
-          setAus(null);
+          zuruecksetzen();
         }
       }}
     >
@@ -115,15 +144,16 @@ export function Abbuchen({
           <DrawerHeader>
             <DrawerTitle>Aus dem Vorrat abbuchen?</DrawerTitle>
             <DrawerDescription>
-              Was davon habt ihr verbraucht? Mengen lassen sich anpassen.
+              Ganze Packungen, die leer sind – und ob eine offen ist.
             </DrawerDescription>
           </DrawerHeader>
           <ul className="max-h-[50dvh] space-y-1 overflow-y-auto px-4">
             {zeilen.map((z) => {
               const id = z.artikel.id;
               const an = !abgewaehlt.has(id);
+              const w = werte[id] ?? { ganze: 0, angebrochen: false };
               return (
-                <li key={id} className="flex items-center gap-3 py-1.5">
+                <li key={id} className="flex items-center gap-2 py-1.5">
                   <input
                     type="checkbox"
                     checked={an}
@@ -142,29 +172,59 @@ export function Abbuchen({
                   <span className="min-w-0 flex-1">
                     {z.name}
                     <span className="block text-xs text-muted-foreground">
-                      Bestand:{" "}
-                      {formatiereMenge(
-                        z.artikel.bestand,
-                        z.artikel.standardeinheit,
-                      )}
+                      Da: {bestandKurz(vorratVon(z.artikel))}
                     </span>
                   </span>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step="any"
-                    aria-label={`Menge ${z.name}`}
-                    value={werte[id] ?? ""}
-                    disabled={!an}
-                    onChange={(e) =>
-                      setMengen({ ...werte, [id]: e.target.value })
-                    }
-                    className="h-9 w-20 text-right text-base"
-                  />
-                  <span className="w-8 text-sm text-muted-foreground">
-                    {EINHEIT_KURZ[z.artikel.standardeinheit]}
-                  </span>
+                  <div
+                    className={cn(
+                      "flex items-center gap-1",
+                      !an && "pointer-events-none opacity-40",
+                    )}
+                  >
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8 rounded-full"
+                      aria-label={`${z.name} eine weniger`}
+                      disabled={!an || w.ganze <= 0}
+                      onClick={() => aendern(id, { ganze: w.ganze - 1 })}
+                    >
+                      <Minus />
+                    </Button>
+                    <span
+                      className="w-6 text-center tabular-nums"
+                      data-testid={`leer-${z.name}`}
+                    >
+                      {w.ganze}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="size-8 rounded-full"
+                      aria-label={`${z.name} eine mehr`}
+                      disabled={!an || w.ganze >= z.artikel.bestand}
+                      onClick={() => aendern(id, { ganze: w.ganze + 1 })}
+                    >
+                      <Plus />
+                    </Button>
+                    <button
+                      type="button"
+                      aria-pressed={w.angebrochen}
+                      aria-label={`${z.name} offen`}
+                      disabled={!an}
+                      onClick={() =>
+                        aendern(id, { angebrochen: !w.angebrochen })
+                      }
+                      className={cn(
+                        "ml-1 rounded-full border px-2.5 py-1 text-xs",
+                        w.angebrochen
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "bg-card text-muted-foreground",
+                      )}
+                    >
+                      offen
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -173,7 +233,10 @@ export function Abbuchen({
             <Button
               variant="outline"
               className="h-12 rounded-full"
-              onClick={() => bestaetigen([])}
+              onClick={() => {
+                bestaetigen([]);
+                zuruecksetzen();
+              }}
             >
               Nichts abbuchen
             </Button>

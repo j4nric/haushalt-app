@@ -1,44 +1,53 @@
-import { type Einheit, formatiereMenge } from "@haushalt/db/einheiten";
+import { formatiereMenge } from "@haushalt/db/einheiten";
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
-import { kategorieName, kategorieRang } from "@haushalt/db/kategorien";
+import { findeNachName } from "@haushalt/db/namen";
+import {
+  bestandBeschreibung,
+  eingekauftePackungen,
+  gelerntePackung,
+  packungVon,
+} from "@haushalt/db/vorrat";
+import { zerlegeEingabe } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import type { AbstractPowerSyncDatabase } from "@powersync/web";
-import { Minus, PackageOpen, Plus } from "lucide-react";
+import {
+  ClipboardCheck,
+  Minus,
+  PackageOpen,
+  PackageX,
+  Plus,
+  SearchX,
+  ShoppingCart,
+} from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import { Gruppe } from "@/components/Gruppe";
 import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ersterBuchstabeGross } from "@/lib/farben";
+import { Wischzeile } from "@/components/Wischzeile";
 import { cn } from "@/lib/utils";
+import { artikelFindenOderAnlegen, aufListeSetzen } from "./listenaktionen";
 import { BarcodeScan, type GescannterArtikel } from "./scanner/BarcodeScan";
+import { Details } from "./vorrat/Details";
+import {
+  gruppieren,
+  istKnapp,
+  istLeer,
+  stueck,
+  VORRAT_ABFRAGE,
+  type VorratsZeile,
+  vorratVon,
+} from "./vorrat/daten";
+import { Inventur } from "./vorrat/Inventur";
 import {
   bestandSetzen,
   buchen,
+  einsVerbrauchen,
   mindestbestandPruefen,
 } from "./vorratsaktionen";
 
-type VorratsZeile = {
-  id: string;
-  name: string;
-  kategorie: string | null;
-  mindestbestand: number | null;
-  bestand: number;
-  auf_liste: number;
-};
-
-const stueck = (zahl: number) =>
-  Math.max(zahl, 0).toLocaleString("de-DE", { maximumFractionDigits: 2 });
+type Filter = "alle" | "knapp" | "leer";
 
 export function Vorrat({
   haushaltId,
@@ -48,36 +57,89 @@ export function Vorrat({
   nutzerId: string;
 }) {
   const db = usePowerSync();
-  const { data: zeilen } = useQuery<VorratsZeile>(
-    `SELECT a.id, a.name, a.kategorie, a.mindestbestand,
-            COALESCE((SELECT SUM(b.menge) FROM vorratsbuchungen b WHERE b.artikel_id = a.id), 0) AS bestand,
-            EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
-       FROM artikel a
-      WHERE a.haushalt_id = ? AND a.im_vorrat = 1
-      ORDER BY a.name`,
-    [haushaltId],
-  );
+  const { data: zeilen } = useQuery<VorratsZeile>(VORRAT_ABFRAGE, [haushaltId]);
   const { data: andere } = useQuery<{ id: string; name: string }>(
     "SELECT id, name FROM artikel WHERE haushalt_id = ? AND COALESCE(im_vorrat, 0) = 0 ORDER BY name",
     [haushaltId],
   );
   const [details, setDetails] = useState<string | null>(null);
+  const [inventur, setInventur] = useState(false);
+  const [filter, setFilter] = useState<Filter>("alle");
+  // Was unten getippt wird, sucht zugleich im Vorrat.
+  const [eingabe, setEingabe] = useState("");
+  const suche = zerlegeEingabe(eingabe).name.trim().toLowerCase();
   const detailZeile = zeilen.find((z) => z.id === details) ?? null;
 
-  const gruppen = gruppieren(zeilen);
   const knapp = zeilen.filter(istKnapp).length;
+  const leer = zeilen.filter(istLeer).length;
+  const sichtbar = zeilen.filter(
+    (z) =>
+      (filter === "alle" ||
+        (filter === "knapp" && istKnapp(z)) ||
+        (filter === "leer" && istLeer(z))) &&
+      (!suche || z.name.toLowerCase().includes(suche)),
+  );
+  const gruppen = gruppieren(sichtbar);
+  const weitere = andere.filter(
+    (a) => !suche || a.name.toLowerCase().includes(suche),
+  );
 
-  function aendern(zeile: VorratsZeile, menge: number) {
-    return db.writeTransaction(async (tx) => {
+  const plus = (zeile: VorratsZeile) =>
+    db.writeTransaction(async (tx) => {
       await buchen(tx, {
         haushaltId,
         artikelId: zeile.id,
-        menge,
-        grund: menge > 0 ? "korrektur" : "verbrauch",
+        menge: 1,
+        grund: "korrektur",
         nutzerId,
       });
       await mindestbestandPruefen(tx, zeile.id, nutzerId);
     });
+  const minus = (zeile: VorratsZeile) =>
+    db.writeTransaction((tx) =>
+      einsVerbrauchen(tx, { haushaltId, artikelId: zeile.id, nutzerId }),
+    );
+
+  async function aufgebraucht(zeile: VorratsZeile) {
+    const vorher = Math.max(zeile.bestand, 0);
+    const offen = Boolean(zeile.angebrochen);
+    if (vorher <= 0) {
+      return;
+    }
+    await db.writeTransaction((tx) =>
+      bestandSetzen(tx, { haushaltId, artikelId: zeile.id, neu: 0, nutzerId }),
+    );
+    toast(`${zeile.name} aufgebraucht`, {
+      action: {
+        label: "Rückgängig",
+        onClick: () =>
+          db.writeTransaction(async (tx) => {
+            await bestandSetzen(tx, {
+              haushaltId,
+              artikelId: zeile.id,
+              neu: vorher,
+              nutzerId,
+            });
+            if (offen) {
+              await tx.execute(
+                "UPDATE artikel SET angebrochen = 1 WHERE id = ?",
+                [zeile.id],
+              );
+            }
+          }),
+      },
+    });
+  }
+
+  async function aufDieListe(zeile: VorratsZeile) {
+    const neu = await db.writeTransaction((tx) =>
+      aufListeSetzen(tx, { haushaltId, nutzerId, artikelId: zeile.id }),
+    );
+    toast(
+      neu
+        ? `${zeile.name} auf der Liste`
+        : `${zeile.name} steht schon auf der Liste`,
+    );
   }
 
   function imVorratFuehren(artikelId: string, an: boolean) {
@@ -89,14 +151,48 @@ export function Vorrat({
 
   return (
     <>
-      {knapp > 0 && (
-        <p
-          role="status"
-          className="mt-2 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning-foreground"
-        >
-          {knapp === 1 ? "1 Artikel ist" : `${knapp} Artikel sind`} unter dem
-          Mindestbestand.
-        </p>
+      {zeilen.length > 0 && (
+        <div className="flex items-center gap-2 pt-2">
+          <fieldset
+            aria-label="Filter"
+            className="m-0 flex min-w-0 flex-1 gap-1.5 overflow-x-auto border-0 p-0"
+          >
+            {(
+              [
+                ["alle", `Alle ${zeilen.length}`],
+                ["knapp", `Knapp ${knapp}`],
+                ["leer", `Leer ${leer}`],
+              ] as const
+            ).map(([id, text]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={filter === id}
+                onClick={() => setFilter(filter === id ? "alle" : id)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-sm",
+                  filter === id
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "bg-card",
+                  id === "knapp" &&
+                    knapp > 0 &&
+                    filter !== id &&
+                    "border-warning/50 text-warning-foreground",
+                )}
+              >
+                {text}
+              </button>
+            ))}
+          </fieldset>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
+            onClick={() => setInventur(true)}
+          >
+            <ClipboardCheck /> Inventur
+          </Button>
+        </div>
       )}
 
       {gruppen.map(([gruppe, kategorie, artikel]) => (
@@ -105,12 +201,28 @@ export function Vorrat({
             <VorratsEintrag
               key={zeile.id}
               zeile={zeile}
-              aendern={aendern}
+              plus={() => plus(zeile)}
+              minus={() => minus(zeile)}
+              aufgebraucht={() => aufgebraucht(zeile)}
+              aufDieListe={() => aufDieListe(zeile)}
               oeffnen={() => setDetails(zeile.id)}
             />
           ))}
         </Gruppe>
       ))}
+
+      {zeilen.length > 0 && sichtbar.length === 0 && (
+        <div className="flex flex-col items-center gap-2 py-10 text-center text-muted-foreground">
+          <SearchX className="size-8" strokeWidth={1.5} />
+          <p>
+            {suche
+              ? `„${eingabe.trim()}“ ist nicht im Vorrat – mit + eintragen.`
+              : filter === "knapp"
+                ? "Nichts ist knapp."
+                : "Nichts ist leer."}
+          </p>
+        </div>
+      )}
 
       {zeilen.length === 0 && (
         <div className="flex flex-col items-center gap-2 py-16 text-center text-muted-foreground">
@@ -123,13 +235,19 @@ export function Vorrat({
         </div>
       )}
 
-      {andere.length > 0 && (
-        <details className="mt-6">
+      {zeilen.length > 0 && filter === "alle" && !suche && (
+        <p className="px-1 pt-3 text-center text-xs text-muted-foreground">
+          Wischen: ← aufgebraucht · → auf die Liste
+        </p>
+      )}
+
+      {weitere.length > 0 && (
+        <details className="mt-6" open={Boolean(suche) || undefined}>
           <summary className="cursor-pointer px-1 text-sm text-muted-foreground">
-            Weitere Artikel ({andere.length}) – nicht im Vorrat
+            Weitere Artikel ({weitere.length}) – nicht im Vorrat
           </summary>
           <ul className="mt-2 divide-y rounded-xl border bg-card">
-            {andere.map((a) => (
+            {weitere.map((a) => (
               <li
                 key={a.id}
                 className="flex items-center justify-between py-1 pr-2 pl-4"
@@ -148,7 +266,7 @@ export function Vorrat({
         </details>
       )}
 
-      <VorratsDetails
+      <Details
         zeile={detailZeile}
         schliessen={() => setDetails(null)}
         haushaltId={haushaltId}
@@ -159,280 +277,226 @@ export function Vorrat({
         }}
       />
 
-      <NeuerVorratsartikel haushaltId={haushaltId} nutzerId={nutzerId} />
+      <Inventur
+        offen={inventur}
+        schliessen={() => setInventur(false)}
+        zeilen={gruppieren(zeilen).flatMap(([, , z]) => z)}
+        haushaltId={haushaltId}
+        nutzerId={nutzerId}
+      />
+
+      <NeuerVorratsartikel
+        haushaltId={haushaltId}
+        nutzerId={nutzerId}
+        name={eingabe}
+        setName={setEingabe}
+      />
     </>
   );
 }
 
-/** Kompakte Zeile: Name (antippen für Details), −, Bestand, +. */
+/**
+ * Zeile: Name (antippen für Details), −, Bestand, +. Wischen nach links =
+ * aufgebraucht, nach rechts = auf die Liste.
+ */
 function VorratsEintrag({
   zeile,
-  aendern,
+  plus,
+  minus,
+  aufgebraucht,
+  aufDieListe,
   oeffnen,
 }: {
   zeile: VorratsZeile;
-  aendern: (zeile: VorratsZeile, menge: number) => void;
+  plus: () => void;
+  minus: () => void;
+  aufgebraucht: () => void;
+  aufDieListe: () => void;
   oeffnen: () => void;
 }) {
-  const bestand = Math.max(zeile.bestand, 0);
+  const vorrat = vorratVon(zeile);
   const knapp = istKnapp(zeile);
+  const leer = istLeer(zeile);
+  const zusatz = [
+    bestandBeschreibung(vorrat),
+    knapp ? `knapp${zeile.auf_liste ? ", auf der Liste" : ""}` : "",
+    !knapp && zeile.auf_liste ? "auf der Liste" : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <li className="flex min-h-14 items-center gap-1 pr-2">
-      <button
-        type="button"
-        onClick={oeffnen}
-        className="flex flex-1 items-center gap-3 self-stretch px-4 py-2 text-left"
-      >
-        <KategorieSymbol kategorie={zeile.kategorie} />
-        <span className="flex-1">
-          <span
-            className={cn(
-              "block text-base",
-              knapp && "font-medium text-warning-foreground",
-            )}
-          >
-            {zeile.name}
-          </span>
-          {knapp && (
-            <span className="text-xs text-warning-foreground">
-              knapp{zeile.auf_liste ? ", auf der Liste" : ""}
-            </span>
-          )}
-        </span>
-      </button>
-      <Button
-        variant="outline"
-        size="icon"
-        className="size-10 rounded-full"
-        aria-label={`${zeile.name} weniger`}
-        disabled={bestand <= 0}
-        onClick={() => aendern(zeile, -Math.min(1, bestand))}
-      >
-        <Minus />
-      </Button>
-      <button
-        type="button"
-        onClick={oeffnen}
-        aria-label={`Bestand ${zeile.name}`}
-        className={cn(
-          "min-w-10 text-center text-lg font-medium tabular-nums",
-          bestand <= 0 && "text-muted-foreground",
-        )}
-      >
-        {stueck(bestand)}
-      </button>
-      <Button
-        variant="outline"
-        size="icon"
-        className="size-10 rounded-full"
-        aria-label={`${zeile.name} mehr`}
-        onClick={() => aendern(zeile, 1)}
-      >
-        <Plus />
-      </Button>
-    </li>
-  );
-}
-
-/** Bestand genau setzen, Mindestbestand, aufbrauchen, aus dem Vorrat nehmen. */
-function VorratsDetails({
-  zeile,
-  schliessen,
-  haushaltId,
-  nutzerId,
-  entfernen,
-}: {
-  zeile: VorratsZeile | null;
-  schliessen: () => void;
-  haushaltId: string;
-  nutzerId: string;
-  entfernen: (artikelId: string) => void;
-}) {
-  const db = usePowerSync();
-
-  return (
-    <Drawer
-      open={zeile != null}
-      onOpenChange={(offen) => !offen && schliessen()}
+    <Wischzeile
+      links={
+        leer
+          ? undefined
+          : {
+              text: "Aufgebraucht",
+              symbol: <PackageX className="size-5" />,
+              farbe: "bg-destructive",
+              ausfuehren: aufgebraucht,
+            }
+      }
+      rechts={{
+        text: "Auf die Liste",
+        symbol: <ShoppingCart className="size-5" />,
+        farbe: "bg-primary",
+        ausfuehren: aufDieListe,
+      }}
     >
-      <DrawerContent>
-        {zeile && (
-          <form
-            key={zeile.id}
-            className="mx-auto w-full max-w-lg"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const daten = new FormData(e.currentTarget);
-              const bestand = zahl(daten.get("bestand"));
-              const mindestbestand = zahl(daten.get("mindestbestand"));
-              await db.writeTransaction(async (tx) => {
-                await tx.execute(
-                  "UPDATE artikel SET mindestbestand = ? WHERE id = ?",
-                  [
-                    mindestbestand && mindestbestand > 0
-                      ? mindestbestand
-                      : null,
-                    zeile.id,
-                  ],
-                );
-                if (bestand != null && bestand !== Math.max(zeile.bestand, 0)) {
-                  await bestandSetzen(tx, {
-                    haushaltId,
-                    artikelId: zeile.id,
-                    neu: bestand,
-                    nutzerId,
-                  });
-                } else {
-                  await mindestbestandPruefen(tx, zeile.id, nutzerId);
-                }
-              });
-              schliessen();
-            }}
-          >
-            <DrawerHeader>
-              <DrawerTitle>{zeile.name}</DrawerTitle>
-              <DrawerDescription>
-                {kategorieName(zeile.kategorie)}
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="grid grid-cols-2 gap-3 px-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="details-bestand">Bestand</Label>
-                <Input
-                  id="details-bestand"
-                  name="bestand"
-                  inputMode="numeric"
-                  defaultValue={Math.max(zeile.bestand, 0)}
-                  aria-label={`Bestand setzen ${zeile.name}`}
-                  className="h-11 text-base"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="details-mindest">Mindestbestand</Label>
-                <Input
-                  id="details-mindest"
-                  name="mindestbestand"
-                  inputMode="numeric"
-                  placeholder="keiner"
-                  defaultValue={zeile.mindestbestand ?? ""}
-                  aria-label={`Mindestbestand ${zeile.name}`}
-                  className="h-11 text-base"
-                />
-              </div>
-              <p className="col-span-2 text-xs text-muted-foreground">
-                Fällt der Bestand unter den Mindestbestand, kommt der Artikel
-                automatisch auf die Einkaufsliste.
-              </p>
-            </div>
-            <DrawerFooter>
-              <Button type="submit" className="h-11">
-                Speichern
-              </Button>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11"
-                  disabled={zeile.bestand <= 0}
-                  onClick={async () => {
-                    await db.writeTransaction((tx) =>
-                      bestandSetzen(tx, {
-                        haushaltId,
-                        artikelId: zeile.id,
-                        neu: 0,
-                        nutzerId,
-                      }),
-                    );
-                    schliessen();
-                  }}
-                >
-                  Aufgebraucht
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="h-11 text-muted-foreground"
-                  onClick={() => entfernen(zeile.id)}
-                >
-                  Nicht im Vorrat führen
-                </Button>
-              </div>
-            </DrawerFooter>
-          </form>
-        )}
-      </DrawerContent>
-    </Drawer>
+      <div
+        data-testid={`vorrat-${zeile.name}`}
+        className="flex min-h-14 items-center gap-1 pr-2"
+      >
+        <button
+          type="button"
+          onClick={oeffnen}
+          className={cn(
+            "flex flex-1 items-center gap-3 self-stretch px-4 py-2 text-left",
+            leer && "opacity-55",
+          )}
+        >
+          <KategorieSymbol kategorie={zeile.kategorie} />
+          <span className="flex-1">
+            <span
+              className={cn(
+                "block text-base",
+                knapp && "font-medium text-warning-foreground",
+              )}
+            >
+              {zeile.name}
+            </span>
+            {zusatz && (
+              <span
+                className={cn(
+                  "text-xs",
+                  knapp ? "text-warning-foreground" : "text-muted-foreground",
+                )}
+              >
+                {zusatz}
+              </span>
+            )}
+          </span>
+        </button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-10 rounded-full"
+          aria-label={`${zeile.name} weniger`}
+          disabled={leer}
+          onClick={minus}
+        >
+          <Minus />
+        </Button>
+        <button
+          type="button"
+          onClick={oeffnen}
+          aria-label={`Bestand ${zeile.name}`}
+          className={cn(
+            "min-w-10 text-center text-lg font-medium tabular-nums",
+            leer && "text-muted-foreground",
+          )}
+        >
+          {stueck(vorrat.bestand)}
+        </button>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-10 rounded-full"
+          aria-label={`${zeile.name} mehr`}
+          onClick={plus}
+        >
+          <Plus />
+        </Button>
+      </div>
+    </Wischzeile>
   );
 }
 
 /**
- * Artikel direkt in den Vorrat eintragen, z. B. bei der ersten Inventur: legt ihn
- * mit Bestand 1 an bzw. erhöht den Bestand um 1. Feinjustieren mit + / −.
+ * Artikel direkt in den Vorrat eintragen, z. B. bei der ersten Inventur. „Mehl 1 kg“
+ * merkt sich die Packungsgröße, „Eier 10“ bucht 10 Stück; sonst eine Packung.
  */
 function NeuerVorratsartikel({
   haushaltId,
   nutzerId,
+  name,
+  setName,
 }: {
   haushaltId: string;
   nutzerId: string;
+  name: string;
+  setName: (name: string) => void;
 }) {
   const db = usePowerSync();
   const { data: bekannte } = useQuery<{
     name: string;
     kategorie: string | null;
   }>("SELECT name, kategorie FROM artikel WHERE haushalt_id = ?", [haushaltId]);
-  const [name, setName] = useState("");
   const [manuell, setManuell] = useState<string | null>(null);
-  const bekannt = bekannte.find(
-    (a) => a.name.toLowerCase() === name.trim().toLowerCase(),
-  );
+  const eingabe = zerlegeEingabe(name);
+  const bekannt = eingabe.name.trim()
+    ? findeNachName(
+        new Map(bekannte.map((a) => [a.name.toLowerCase(), a])),
+        eingabe.name,
+      )
+    : undefined;
   const vorschlag = kategorieVorschlag(
     bekannt?.kategorie,
-    erkenneKategorie(name),
+    erkenneKategorie(eingabe.konserve ? `Dose ${eingabe.name}` : eingabe.name),
     manuell,
   );
 
   async function eintragen(kategorie: string) {
-    const artikelName = ersterBuchstabeGross(name);
-    await db.writeTransaction(async (tx) => {
-      const vorhanden = await tx.getOptional<{
-        id: string;
-        kategorie: string | null;
-      }>(
-        "SELECT id, kategorie FROM artikel WHERE haushalt_id = ? AND lower(name) = lower(?)",
-        [haushaltId, artikelName],
-      );
-      let artikelId = vorhanden?.id;
-      if (artikelId) {
-        await tx.execute(
-          "UPDATE artikel SET im_vorrat = 1, kategorie = ? WHERE id = ?",
-          [kategorie || null, artikelId],
-        );
-      } else {
-        artikelId = crypto.randomUUID();
-        await tx.execute(
-          `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, erstellt_am)
-           VALUES (?, ?, ?, ?, 'stueck', 1, 0, ?)`,
-          [
-            artikelId,
-            haushaltId,
-            artikelName,
-            kategorie || null,
-            new Date().toISOString(),
-          ],
-        );
+    // Sofort leeren: Was gleich weiter getippt wird, soll nicht verloren gehen.
+    const gewaehlt = manuell;
+    setName("");
+    setManuell(null);
+    const meldung = await db.writeTransaction(async (tx) => {
+      const artikel = await artikelFindenOderAnlegen(tx, {
+        haushaltId,
+        name: eingabe.name,
+        kategorie,
+      });
+      // Nur eine von Hand gewählte Kategorie ändert einen bekannten Artikel.
+      if (
+        !artikel.neu &&
+        gewaehlt != null &&
+        (artikel.kategorie ?? "") !== kategorie
+      ) {
+        await tx.execute("UPDATE artikel SET kategorie = ? WHERE id = ?", [
+          kategorie || null,
+          artikel.id,
+        ]);
       }
+      const a = await tx.get<{
+        packung_menge: number | null;
+        packung_einheit: string | null;
+      }>("SELECT packung_menge, packung_einheit FROM artikel WHERE id = ?", [
+        artikel.id,
+      ]);
+      const packung = packungVon(a);
+      const gelernt = gelerntePackung(eingabe, packung);
+      await tx.execute(
+        `UPDATE artikel SET im_vorrat = 1, packung_menge = ?, packung_einheit = ? WHERE id = ?`,
+        [
+          (packung ?? gelernt)?.menge ?? null,
+          (packung ?? gelernt)?.einheit ?? null,
+          artikel.id,
+        ],
+      );
+      const menge = eingekauftePackungen(eingabe, packung ?? gelernt);
       await buchen(tx, {
         haushaltId,
-        artikelId,
-        menge: 1,
+        artikelId: artikel.id,
+        menge,
         grund: "korrektur",
         nutzerId,
       });
+      await mindestbestandPruefen(tx, artikel.id, nutzerId);
+      return `+${stueck(menge)} ${artikel.name} im Vorrat`;
     });
-    setName("");
-    setManuell(null);
+    toast.success(meldung);
   }
 
   return (
@@ -443,7 +507,7 @@ function NeuerVorratsartikel({
         setManuell(null);
       }}
       absenden={eintragen}
-      platzhalter="Was ist da?"
+      platzhalter="Suchen oder eintragen"
       label="Vorratsartikel"
       absendenLabel="Eintragen"
       kategorie={vorschlag.kategorie}
@@ -464,38 +528,9 @@ function NeuerVorratsartikel({
   );
 }
 
-/** Eingabe als Zahl ≥ 0 lesen (Komma oder Punkt); leer oder ungültig → null. */
-function zahl(wert: FormDataEntryValue | null): number | null {
-  const roh = String(wert ?? "")
-    .trim()
-    .replace(",", ".");
-  const z = roh === "" ? null : Number(roh);
-  return z != null && Number.isFinite(z) && z >= 0 ? z : null;
-}
-
-function istKnapp(zeile: VorratsZeile) {
-  return zeile.mindestbestand != null && zeile.bestand < zeile.mindestbestand;
-}
-
-function gruppieren(
-  zeilen: VorratsZeile[],
-): [string, string | null, VorratsZeile[]][] {
-  const sortiert = [...zeilen].sort(
-    (a, b) => kategorieRang(a.kategorie) - kategorieRang(b.kategorie),
-  );
-  const gruppen = new Map<string, [string, string | null, VorratsZeile[]]>();
-  for (const zeile of sortiert) {
-    const name = kategorieName(zeile.kategorie);
-    const gruppe = gruppen.get(name) ?? [name, zeile.kategorie, []];
-    gruppe[2].push(zeile);
-    gruppen.set(name, gruppe);
-  }
-  return [...gruppen.values()];
-}
-
 /**
- * Gescannt im Vorrat: als Vorratsartikel führen und die Packung einbuchen – mit ihrer
- * Größe, wenn sie zur Einheit des Artikels passt, sonst ein Stück (oder nachfragen).
+ * Gescannt im Vorrat: als Vorratsartikel führen und eine Packung einbuchen. Kennt
+ * der Artikel seine Packungsgröße noch nicht, übernimmt er die des Barcodes.
  */
 async function scanEinbuchen(
   db: AbstractPowerSyncDatabase,
@@ -506,30 +541,23 @@ async function scanEinbuchen(
   }: { haushaltId: string; nutzerId: string; artikel: GescannterArtikel },
 ): Promise<string> {
   return db.writeTransaction(async (tx) => {
-    const { standardeinheit } = await tx.get<{ standardeinheit: Einheit }>(
-      "SELECT standardeinheit FROM artikel WHERE id = ?",
-      [artikel.id],
-    );
     await tx.execute("UPDATE artikel SET im_vorrat = 1 WHERE id = ?", [
       artikel.id,
     ]);
-    const menge =
-      artikel.packung?.einheit === standardeinheit
-        ? artikel.packung.menge
-        : standardeinheit === "stueck"
-          ? 1
-          : null;
-    if (menge == null) {
-      return `${artikel.name} im Vorrat – Menge bitte eintragen`;
+    if (artikel.packung) {
+      await tx.execute(
+        "UPDATE artikel SET packung_menge = ?, packung_einheit = ? WHERE id = ? AND packung_menge IS NULL",
+        [artikel.packung.menge, artikel.packung.einheit, artikel.id],
+      );
     }
     await buchen(tx, {
       haushaltId,
       artikelId: artikel.id,
-      menge,
+      menge: 1,
       grund: "einkauf",
       nutzerId,
     });
     await mindestbestandPruefen(tx, artikel.id, nutzerId);
-    return `+${formatiereMenge(menge, standardeinheit)} ${artikel.name} im Vorrat`;
+    return `+1 ${artikel.name}${artikel.packung ? ` (${formatiereMenge(artikel.packung.menge, artikel.packung.einheit)})` : ""} im Vorrat`;
   });
 }

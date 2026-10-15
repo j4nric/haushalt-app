@@ -1,5 +1,5 @@
-import { formatiereMenge } from "@haushalt/db/einheiten";
 import { findeNachName } from "@haushalt/db/namen";
+import { bestandKurz, packungVon, reichtVorrat } from "@haushalt/db/vorrat";
 import {
   istGrundzutat,
   mengeFuerListe,
@@ -17,8 +17,11 @@ export type ArtikelStand = {
   /** Kleingeschrieben, zum Abgleich mit Zutatennamen. */
   name: string;
   im_vorrat: number;
-  standardeinheit: "stueck" | "g" | "ml";
+  /** Packungen bzw. Stück im Vorrat. */
   bestand: number;
+  angebrochen: number;
+  packung_menge: number | null;
+  packung_einheit: string | null;
   auf_liste: number;
 };
 
@@ -33,17 +36,21 @@ export function imVorrat(
   artikel: ArtikelStand | undefined,
   faktor = 1,
 ): string | null {
-  if (!artikel?.im_vorrat || artikel.bestand <= 0) {
+  if (!artikel?.im_vorrat) {
     return null;
   }
-  const { menge, einheit } = mengeFuerListe(z, faktor);
-  const reicht =
-    menge == null ||
-    einheit !== artikel.standardeinheit ||
-    artikel.bestand >= menge;
-  return reicht
-    ? `im Vorrat: ${formatiereMenge(artikel.bestand, artikel.standardeinheit)}`
+  const vorrat = vorratVon(artikel);
+  return reichtVorrat(vorrat, mengeFuerListe(z, faktor))
+    ? `im Vorrat: ${bestandKurz(vorrat)}`
     : null;
+}
+
+export function vorratVon(a: ArtikelStand) {
+  return {
+    bestand: a.bestand,
+    angebrochen: Boolean(a.angebrochen),
+    packung: packungVon(a),
+  };
 }
 
 /** Zählt nur Zutaten, die man wirklich einkaufen müsste (ohne Optionales). */

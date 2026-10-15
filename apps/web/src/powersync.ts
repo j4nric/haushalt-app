@@ -34,6 +34,9 @@ export const schema = new Schema({
     im_vorrat: column.integer,
     archiviert: column.integer,
     mindestbestand: column.real,
+    packung_menge: column.real,
+    packung_einheit: column.text,
+    angebrochen: column.integer,
     erstellt_am: column.text,
   }),
   vorratsbuchungen: new Table(

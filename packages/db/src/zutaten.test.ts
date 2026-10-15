@@ -5,6 +5,7 @@ import {
   istGrundzutat,
   mengeFuerListe,
   zeileAlsText,
+  zerlegeEingabe,
   zerlegeZeile,
   zerlegeZutat,
   zutatAlsText,
@@ -238,5 +239,48 @@ describe("optionale Zutaten", () => {
       "(1 Zwiebel, gewürfelt)",
     );
     expect(zeileAlsText(zerlegeZeile("Salz"))).toBe("Salz");
+  });
+});
+
+describe("zerlegeEingabe", () => {
+  it.each([
+    ["Mehl 1 kg", { name: "Mehl", menge: 1000, einheit: "g", konserve: false }],
+    [
+      "Milch 1,5 l",
+      { name: "Milch", menge: 1500, einheit: "ml", konserve: false },
+    ],
+    [
+      "2 Dosen Tomaten",
+      { name: "Tomaten", menge: 2, einheit: "stueck", konserve: true },
+    ],
+    [
+      "Tomaten Dose 2",
+      { name: "Tomaten", menge: 2, einheit: "stueck", konserve: true },
+    ],
+    [
+      "Eier 10",
+      { name: "Eier", menge: 10, einheit: "stueck", konserve: false },
+    ],
+    [
+      "3 Zitronen",
+      { name: "Zitronen", menge: 3, einheit: "stueck", konserve: false },
+    ],
+  ])("%s", (text, erwartet) => {
+    expect(zerlegeEingabe(text)).toEqual(erwartet);
+  });
+
+  it.each([
+    "Milch",
+    "7 Up",
+    "Milch 3,5 %",
+    "Milch, laktosefrei 1 l",
+    "Toilettenpapier 3-lagig",
+  ])("lässt „%s“ als Namen stehen", (text) => {
+    expect(zerlegeEingabe(text)).toEqual({
+      name: text,
+      menge: null,
+      einheit: null,
+      konserve: false,
+    });
   });
 });

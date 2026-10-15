@@ -181,10 +181,17 @@ function Unbekannt({
         : await artikelFindenOderAnlegen(tx, {
             haushaltId,
             name,
-            standardeinheit: packung?.einheit ?? null,
+            packung,
           });
       if (!ziel) {
         return null;
+      }
+      // Kennt der Artikel seine Packungsgröße noch nicht, verrät sie der Barcode.
+      if (packung) {
+        await tx.execute(
+          "UPDATE artikel SET packung_menge = ?, packung_einheit = ? WHERE id = ? AND packung_menge IS NULL",
+          [packung.menge, packung.einheit, ziel.id],
+        );
       }
       await tx.execute(
         `INSERT INTO artikel_barcodes (id, haushalt_id, artikel_id, barcode, packung_menge, packung_einheit, erstellt_am)

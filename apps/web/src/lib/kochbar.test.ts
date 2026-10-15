@@ -2,18 +2,22 @@ import { zerlegeZutat } from "@haushalt/db/zutaten";
 import { describe, expect, it } from "vitest";
 import { type ArtikelStand, verfuegbarkeit } from "./kochbar";
 
+/** Bestand in Packungen; optional mit Packungsgröße in Gramm und „offen“. */
 const stand = (
   name: string,
   bestand: number,
-  standardeinheit: ArtikelStand["standardeinheit"] = "stueck",
+  packungGramm: number | null = null,
+  angebrochen = 0,
 ): [string, ArtikelStand] => [
   name.toLowerCase(),
   {
     id: name,
     name: name.toLowerCase(),
     im_vorrat: 1,
-    standardeinheit,
     bestand,
+    angebrochen,
+    packung_menge: packungGramm,
+    packung_einheit: packungGramm ? "g" : null,
     auf_liste: 0,
   },
 ];
@@ -24,9 +28,9 @@ const zutat = (zeile: string, gewuerz = 0) => ({
 
 describe("verfuegbarkeit", () => {
   const vorrat = new Map([
-    stand("Spaghetti", 500, "g"),
+    stand("Spaghetti", 1, 500),
     stand("Tomaten", 1),
-    stand("Reis", 100, "g"),
+    stand("Reis", 1, 500, 1),
   ]);
 
   it("zählt, was im Vorrat reicht – ohne Gewürze und Grundzutaten", () => {
@@ -44,7 +48,7 @@ describe("verfuegbarkeit", () => {
     ).toEqual({ prozent: 67, fehlt: ["Zwiebel"] });
   });
 
-  it("zu wenig im Vorrat zählt als fehlend", () => {
+  it("zu wenig im Vorrat zählt als fehlend – eine offene Packung zählt halb", () => {
     expect(verfuegbarkeit([zutat("300 g Reis")], vorrat)).toEqual({
       prozent: 0,
       fehlt: ["Reis"],

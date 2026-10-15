@@ -138,8 +138,13 @@ export async function vorratEintragen(
   await page.getByLabel("Vorratsartikel").fill(name);
   await page.getByRole("button", { name: "Eintragen" }).click();
   await bestand(page, name).click();
-  await page.getByLabel(`Bestand setzen ${name}`).fill(String(bestandNeu));
-  await page.getByLabel(`Bestand setzen ${name}`).press("Enter");
+  const feld = page.getByRole("textbox", {
+    name: `Bestand ${name}`,
+    exact: true,
+  });
+  await feld.fill(String(bestandNeu));
+  await feld.press("Enter");
+  await expect(feld).toBeHidden();
   await expect(bestand(page, name)).toHaveText(String(bestandNeu));
 }
 

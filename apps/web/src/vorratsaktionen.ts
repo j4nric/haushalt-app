@@ -1,11 +1,17 @@
 import type { Einheit } from "@haushalt/db/einheiten";
-import { auffuellmenge, vorratsmenge } from "@haushalt/db/vorrat";
+import {
+  auffuellmenge,
+  eingekauftePackungen,
+  gelerntePackung,
+  packungVon,
+} from "@haushalt/db/vorrat";
 import type { Transaction } from "@powersync/web";
 
 /**
  * Vorrat-Aktionen auf der lokalen Datenbank. Alle laufen innerhalb einer
  * Schreibtransaktion des Aufrufers und funktionieren damit auch offline.
- * Der Bestand ist immer die Summe der Buchungen (siehe packages/db/src/schema).
+ * Der Bestand ist immer die Summe der Buchungen (siehe packages/db/src/schema) und
+ * zählt Packungen bzw. Stück; eine offene Packung ist nur markiert (`angebrochen`).
  */
 
 type Grund = "einkauf" | "verbrauch" | "korrektur";
@@ -16,6 +22,10 @@ async function bestand(tx: Transaction, artikelId: string): Promise<number> {
     [artikelId],
   );
   return zeile.bestand;
+}
+
+export async function bestandVon(tx: Transaction, artikelId: string) {
+  return bestand(tx, artikelId);
 }
 
 export async function buchen(
@@ -46,12 +56,48 @@ export async function buchen(
       new Date().toISOString(),
     ],
   );
+  // Ist nichts mehr da, ist auch nichts mehr offen.
+  if ((await bestand(tx, b.artikelId)) <= 0) {
+    await angebrochenSetzen(tx, b.artikelId, false);
+  }
+}
+
+export async function angebrochenSetzen(
+  tx: Transaction,
+  artikelId: string,
+  an: boolean,
+) {
+  await tx.execute(
+    "UPDATE artikel SET angebrochen = ? WHERE id = ? AND COALESCE(angebrochen, 0) <> ?",
+    [an ? 1 : 0, artikelId, an ? 1 : 0],
+  );
+}
+
+/**
+ * Eine Packung verbraucht („−“). War eine offen, ist es die – danach ist keine
+ * mehr offen.
+ */
+export async function einsVerbrauchen(
+  tx: Transaction,
+  b: { haushaltId: string; artikelId: string; nutzerId: string },
+) {
+  const vorher = await bestand(tx, b.artikelId);
+  if (vorher <= 0) {
+    return;
+  }
+  await buchen(tx, {
+    ...b,
+    menge: -Math.min(1, vorher),
+    grund: "verbrauch",
+  });
+  await angebrochenSetzen(tx, b.artikelId, false);
+  await mindestbestandPruefen(tx, b.artikelId, b.nutzerId);
 }
 
 /**
  * Listeneintrag abgehakt: Gekauftes in den Vorrat buchen, falls der Artikel im
- * Vorrat geführt wird und sich die Menge bestimmen lässt.
- * Gibt `false` zurück, wenn ein Vorratsartikel nicht gebucht werden konnte.
+ * Vorrat geführt wird – in Packungen bzw. Stück. Der erste Einkauf mit Gewicht
+ * („1 kg Mehl“) merkt sich die Packungsgröße.
  */
 export async function einkaufBuchen(
   tx: Transaction,
@@ -64,29 +110,33 @@ export async function einkaufBuchen(
     menge: number | null;
     einheit: Einheit | null;
     im_vorrat: number;
-    standardeinheit: Einheit;
+    packung_menge: number | null;
+    packung_einheit: string | null;
   }>(
-    `SELECT l.haushalt_id, l.artikel_id, l.menge, l.einheit, a.im_vorrat, a.standardeinheit
+    `SELECT l.haushalt_id, l.artikel_id, l.menge, l.einheit, a.im_vorrat, a.packung_menge, a.packung_einheit
        FROM listeneintraege l JOIN artikel a ON a.id = l.artikel_id
       WHERE l.id = ?`,
     [listeneintragId],
   );
   if (!e?.im_vorrat) {
-    return true;
+    return;
   }
-  const menge = vorratsmenge(e, e.standardeinheit);
-  if (menge == null) {
-    return false;
+  const packung = packungVon(e);
+  const gelernt = gelerntePackung(e, packung);
+  if (gelernt) {
+    await tx.execute(
+      "UPDATE artikel SET packung_menge = ?, packung_einheit = ? WHERE id = ?",
+      [gelernt.menge, gelernt.einheit, e.artikel_id],
+    );
   }
   await buchen(tx, {
     haushaltId: e.haushalt_id,
     artikelId: e.artikel_id,
-    menge,
+    menge: eingekauftePackungen(e, packung ?? gelernt),
     grund: "einkauf",
     nutzerId,
     listeneintragId,
   });
-  return true;
 }
 
 /** Haken zurückgenommen: die Einkaufsbuchung dieses Eintrags wieder entfernen. */
@@ -122,9 +172,8 @@ export async function mindestbestandPruefen(
     haushalt_id: string;
     im_vorrat: number;
     mindestbestand: number | null;
-    standardeinheit: Einheit;
   }>(
-    "SELECT haushalt_id, im_vorrat, mindestbestand, standardeinheit FROM artikel WHERE id = ?",
+    "SELECT haushalt_id, im_vorrat, mindestbestand FROM artikel WHERE id = ?",
     [artikelId],
   );
   if (!a?.im_vorrat) {
@@ -147,8 +196,8 @@ export async function mindestbestandPruefen(
     [
       a.haushalt_id,
       artikelId,
-      menge,
-      a.standardeinheit,
+      Math.ceil(menge - 1e-9),
+      "stueck",
       nutzerId,
       new Date().toISOString(),
     ],

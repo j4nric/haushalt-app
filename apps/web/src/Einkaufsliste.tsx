@@ -1,5 +1,6 @@
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
 import { kategorieName, kategorieRang } from "@haushalt/db/kategorien";
+import { zerlegeEingabe } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -98,9 +99,11 @@ export function Einkaufsliste({
     return () => document.removeEventListener("pointerdown", tippen);
   }, [verlaufOffen]);
 
+  // „Mehl 1 kg“, „2 Dosen Tomaten“: Menge und Name getrennt.
+  const eingabe = zerlegeEingabe(name);
   const vorschlag = kategorieVorschlag(
-    finde(bekannteArtikel, name)?.kategorie,
-    erkenneKategorie(name),
+    finde(bekannteArtikel, eingabe.name)?.kategorie,
+    erkenneKategorie(eingabe.konserve ? `Dose ${eingabe.name}` : eingabe.name),
     manuell,
   );
   const offen = eintraege.filter((e) => !e.erledigt);
@@ -120,14 +123,22 @@ export function Einkaufsliste({
 
   /** Trägt ein; steht der Artikel schon offen auf der Liste, gibt es nur einen Hinweis. */
   async function hinzufuegen(kategorie: string) {
+    // Sofort leeren: Was gleich weiter getippt wird, soll nicht verloren gehen.
+    const gewaehlt = manuell;
+    setName("");
+    setManuell(null);
     const { neu, artikelName } = await db.writeTransaction(async (tx) => {
       const artikel = await artikelFindenOderAnlegen(tx, {
         haushaltId,
-        name,
+        name: eingabe.name,
         kategorie,
       });
-      // Kategorie gewählt oder geändert: gilt ab jetzt für diesen Artikel.
-      if (!artikel.neu && (artikel.kategorie ?? "") !== kategorie) {
+      // Von Hand eine andere Kategorie gewählt: gilt ab jetzt für diesen Artikel.
+      if (
+        !artikel.neu &&
+        gewaehlt != null &&
+        (artikel.kategorie ?? "") !== kategorie
+      ) {
         await tx.execute("UPDATE artikel SET kategorie = ? WHERE id = ?", [
           kategorie || null,
           artikel.id,
@@ -138,6 +149,8 @@ export function Einkaufsliste({
           haushaltId,
           nutzerId,
           artikelId: artikel.id,
+          menge: eingabe.menge,
+          einheit: eingabe.einheit,
         }),
         artikelName: artikel.name,
       };
@@ -145,8 +158,6 @@ export function Einkaufsliste({
     if (!neu) {
       toast(`${artikelName} steht schon auf der Liste`);
     }
-    setName("");
-    setManuell(null);
   }
 
   /**
