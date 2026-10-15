@@ -16,8 +16,10 @@ import {
   PackageOpen,
   PackageX,
   Plus,
+  Refrigerator,
   SearchX,
   ShoppingCart,
+  Snowflake,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -370,9 +372,6 @@ function VorratsEintrag({
   const zusatz = [
     zeile.gericht && zeile.lagerort ? LAGERORT_NAME[zeile.lagerort] : "",
     alter?.text ?? "",
-    rest
-      ? `${stueck(vorrat.bestand)} ${vorrat.bestand === 1 ? "Portion" : "Portionen"}`
-      : "",
     rest ? "" : bestandBeschreibung(vorrat),
     knapp ? `knapp${zeile.auf_liste ? ", auf der Liste" : ""}` : "",
     !knapp && zeile.auf_liste ? "auf der Liste" : "",
@@ -415,7 +414,18 @@ function VorratsEintrag({
             leer && "opacity-55",
           )}
         >
-          <KategorieSymbol kategorie={zeile.kategorie} />
+          {zeile.gericht ? (
+            zeile.lagerort === "tk" ? (
+              <Snowflake className="size-6 shrink-0 text-sky-500" aria-hidden />
+            ) : (
+              <Refrigerator
+                className="size-6 shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+            )
+          ) : (
+            <KategorieSymbol kategorie={zeile.kategorie} />
+          )}
           <span className="flex-1">
             <span
               className={cn(

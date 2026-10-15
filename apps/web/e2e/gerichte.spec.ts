@@ -72,7 +72,6 @@ test("Kochen mit Timer, Reste einfrieren, Gerichte im Vorrat", async ({
     await expect(page.getByRole("heading", { name: "Reste" })).toBeVisible();
     await expect(rest).toContainText("eingefroren");
     await expect(rest).toContainText("von heute");
-    await expect(rest).toContainText("2 Portionen");
     // Kein Rezept-Artikel landet in den Kategorien oder auf der Liste.
     await expect(bestand(page, "Rotes Linsen-Dal")).toHaveText("2");
 
