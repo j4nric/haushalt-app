@@ -25,14 +25,26 @@ async function wischen(page: Page, ziel: Locator, dx: number) {
   await page.mouse.up();
 }
 
+/**
+ * Tippt und schickt ab – erst, wenn der Text wirklich im Feld steht (auf langsamen
+ * Rechnern übernimmt React ihn mitunter einen Moment später). Abgeschickt ist das
+ * Feld sofort leer, doppelt eingetragen wird also nie.
+ */
 async function eintippen(
   page: Page,
   feld: string,
   text: string,
   knopf: string,
 ) {
-  await page.getByLabel(feld).fill(text);
+  const eingabe = page.getByLabel(feld);
+  await expect(async () => {
+    if ((await eingabe.inputValue()) !== text) {
+      await eingabe.fill(text);
+    }
+    await expect(eingabe).toHaveValue(text, { timeout: 500 });
+  }).toPass();
   await page.getByRole("button", { name: knopf }).click();
+  await expect(eingabe).toHaveValue("");
 }
 
 test("Vorrat pflegen: Packungen, Kategorie, Filter, Wischen, Inventur", async ({
@@ -65,6 +77,7 @@ test("Vorrat pflegen: Packungen, Kategorie, Filter, Wischen, Inventur", async ({
     await bestand(page, "Mehl").click();
     await expect(page.getByLabel("Inhalt einer Packung")).toHaveValue("1000");
     await page.getByRole("button", { name: "Speichern" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
     await expect(zeile(page, "Mehl")).toContainText("à 1 kg");
 
     // Direkt eintragen: „Eier 10“ bucht 10 Stück, „Kaffee“ eine Packung.
