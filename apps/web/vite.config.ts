@@ -25,6 +25,12 @@ export default defineConfig({
         display: "standalone",
         theme_color: "#15803d",
         background_color: "#ffffff",
+        // „Teilen → Haushalt“ (Android): geteilte Rezept-Links landen im Import.
+        share_target: {
+          action: "/teilen",
+          method: "GET",
+          params: { title: "title", text: "text", url: "url" },
+        },
         icons: [
           { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },

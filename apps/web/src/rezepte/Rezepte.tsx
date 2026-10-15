@@ -1,6 +1,6 @@
 import { useQuery } from "@powersync/react";
-import { Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { LoaderCircle, Plus, Search } from "lucide-react";
+import { lazy, Suspense, useState } from "react";
 import { useUnterseite } from "@/Ansicht";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,11 @@ import { ResteVerwerten } from "./ResteVerwerten";
 import { RezeptDetail } from "./RezeptDetail";
 import { RezeptEditor } from "./RezeptEditor";
 import { useKochbar } from "./useKochbar";
+
+// Die Sammlung (~100 Rezepte) erst laden, wenn jemand „Entdecken“ öffnet.
+const Entdecken = lazy(() =>
+  import("@/entdecken/Entdecken").then((m) => ({ default: m.Entdecken })),
+);
 
 type Karte = {
   id: string;
@@ -42,6 +47,17 @@ export function Rezepte({
   const [pfad, gehe] = useUnterseite();
   const [id, unterseite] = pfad;
 
+  if (id === "entdecken") {
+    return (
+      <Suspense
+        fallback={
+          <LoaderCircle className="mx-auto mt-16 size-6 animate-spin text-muted-foreground" />
+        }
+      >
+        <Entdecken haushaltId={haushaltId} nutzerId={nutzerId} gehe={gehe} />
+      </Suspense>
+    );
+  }
   if (id === "neu") {
     return (
       <RezeptEditor
@@ -186,12 +202,21 @@ function Uebersicht({
         </span>
         <h2 className="text-lg font-semibold">Noch keine Rezepte</h2>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Füge einen Link von deiner Lieblings-Rezeptseite ein oder schreib eins
-          von Hand auf.
+          Stöbert in 100 Rezepten für zwei, fügt einen Link von eurer
+          Lieblings-Rezeptseite ein oder schreibt eins von Hand auf.
         </p>
-        <Button className="mt-2 rounded-full" onClick={() => gehe(["neu"])}>
-          <Plus /> Erstes Rezept
-        </Button>
+        <div className="mt-2 flex flex-col gap-2">
+          <Button className="rounded-full" onClick={() => gehe(["entdecken"])}>
+            ✨ Rezepte entdecken
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={() => gehe(["neu"])}
+          >
+            <Plus /> Eigenes Rezept
+          </Button>
+        </div>
       </div>
     );
   }
@@ -226,6 +251,9 @@ function Uebersicht({
         aria-label="Filter"
         className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]"
       >
+        <FilterChip an={false} umschalten={() => gehe(["entdecken"])}>
+          ✨ Entdecken
+        </FilterChip>
         <FilterChip
           an={auswahl.favoriten}
           umschalten={() => setAuswahl({ favoriten: !auswahl.favoriten })}

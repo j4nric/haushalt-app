@@ -14,7 +14,7 @@ async function rezeptAnlegen(
   schlagwort: string,
 ) {
   await page
-    .getByRole("button", { name: /Erstes Rezept|Neues Rezept/ })
+    .getByRole("button", { name: /Eigenes Rezept|Neues Rezept/ })
     .click();
   await page.getByLabel("Titel").fill(titel);
   await page

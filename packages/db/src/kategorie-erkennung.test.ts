@@ -26,6 +26,19 @@ describe("erkenneKategorie", () => {
     expect(erkenneKategorie(name)).toEqual([kategorie]);
   });
 
+  it.each([
+    ["Ricotta", "milch_kaese"],
+    ["Pizzateig", "milch_kaese"],
+    ["Orzo", "vorrat"],
+    ["Apfelmus", "vorrat"],
+    ["Ciabatta", "brot_backwaren"],
+    ["Pak Choi", "obst_gemuese"],
+    ["Chorizo", "fleisch_fisch"],
+    ["Hähnchenschenkel", "fleisch_fisch"],
+  ])("kennt Rezept-Zutaten wie %s", (name, kategorie) => {
+    expect(erkenneKategorie(name)[0]).toBe(kategorie);
+  });
+
   it("bietet bei mehrdeutigen Artikeln mehrere Kategorien an, die häufigste zuerst", () => {
     expect(erkenneKategorie("Heidelbeeren")).toEqual([
       "obst_gemuese",
