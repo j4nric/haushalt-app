@@ -9,6 +9,7 @@ import { vorWann, zeitWert } from "@/lib/zeit";
 import { RezeptBild } from "@/rezepte/RezeptBild";
 import { schlagwoerterAusText } from "./aktionen";
 import { Gluecksrad } from "./Gluecksrad";
+import { ResteVerwerten } from "./ResteVerwerten";
 import { RezeptDetail } from "./RezeptDetail";
 import { RezeptEditor } from "./RezeptEditor";
 import { useKochbar } from "./useKochbar";
@@ -82,12 +83,15 @@ type Auswahl = {
   favoriten: boolean;
   sortierung: "name" | "kochbar" | "zuletzt";
   schlagwoerter: string[];
+  /** „Reste verwerten“: was übrig ist; `null` = aus. */
+  reste: string[] | null;
 };
 let letzteAuswahl: Auswahl = {
   suche: "",
   favoriten: false,
   sortierung: "name",
   schlagwoerter: [],
+  reste: null,
 };
 
 function Uebersicht({
@@ -239,6 +243,14 @@ function Uebersicht({
           🥘 Was kann ich kochen?
         </FilterChip>
         <FilterChip
+          an={auswahl.reste !== null}
+          umschalten={() =>
+            setAuswahl({ reste: auswahl.reste === null ? [] : null })
+          }
+        >
+          ♻️ Reste verwerten
+        </FilterChip>
+        <FilterChip
           an={auswahl.sortierung === "zuletzt"}
           umschalten={() =>
             setAuswahl({
@@ -268,102 +280,115 @@ function Uebersicht({
         })}
       </div>
 
-      {ungefiltert && liebling && liebling.gekocht_anzahl > 0 && (
-        <button
-          type="button"
-          onClick={() => gehe([liebling.id])}
-          className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left"
-          style={{
-            background: "color-mix(in oklab, var(--card), #f59e0b 14%)",
-          }}
-        >
-          <span aria-hidden className="text-3xl">
-            🏆
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-xs text-muted-foreground">
-              Euer Lieblingsgericht
-            </span>
-            <span className="block truncate font-semibold">
-              {liebling.titel} · {liebling.gekocht_anzahl}× gekocht
-            </span>
-          </span>
-          {imMonat > 0 && (
-            <span className="shrink-0 text-right text-xs text-muted-foreground">
-              Diesen Monat
-              <span className="block text-base font-semibold text-foreground">
-                {imMonat}× 🍳
-              </span>
-            </span>
-          )}
-        </button>
-      )}
-
-      {treffer.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          {auswahl.sortierung === "zuletzt" && !auswahl.suche
-            ? "Noch nichts gekocht – in der Kochansicht „Fertig gekocht“ antippen."
-            : "Nichts gefunden."}
-        </p>
+      {auswahl.reste !== null ? (
+        <ResteVerwerten
+          haushaltId={haushaltId}
+          rezepte={rezepte}
+          reste={auswahl.reste}
+          aendern={(reste) => setAuswahl({ reste })}
+          oeffnen={(id) => gehe([id])}
+        />
       ) : (
-        <ul className="grid grid-cols-2 gap-3">
-          {treffer.map((r, i) => {
-            const v = kochbar.get(r.id);
-            return (
-              <li
-                key={r.id}
-                className="einblenden"
-                style={{ "--i": i } as React.CSSProperties}
-              >
-                <button
-                  type="button"
-                  onClick={() => gehe([r.id])}
-                  className="flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-xs transition-transform active:scale-[0.98]"
-                >
-                  <span className="relative block">
-                    <RezeptBild
-                      url={r.bild_url}
-                      titel={r.titel}
-                      className="aspect-[4/3]"
-                    />
-                    {r.favorit ? (
-                      <span className="absolute top-2 left-2 rounded-full bg-background/85 px-1.5 py-0.5 text-sm">
-                        <span aria-hidden>⭐</span>
-                        <span className="sr-only">Favorit</span>
-                      </span>
-                    ) : null}
-                    {auswahl.sortierung === "kochbar" && v && (
-                      <span
-                        className={cn(
-                          "absolute top-2 right-2 rounded-full px-2 py-0.5 text-xs font-semibold",
-                          v.prozent === 100
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-background/90",
+        <>
+          {ungefiltert && liebling && liebling.gekocht_anzahl > 0 && (
+            <button
+              type="button"
+              onClick={() => gehe([liebling.id])}
+              className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left"
+              style={{
+                background: "color-mix(in oklab, var(--card), #f59e0b 14%)",
+              }}
+            >
+              <span aria-hidden className="text-3xl">
+                🏆
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs text-muted-foreground">
+                  Euer Lieblingsgericht
+                </span>
+                <span className="block truncate font-semibold">
+                  {liebling.titel} · {liebling.gekocht_anzahl}× gekocht
+                </span>
+              </span>
+              {imMonat > 0 && (
+                <span className="shrink-0 text-right text-xs text-muted-foreground">
+                  Diesen Monat
+                  <span className="block text-base font-semibold text-foreground">
+                    {imMonat}× 🍳
+                  </span>
+                </span>
+              )}
+            </button>
+          )}
+
+          {treffer.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {auswahl.sortierung === "zuletzt" && !auswahl.suche
+                ? "Noch nichts gekocht – in der Kochansicht „Fertig gekocht“ antippen."
+                : "Nichts gefunden."}
+            </p>
+          ) : (
+            <ul className="grid grid-cols-2 gap-3">
+              {treffer.map((r, i) => {
+                const v = kochbar.get(r.id);
+                return (
+                  <li
+                    key={r.id}
+                    className="einblenden"
+                    style={{ "--i": i } as React.CSSProperties}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => gehe([r.id])}
+                      className="flex h-full w-full flex-col overflow-hidden rounded-2xl border bg-card text-left shadow-xs transition-transform active:scale-[0.98]"
+                    >
+                      <span className="relative block">
+                        <RezeptBild
+                          url={r.bild_url}
+                          titel={r.titel}
+                          className="aspect-[4/3]"
+                        />
+                        {r.favorit ? (
+                          <span className="absolute top-2 left-2 rounded-full bg-background/85 px-1.5 py-0.5 text-sm">
+                            <span aria-hidden>⭐</span>
+                            <span className="sr-only">Favorit</span>
+                          </span>
+                        ) : null}
+                        {auswahl.sortierung === "kochbar" && v && (
+                          <span
+                            className={cn(
+                              "absolute top-2 right-2 rounded-full px-2 py-0.5 text-xs font-semibold",
+                              v.prozent === 100
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-background/90",
+                            )}
+                          >
+                            {v.prozent} % da
+                          </span>
                         )}
-                      >
-                        {v.prozent} % da
                       </span>
-                    )}
-                  </span>
-                  <span className="flex flex-1 flex-col gap-0.5 p-3">
-                    <span className="leading-tight font-semibold">
-                      {r.titel}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {auswahl.sortierung === "kochbar" && v
-                        ? v.fehlt.length === 0
-                          ? "Alles im Vorrat 🎉"
-                          : `Fehlt: ${v.fehlt.join(", ")}`
-                        : auswahl.sortierung === "zuletzt" && r.zuletzt_gekocht
-                          ? `${r.gekocht_anzahl}× · zuletzt ${vorWann(r.zuletzt_gekocht)}`
-                          : `${r.zutaten} ${r.zutaten === 1 ? "Zutat" : "Zutaten"}${r.portionen ? ` · ${r.portionen} ${r.portionen === 1 ? "Portion" : "Portionen"}` : ""}`}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                      <span className="flex flex-1 flex-col gap-0.5 p-3">
+                        <span className="leading-tight font-semibold">
+                          {r.titel}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {auswahl.sortierung === "kochbar" && v
+                            ? v.fehlt.length === 0
+                              ? "Alles im Vorrat 🎉"
+                              : `Fehlt: ${v.fehlt.join(", ")}`
+                            : auswahl.sortierung === "zuletzt" &&
+                                r.zuletzt_gekocht
+                              ? `${r.gekocht_anzahl}× · zuletzt ${vorWann(r.zuletzt_gekocht)}`
+                              : `${r.zutaten} ${r.zutaten === 1 ? "Zutat" : "Zutaten"}${r.portionen ? ` · ${r.portionen} ${r.portionen === 1 ? "Portion" : "Portionen"}` : ""}`}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
       )}
     </div>
   );

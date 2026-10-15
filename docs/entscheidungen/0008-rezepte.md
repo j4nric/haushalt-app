@@ -78,3 +78,14 @@ Kochansicht. Später: Schlagwörter, Favoriten/„zuletzt gekocht“, eigene Fot
   anderes Gericht der Woche dieselbe Zutat fest, gilt sie nicht mehr als optional.
 - „Was kann ich kochen?“ zählt Optionales nicht als fehlend; beim Abbuchen ist es
   abgewählt.
+
+## Reste verwerten
+
+- Filter „♻️ Reste verwerten“ in der Übersicht: Reste eintippen (Vorschläge aus den
+  Zutaten aller Rezepte) oder aus dem Vorrat antippen. Treffer: Rezepte, die
+  mindestens einen Rest nutzen – die meisten Reste zuerst, bei Gleichstand das mit
+  dem wenigsten Einzukaufenden.
+- Ein Rest passt zu einer Zutat, wenn er (auch im Plural) als Wort darin steht oder
+  das letzte Wort darauf endet („Käse“ → „Bergkäse“, nicht „Käsekuchen“).
+- Pro Rezept: was es nutzt, was im Vorrat liegt und was eingekauft werden müsste
+  (ohne Gewürze, Grundzutaten und Optionales). Läuft komplett lokal, also offline.
