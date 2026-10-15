@@ -7,7 +7,11 @@ import {
 import type { AbstractPowerSyncDatabase, Transaction } from "@powersync/web";
 import { heute } from "@/lib/plan";
 import { artikelFindenOderAnlegen, aufListeSetzen } from "../listenaktionen";
-import { mindestbestandPruefen } from "../vorratsaktionen";
+import {
+  angebrochenSetzen,
+  bestandVon,
+  mindestbestandPruefen,
+} from "../vorratsaktionen";
 
 /**
  * Schreibende Aktionen für Rezepte – alle lokal (offline) und in einer Transaktion.
@@ -240,7 +244,6 @@ export async function zutatenAufListe(
       const artikel = await artikelFindenOderAnlegen(tx, {
         haushaltId,
         name: z.name,
-        standardeinheit: z.einheit,
         ...(z.erkennenAls ? { erkennenAls: z.erkennenAls } : {}),
       });
       if (
@@ -288,11 +291,14 @@ export async function kochenAbschliessen(
     nutzerId: string;
     rezeptId: string;
     planEintragId: string | null;
-    abbuchen: { artikelId: string; menge: number }[];
+    /** Ganze verbrauchte Packungen und ob danach eine offen ist. */
+    abbuchen: { artikelId: string; menge: number; angebrochen: boolean }[];
   },
 ): Promise<{ anzahl: number; zuruecknehmen: () => Promise<unknown> }> {
   const gekochtId = crypto.randomUUID();
   const buchungen: string[] = [];
+  /** „angebrochen“ vor dem Kochen – fürs Zurücknehmen. */
+  const vorher = new Map<string, number>();
   const jetzt = new Date();
   const anzahl = await db.writeTransaction(async (tx) => {
     await tx.execute(
@@ -300,16 +306,26 @@ export async function kochenAbschliessen(
        VALUES (?, ?, ?, ?, ?)`,
       [gekochtId, haushaltId, rezeptId, jetzt.toISOString(), nutzerId],
     );
-    for (const { artikelId, menge } of abbuchen) {
-      if (!(menge > 0)) {
-        continue;
+    for (const { artikelId, menge, angebrochen } of abbuchen) {
+      const { offen } = await tx.get<{ offen: number }>(
+        "SELECT COALESCE(angebrochen, 0) AS offen FROM artikel WHERE id = ?",
+        [artikelId],
+      );
+      vorher.set(artikelId, offen);
+      if (menge > 0) {
+        const id = crypto.randomUUID();
+        buchungen.push(id);
+        await tx.execute(
+          `INSERT INTO vorratsbuchungen (id, haushalt_id, artikel_id, menge, grund, erstellt_von, erstellt_am)
+           VALUES (?, ?, ?, ?, 'verbrauch', ?, ?)`,
+          [id, haushaltId, artikelId, -menge, nutzerId, jetzt.toISOString()],
+        );
       }
-      const id = crypto.randomUUID();
-      buchungen.push(id);
-      await tx.execute(
-        `INSERT INTO vorratsbuchungen (id, haushalt_id, artikel_id, menge, grund, erstellt_von, erstellt_am)
-         VALUES (?, ?, ?, ?, 'verbrauch', ?, ?)`,
-        [id, haushaltId, artikelId, -menge, nutzerId, jetzt.toISOString()],
+      // Ist nichts mehr da, ist auch nichts offen.
+      await angebrochenSetzen(
+        tx,
+        artikelId,
+        angebrochen && (await bestandVon(tx, artikelId)) > 0,
       );
       await mindestbestandPruefen(tx, artikelId, nutzerId);
     }
@@ -342,6 +358,9 @@ export async function kochenAbschliessen(
         await tx.execute("DELETE FROM gekocht WHERE id = ?", [gekochtId]);
         for (const id of buchungen) {
           await tx.execute("DELETE FROM vorratsbuchungen WHERE id = ?", [id]);
+        }
+        for (const [artikelId, offen] of vorher) {
+          await angebrochenSetzen(tx, artikelId, Boolean(offen));
         }
         await tx.execute(
           "UPDATE plan_eintraege SET erledigt = 0, gekocht_id = NULL WHERE gekocht_id = ?",

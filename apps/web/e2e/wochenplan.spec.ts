@@ -129,7 +129,7 @@ test("Wochenplan: planen, einkaufen, verschieben, füllen, kochen mit Vorrat", a
     await expect(page.getByText("4 Portionen").first()).toBeVisible();
     await page.getByRole("button", { name: "Fertig gekocht" }).click();
     // Reis: 2 Pck. für 4 Portionen, alles was da ist.
-    await expect(page.getByLabel("Menge Reis")).toHaveValue("2");
+    await expect(page.getByTestId("leer-Reis")).toHaveText("2");
     await page.getByRole("button", { name: "Abbuchen", exact: true }).click();
     await expect(page.getByText(/1 aus dem Vorrat abgebucht/)).toBeVisible();
     await expect(tag(0)).toContainText("✓ erledigt");

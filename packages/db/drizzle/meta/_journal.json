@@ -92,6 +92,13 @@
       "when": 1792078066042,
       "tag": "0012_benachrichtigungen",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792086282562,
+      "tag": "0013_vorrat_packungen",
+      "breakpoints": true
     }
   ]
 }

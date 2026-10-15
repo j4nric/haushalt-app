@@ -395,3 +395,55 @@ export function zeileAlsText(z: ZutatZeile): string {
   const text = zutatAlsText(z) + (z.zusatz ? `, ${z.zusatz}` : "");
   return z.optional ? `(${text})` : text;
 }
+
+export type Eingabe = {
+  name: string;
+  /** In Artikel-Einheiten (g, ml, Stück); `null` = ohne Menge. */
+  menge: number | null;
+  einheit: Einheit | null;
+  /** Als Dose oder Glas angegeben – für die Kategorie (Konserve statt frisch). */
+  konserve: boolean;
+};
+
+/**
+ * Eingabe in Liste und Vorrat: „Mehl 1 kg“, „2 Dosen Tomaten“, „Tomaten Dose 2“,
+ * „Eier 10“. Vorsichtig: Mit Zusatz („Milch, laktosefrei“) oder ohne erkannte Menge
+ * bleibt alles Name.
+ */
+export function zerlegeEingabe(text: string): Eingabe {
+  const roh = text.replace(/\s+/g, " ").trim();
+  const nurName: Eingabe = {
+    name: roh,
+    menge: null,
+    einheit: null,
+    konserve: false,
+  };
+  const z = zerlegeZutat(roh);
+  if (z.menge == null || z.zusatz) {
+    return nurName;
+  }
+  let name = z.name;
+  let einheit = z.einheit;
+  // Einheit am Ende des Namens: „Tomaten Dose 2“.
+  const hinten = einheit
+    ? null
+    : name.match(/^(.*\S)\s+([A-Za-zÄÖÜäöüß]+)\.?$/);
+  const einheitHinten = hinten?.[2]
+    ? EINHEITEN_TEXT[hinten[2].toLowerCase()]
+    : undefined;
+  if (hinten?.[1] && einheitHinten && STUECKWEISE.has(einheitHinten)) {
+    name = hinten[1];
+    einheit = einheitHinten;
+  }
+  // „7 Up“ ist ein Name, keine Menge.
+  if (name.length < 3 || /^\d/.test(name)) {
+    return nurName;
+  }
+  const liste = mengeFuerListe({ ...z, name, einheit });
+  return {
+    name,
+    menge: liste.menge,
+    einheit: liste.einheit,
+    konserve: einheit === "Dose" || einheit === "Glas",
+  };
+}

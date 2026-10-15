@@ -113,10 +113,22 @@ export const artikel = pgTable(
     archiviert: boolean("archiviert").notNull().default(false),
     /** Fällt der Bestand darunter, kommt der Artikel auf die Einkaufsliste. */
     mindestbestand: doublePrecision("mindestbestand"),
+    /**
+     * Inhalt einer Packung („500 g“), optional. Der Vorrat zählt Packungen; damit
+     * rechnen Rezepte Gramm und Milliliter in Packungen um.
+     */
+    packungMenge: doublePrecision("packung_menge"),
+    packungEinheit: text("packung_einheit", { enum: EINHEITEN }),
+    /** Eine der Packungen im Vorrat ist offen (nur markiert, nicht gezählt). */
+    angebrochen: boolean("angebrochen").notNull().default(false),
     erstelltAm: erstelltAm(),
   },
   (t) => [
     index().on(t.haushaltId),
+    check(
+      "artikel_packung_vollstaendig",
+      sql`(${t.packungMenge} is null) = (${t.packungEinheit} is null) and (${t.packungMenge} is null or ${t.packungMenge} > 0)`,
+    ),
     check(
       "artikel_mindestbestand_positiv",
       sql`${t.mindestbestand} is null or ${t.mindestbestand} > 0`,

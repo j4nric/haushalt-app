@@ -79,7 +79,7 @@ test("Barcode: unbekannt benennen, wieder scannen = abhaken, im Vorrat einbuchen
     await zuBereich(page, "Vorrat");
     await page.getByRole("button", { name: "Barcode scannen" }).click();
     await expect(page.getByRole("dialog", { name: /Scannen/ })).toContainText(
-      "+1 l Milch im Vorrat",
+      "+1 Milch (1 l) im Vorrat",
       { timeout: 20_000 },
     );
     await page.getByRole("button", { name: "Scanner schließen" }).click();

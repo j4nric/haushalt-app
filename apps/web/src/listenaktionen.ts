@@ -1,7 +1,7 @@
 import type { Einheit } from "@haushalt/db/einheiten";
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
-import { namensVarianten } from "@haushalt/db/namen";
-import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
+import { findeNachName } from "@haushalt/db/namen";
+import { type Packung, standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import type { Transaction } from "@powersync/web";
 import { ersterBuchstabeGross } from "@/lib/farben";
 
@@ -21,7 +21,8 @@ export async function artikelFindenOderAnlegen(
     haushaltId: string;
     name: string;
     kategorie?: string | null;
-    standardeinheit?: Einheit | null;
+    /** Packungsgröße für einen neuen Artikel (z. B. vom gescannten Barcode). */
+    packung?: Packung | null;
     /** Text für die Kategorie-Erkennung, wenn er mehr verrät als der Name („Dose Tomaten“). */
     erkennenAls?: string;
   },
@@ -32,17 +33,18 @@ export async function artikelFindenOderAnlegen(
   neu: boolean;
 }> {
   const name = ersterBuchstabeGross(a.name.trim());
+  // Abgleich in JavaScript: SQLites lower() kennt keine Umlaute („Öl“ ≠ „öl“).
   // Auch „Zwiebel“ findet „Zwiebeln“ – die genaue Schreibweise hat Vorrang.
-  const varianten = namensVarianten(name);
-  const vorhanden = await tx.getOptional<{
+  const alle = await tx.getAll<{
     id: string;
     name: string;
     kategorie: string | null;
-  }>(
-    `SELECT id, name, kategorie FROM artikel
-      WHERE haushalt_id = ? AND lower(name) IN (${varianten.map(() => "?").join(", ")})
-      ORDER BY lower(name) = ? DESC LIMIT 1`,
-    [a.haushaltId, ...varianten, varianten[0]],
+  }>("SELECT id, name, kategorie FROM artikel WHERE haushalt_id = ?", [
+    a.haushaltId,
+  ]);
+  const vorhanden = findeNachName(
+    new Map(alle.map((x) => [x.name.trim().toLowerCase(), x])),
+    name,
   );
   if (vorhanden) {
     await tx.execute(
@@ -57,15 +59,16 @@ export async function artikelFindenOderAnlegen(
       ? (erkenneKategorie(a.erkennenAls ?? name)[0] ?? null)
       : a.kategorie || null;
   await tx.execute(
-    `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, erstellt_am)
-     VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+    `INSERT INTO artikel (id, haushalt_id, name, kategorie, standardeinheit, im_vorrat, archiviert, angebrochen, packung_menge, packung_einheit, erstellt_am)
+     VALUES (?, ?, ?, ?, 'stueck', ?, 0, 0, ?, ?, ?)`,
     [
       id,
       a.haushaltId,
       name,
       kategorie,
-      a.standardeinheit ?? "stueck",
       standardmaessigImVorrat(kategorie) ? 1 : 0,
+      a.packung?.menge ?? null,
+      a.packung?.einheit ?? null,
       new Date().toISOString(),
     ],
   );

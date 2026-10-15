@@ -42,9 +42,12 @@ test("Einkauf landet im Vorrat, Knappes kommt auf die Liste", async ({
 
     // Mindestbestand 3 bei Bestand 1 → kommt automatisch wieder auf die Liste.
     await bestand(page, "Nudeln").click();
-    await page.getByLabel("Mindestbestand Nudeln").fill("3");
-    await page.getByLabel("Mindestbestand Nudeln").press("Enter");
-    await expect(page.getByLabel("Mindestbestand Nudeln")).toBeHidden();
+    const mindest = page.getByRole("textbox", {
+      name: "Mindestbestand Nudeln",
+    });
+    await mindest.fill("3");
+    await mindest.press("Enter");
+    await expect(mindest).toBeHidden();
     await expect(
       page.getByRole("listitem").filter({ hasText: "Nudeln" }),
     ).toContainText("knapp, auf der Liste");
