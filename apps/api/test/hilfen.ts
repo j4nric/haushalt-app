@@ -12,7 +12,7 @@ export function testApp() {
     secret: "test-secret-mindestens-32-zeichen-lang!!",
     webUrl: WEB_URL,
   });
-  const app = erstelleApp({ db, sql, auth });
+  const app = erstelleApp({ db, sql, auth, importLokalErlaubt: true });
 
   /** Ein angemeldeter Testnutzer, der Anfragen mit seinem Sitzungs-Cookie stellt. */
   async function nutzer(name: string) {

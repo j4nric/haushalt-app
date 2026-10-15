@@ -45,6 +45,18 @@ export default defineConfig({
         navigateFallback: "/index.html",
         // API und Sync immer übers Netz, nie aus dem Cache.
         navigateFallbackDenylist: [/^\/api\//, /^\/powersync\//],
+        // Rezeptbilder (fremde Seiten) nach dem ersten Laden auch offline zeigen.
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === "image",
+            handler: "CacheFirst",
+            options: {
+              cacheName: "rezeptbilder",
+              expiration: { maxEntries: 300, maxAgeSeconds: 90 * 24 * 3600 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

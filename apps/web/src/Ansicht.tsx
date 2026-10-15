@@ -1,19 +1,48 @@
-import { House, Package, ShoppingCart } from "lucide-react";
+import { ChefHat, House, Package, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type Ansicht = "liste" | "vorrat" | "haushalt";
+export type Ansicht = "liste" | "vorrat" | "rezepte" | "haushalt";
 
 const ANSICHTEN: { id: Ansicht; name: string; symbol: typeof ShoppingCart }[] =
   [
     { id: "liste", name: "Einkaufsliste", symbol: ShoppingCart },
     { id: "vorrat", name: "Vorrat", symbol: Package },
+    { id: "rezepte", name: "Rezepte", symbol: ChefHat },
     { id: "haushalt", name: "Haushalt", symbol: House },
   ];
 
 function lesen(): Ansicht {
-  const hash = location.hash.slice(1);
-  return hash === "vorrat" || hash === "haushalt" ? hash : "liste";
+  // Unterseiten hängen mit „/“ an: #rezepte/<id>/kochen
+  const bereich = location.hash.slice(1).split("/")[0];
+  return bereich === "vorrat" || bereich === "rezepte" || bereich === "haushalt"
+    ? bereich
+    : "liste";
+}
+
+const lesenPfad = () => location.hash.slice(1).split("/").slice(1);
+
+/**
+ * Unterseite eines Bereichs aus der Adresse, z. B. #rezepte/abc/kochen → ["abc", "kochen"].
+ * Zurück im Browser bzw. Wischgeste führt so eine Ebene hoch.
+ */
+export function useUnterseite(): [string[], (pfad: string[]) => void] {
+  const [pfad, setPfad] = useState(lesenPfad);
+  useEffect(() => {
+    const aktualisieren = () => {
+      setPfad(lesenPfad());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("hashchange", aktualisieren);
+    return () => window.removeEventListener("hashchange", aktualisieren);
+  }, []);
+  return [
+    pfad,
+    (neu) => {
+      const bereich = location.hash.slice(1).split("/")[0];
+      location.hash = [bereich, ...neu].join("/");
+    },
+  ];
 }
 
 /** Aktuelle Ansicht, gespiegelt in der Adresse (#vorrat), damit Zurück und Neuladen funktionieren. */
@@ -47,7 +76,7 @@ export function Navigation({
       aria-label="Bereiche"
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="mx-auto grid h-16 max-w-lg grid-cols-3">
+      <div className="mx-auto grid h-16 max-w-lg grid-cols-4">
         {ANSICHTEN.map(({ id, name, symbol: Icon }) => (
           <button
             key={id}

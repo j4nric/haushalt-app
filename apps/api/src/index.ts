@@ -17,7 +17,15 @@ const auth = erstelleAuth(db, {
   weitereOrigins: env.weitereOrigins,
 });
 const app = new Hono();
-app.route("/", erstelleApp({ db, sql, auth }));
+app.route(
+  "/",
+  erstelleApp({
+    db,
+    sql,
+    auth,
+    importLokalErlaubt: env.importLokalErlaubt,
+  }),
+);
 // In Produktion liefert das API auch das Frontend aus (siehe Dockerfile).
 if (env.frontendVerzeichnis) {
   statischesFrontend(app, env.frontendVerzeichnis);

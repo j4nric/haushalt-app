@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import type postgres from "postgres";
 import type { Auth } from "./auth";
 import { neuerCode, normalisiereCode } from "./einladungscode";
+import { ImportFehler, rezeptAusHtml, seiteHolen } from "./rezept-import";
 import {
   KeinZugriff,
   parseOperationen,
@@ -18,10 +19,13 @@ type Nutzer = { id: string; name: string };
 export function erstelleApp({
   sql,
   auth,
+  importLokalErlaubt = false,
 }: {
   db: Db;
   sql: postgres.Sql;
   auth: Auth;
+  /** Rezept-Import auch von lokalen Adressen (nur Entwicklung und Tests). */
+  importLokalErlaubt?: boolean;
 }) {
   const app = new Hono<{ Variables: { nutzer: Nutzer } }>().basePath("/api");
 
@@ -133,6 +137,32 @@ export function erstelleApp({
       // Verletzte Datenbank-Regeln (Fremdschlüssel, CHECK, …) sind Fehler der Anfrage.
       if (istConstraintFehler(fehler)) {
         return c.json({ fehler: fehler.message }, 400);
+      }
+      throw fehler;
+    }
+  });
+
+  /** Liest ein Rezept von einer Webseite aus (Link-Import). */
+  app.post("/rezepte/import", async (c) => {
+    const { url } = await c.req.json<{ url?: unknown }>();
+    if (typeof url !== "string" || url.trim() === "") {
+      return c.json({ fehler: "Link fehlt" }, 400);
+    }
+    try {
+      const seite = await seiteHolen(url.trim(), {
+        lokalErlaubt: importLokalErlaubt,
+      });
+      const rezept = rezeptAusHtml(seite.html, seite.url);
+      if (!rezept) {
+        throw new ImportFehler(
+          "Auf dieser Seite wurde kein Rezept gefunden",
+          422,
+        );
+      }
+      return c.json(rezept);
+    } catch (fehler) {
+      if (fehler instanceof ImportFehler) {
+        return c.json({ fehler: fehler.message }, fehler.status);
       }
       throw fehler;
     }

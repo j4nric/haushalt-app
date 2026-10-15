@@ -419,3 +419,65 @@ describe("Käufe", () => {
     );
   });
 });
+
+describe("Rezepte", () => {
+  it("speichert Rezepte mit Zutaten, wie die App sie hochlädt", async () => {
+    const koch = await t.nutzer("Koch");
+    const haushalt = await koch.haushaltAnlegen();
+    const rezept = neueId();
+    const antwort = await koch.hochladen([
+      {
+        op: "PUT",
+        table: "rezepte",
+        id: rezept,
+        opData: {
+          haushalt_id: haushalt,
+          titel: "Spaghetti",
+          portionen: 2,
+          quelle_url: null,
+          bild_url: null,
+          schritte: "Nudeln kochen.",
+          erstellt_von: koch.id,
+          erstellt_am: jetzt(),
+        },
+      },
+      {
+        op: "PUT",
+        table: "rezept_zutaten",
+        id: neueId(),
+        opData: {
+          haushalt_id: haushalt,
+          rezept_id: rezept,
+          position: 0,
+          menge: 200,
+          einheit: "g",
+          name: "Spaghetti",
+          zusatz: null,
+        },
+      },
+    ]);
+    expect(await antwort.text()).toContain("ok");
+    const [r] =
+      await t.sql`select titel, erstellt_von from rezepte where id = ${rezept}`;
+    expect(r).toEqual({ titel: "Spaghetti", erstellt_von: koch.id });
+  });
+
+  it("lässt nur http(s)-Adressen für Quelle und Bild zu", async () => {
+    const koch = await t.nutzer("Koch2");
+    const haushalt = await koch.haushaltAnlegen();
+    const antwort = await koch.hochladen([
+      {
+        op: "PUT",
+        table: "rezepte",
+        id: neueId(),
+        opData: {
+          haushalt_id: haushalt,
+          titel: "Böse",
+          quelle_url: "javascript:alert(1)",
+          erstellt_am: jetzt(),
+        },
+      },
+    ]);
+    expect(antwort.status).toBe(400);
+  });
+});
