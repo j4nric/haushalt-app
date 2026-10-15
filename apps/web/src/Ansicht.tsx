@@ -19,6 +19,8 @@ const ANSICHTEN: { id: Ansicht; name: string; symbol: typeof ShoppingCart }[] =
     { id: "haushalt", name: "Haushalt", symbol: House },
   ];
 
+const REIHENFOLGE: Ansicht[] = ANSICHTEN.map((a) => a.id);
+
 function lesen(): Ansicht {
   // Unterseiten hängen mit „/“ an: #rezepte/<id>/kochen
   const bereich = location.hash.slice(1).split("/")[0];
@@ -50,7 +52,15 @@ export function useUnterseite(): [string[], (pfad: string[]) => void] {
     pfad,
     (neu) => {
       const bereich = location.hash.slice(1).split("/")[0];
-      location.hash = [bereich, ...neu].join("/");
+      const richtung =
+        neu.at(-1) === "kochen"
+          ? "hoch"
+          : neu.length >= lesenPfad().length
+            ? "vor"
+            : "zurueck";
+      mitUebergang(richtung, () => {
+        location.hash = [bereich, ...neu].join("/");
+      });
     },
   ];
 }
@@ -92,17 +102,64 @@ export function Navigation({
             key={id}
             type="button"
             aria-current={ansicht === id ? "page" : undefined}
-            onClick={() => wechseln(id)}
+            onClick={() =>
+              mitUebergang(
+                REIHENFOLGE.indexOf(id) >= REIHENFOLGE.indexOf(ansicht)
+                  ? "vor"
+                  : "zurueck",
+                () => wechseln(id),
+              )
+            }
             className={cn(
               "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors",
               ansicht === id && "text-primary",
             )}
           >
-            <Icon className="size-6" strokeWidth={ansicht === id ? 2.4 : 1.8} />
+            <Icon
+              // Neu gemountet beim Wechsel, damit es jedes Mal hüpft.
+              key={ansicht === id ? "an" : "aus"}
+              className={cn("size-6", ansicht === id && "huepfen")}
+              strokeWidth={ansicht === id ? 2.4 : 1.8}
+            />
             {name}
           </button>
         ))}
       </div>
     </nav>
   );
+}
+
+type Richtung = "vor" | "zurueck" | "hoch";
+
+/**
+ * Seitenwechsel mit sanftem Gleiten (View Transitions): Der Browser animiert ein
+ * Standbild, das Layout bleibt unberührt – fest positionierte Leisten verrutschen
+ * nicht. Ohne Unterstützung oder bei „Bewegung reduzieren“ einfach sofort.
+ */
+export function mitUebergang(richtung: Richtung, aendern: () => void) {
+  const doc = document as Document & {
+    startViewTransition?: (aktualisieren: () => Promise<void>) => unknown;
+  };
+  if (
+    !doc.startViewTransition ||
+    matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    aendern();
+    return;
+  }
+  document.documentElement.dataset.uebergang = richtung;
+  doc.startViewTransition(async () => {
+    // Die Adresse ändert sich, React zeichnet nach dem hashchange neu – darauf warten.
+    const neu = new Promise<void>((fertig) => {
+      window.addEventListener(
+        "hashchange",
+        () =>
+          requestAnimationFrame(() => requestAnimationFrame(() => fertig())),
+        { once: true },
+      );
+      setTimeout(fertig, 300);
+    });
+    aendern();
+    await neu;
+  });
 }

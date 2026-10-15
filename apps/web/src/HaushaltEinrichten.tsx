@@ -2,9 +2,19 @@ import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { haushaltWaehlen } from "./haushaltwahl";
 
-/** Erster Start: eigenen Haushalt anlegen oder mit Einladungscode beitreten. */
-export function HaushaltEinrichten() {
+/**
+ * Haushalt anlegen oder mit Einladungscode beitreten – beim ersten Start und später
+ * für weitere Haushalte. `fertig` bekommt die ID (der neue Haushalt wird aktiv).
+ */
+export function HaushaltEinrichten({
+  fertig,
+  ueberschrift = true,
+}: {
+  fertig?: (id: string) => void;
+  ueberschrift?: boolean;
+} = {}) {
   const [fehler, setFehler] = useState<string | null>(null);
   const [laeuft, setLaeuft] = useState(false);
 
@@ -18,6 +28,16 @@ export function HaushaltEinrichten() {
       body: JSON.stringify(body),
     }).catch(() => null);
     setLaeuft(false);
+    if (antwort?.ok) {
+      const { id } = (await antwort.json().catch(() => ({}))) as {
+        id?: string;
+      };
+      if (id) {
+        haushaltWaehlen(id);
+        fertig?.(id);
+      }
+      return;
+    }
     if (!antwort?.ok) {
       const { fehler: meldung } =
         (await antwort?.json().catch(() => ({}))) ?? {};
@@ -29,12 +49,14 @@ export function HaushaltEinrichten() {
 
   return (
     <section className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">Haushalt einrichten</h2>
-        <p className="text-sm text-muted-foreground">
-          Leg einen neuen Haushalt an oder tritt mit einem Code bei.
-        </p>
-      </div>
+      {ueberschrift && (
+        <div>
+          <h2 className="text-xl font-semibold">Haushalt einrichten</h2>
+          <p className="text-sm text-muted-foreground">
+            Leg einen neuen Haushalt an oder tritt mit einem Code bei.
+          </p>
+        </div>
+      )}
       <form
         className="space-y-2"
         onSubmit={(e: FormEvent<HTMLFormElement>) => {

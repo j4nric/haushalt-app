@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { testApp } from "../test/hilfen";
+import { ADMIN_EMAIL, testApp } from "../test/hilfen";
 
 const t = testApp();
 afterAll(() => t.beenden());
@@ -13,16 +13,14 @@ describe("Haushalt und Einladungen", () => {
     expect(antwort.status).toBe(401);
   });
 
-  it("legt einen Haushalt an, aber nur einen pro Nutzer", async () => {
+  it("legt Haushalte an, auch mehrere pro Konto", async () => {
     const anna = await t.nutzer("Anna");
     const id = await anna.haushaltAnlegen("Familie Muster");
 
     const [mitglied] =
       await t.sql`select rolle, anzeigename from haushalt_mitglieder where haushalt_id = ${id}`;
     expect(mitglied).toEqual({ rolle: "besitzer", anzeigename: "Anna" });
-    expect((await anna.post("/haushalte", { name: "Zweiter" })).status).toBe(
-      409,
-    );
+    expect((await anna.post("/haushalte", { name: "WG" })).status).toBe(201);
   });
 
   it("lässt per Einladungscode beitreten, jeder Code gilt einmal", async () => {
@@ -80,5 +78,75 @@ describe("PowerSync-Token", () => {
       keys: { kid: string }[];
     };
     expect(jwks.keys.map((k) => k.kid)).toContain(kopf.kid);
+  });
+});
+
+describe("Mehrere Haushalte und Verlassen", () => {
+  it("lässt Mitglieder eines Haushalts nicht noch einmal beitreten", async () => {
+    const anna = await t.nutzer("Anna");
+    const haushalt = await anna.haushaltAnlegen();
+    const { code } = (await (
+      await anna.post(`/haushalte/${haushalt}/einladungen`)
+    ).json()) as { code: string };
+    expect((await anna.post("/einladungen/annehmen", { code })).status).toBe(
+      409,
+    );
+  });
+
+  it("übergibt beim Verlassen die Besitzer-Rolle und löscht erst beim letzten", async () => {
+    const anna = await t.nutzer("Anna");
+    const ben = await t.nutzer("Ben");
+    const haushalt = await anna.haushaltAnlegen();
+    const { code } = (await (
+      await anna.post(`/haushalte/${haushalt}/einladungen`)
+    ).json()) as { code: string };
+    await ben.post("/einladungen/annehmen", { code });
+
+    const raus = await anna.loeschen(`/haushalte/${haushalt}/mitgliedschaft`);
+    expect(await raus.json()).toEqual({ geloescht: false });
+    const [rolle] = await t.sql`
+      select rolle from haushalt_mitglieder where haushalt_id = ${haushalt} and nutzer_id = ${ben.id}`;
+    expect(rolle).toEqual({ rolle: "besitzer" });
+    // Wer draußen ist, kann nicht noch einmal gehen.
+    expect(
+      (await anna.loeschen(`/haushalte/${haushalt}/mitgliedschaft`)).status,
+    ).toBe(403);
+
+    const zuletzt = await ben.loeschen(`/haushalte/${haushalt}/mitgliedschaft`);
+    expect(await zuletzt.json()).toEqual({ geloescht: true });
+    expect(
+      await t.sql`select 1 from haushalte where id = ${haushalt}`,
+    ).toHaveLength(0);
+  });
+});
+
+describe("Admin", () => {
+  it("zeigt Admins alle Konten mit Haushalten, anderen nicht", async () => {
+    const admin = await t.nutzer("Admin", { email: ADMIN_EMAIL });
+    const anna = await t.nutzer("Anna");
+    await anna.haushaltAnlegen("Annas WG");
+
+    expect(await (await admin.get("/ich")).json()).toEqual({ admin: true });
+    expect(await (await anna.get("/ich")).json()).toEqual({ admin: false });
+    expect((await anna.get("/admin/uebersicht")).status).toBe(403);
+
+    const { nutzer, zahlen } = (await (
+      await admin.get("/admin/uebersicht")
+    ).json()) as {
+      nutzer: {
+        id: string;
+        haushalte: { name: string; rolle: string; mitglieder: number }[];
+      }[];
+      zahlen: { haushalte: number };
+    };
+    expect(nutzer.find((n) => n.id === anna.id)?.haushalte).toEqual([
+      expect.objectContaining({
+        name: "Annas WG",
+        rolle: "besitzer",
+        mitglieder: 1,
+      }),
+    ]);
+    expect(nutzer.find((n) => n.id === admin.id)?.haushalte).toEqual([]);
+    expect(zahlen.haushalte).toBeGreaterThan(0);
   });
 });

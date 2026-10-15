@@ -45,3 +45,18 @@ den E2E-Test mit einem dritten, fremden Haushalt.
 - Passwort vergessen (braucht E-Mail-Versand)
 - Haushalt verlassen, Mitglieder entfernen
 - Für die Produktion: eigene Replikationsrolle, Publikation nur für synchronisierte Tabellen
+
+## Nachtrag: mehrere Haushalte, Verlassen, Admin (2026-10-15)
+
+- **Mehrere Haushalte pro Konto** (höchstens 10). Lokal liegen alle eigenen; welcher
+  aktiv ist, merkt sich jedes Gerät (`haushalt-aktiv` im Browser). Gibt es den
+  gewählten nicht (noch nicht synchronisiert oder verlassen), gilt der erste.
+  Wechseln über den Namen oben (ab zwei Haushalten) oder unter „Haushalt“.
+- **Verlassen** (`DELETE /api/haushalte/:id/mitgliedschaft`): Geht der Besitzer,
+  übernimmt das am längsten dabei gewesene Mitglied. Geht das letzte Mitglied, wird
+  der Haushalt mit allen Daten gelöscht – in der App nur nach Eintippen des Namens.
+  Wer schon Mitglied ist, kann nicht per Code erneut beitreten (409).
+- **Admin-Panel** (nur lesend): alle Konten mit Haushalten, Rolle, Mitgliederzahl,
+  letzte Aktivität. Wer Admin ist, regelt `ADMIN_EMAILS` (kommagetrennt; `@domain`
+  für alle Konten einer Domain, genutzt in den E2E-Tests). Nicht synchronisiert,
+  braucht Netz.

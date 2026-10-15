@@ -38,18 +38,24 @@ export function bildFormat(daten: Buffer): string | null {
   return null;
 }
 
-type Nutzer = { id: string; name: string };
+type Nutzer = { id: string; name: string; email: string };
+
+/** So viele Haushalte darf ein Konto höchstens haben (Schutz vor Versehen/Missbrauch). */
+const HAUSHALTE_HOECHSTENS = 10;
 
 export function erstelleApp({
   sql,
   auth,
   importLokalErlaubt = false,
+  adminEmails = [],
 }: {
   db: Db;
   sql: postgres.Sql;
   auth: Auth;
   /** Rezept-Import auch von lokalen Adressen (nur Entwicklung und Tests). */
   importLokalErlaubt?: boolean;
+  /** Diese Konten sehen das Admin-Panel (E-Mail, ohne Groß/klein). */
+  adminEmails?: string[];
 }) {
   const app = new Hono<{ Variables: { nutzer: Nutzer } }>().basePath("/api");
 
@@ -64,11 +70,15 @@ export function erstelleApp({
     if (!sitzung) {
       throw new HTTPException(401, { message: "Nicht angemeldet" });
     }
-    c.set("nutzer", { id: sitzung.user.id, name: sitzung.user.name });
+    c.set("nutzer", {
+      id: sitzung.user.id,
+      name: sitzung.user.name,
+      email: sitzung.user.email,
+    });
     await next();
   });
 
-  /** Legt einen Haushalt an; der Nutzer wird Besitzer. Vorerst ein Haushalt pro Nutzer. */
+  /** Legt einen Haushalt an; der Nutzer wird Besitzer. Mehrere pro Konto sind möglich. */
   app.post("/haushalte", async (c) => {
     const nutzer = c.get("nutzer");
     const { name } = await c.req.json<{ name?: unknown }>();
@@ -76,7 +86,7 @@ export function erstelleApp({
       throw new HTTPException(400, { message: "Name fehlt" });
     }
     const haushalt = await sql.begin(async (tx) => {
-      await pruefeKeinHaushalt(tx, nutzer.id);
+      await pruefeHaushaltLimit(tx, nutzer.id);
       const [neu] = await tx<
         { id: string }[]
       >`insert into haushalte (name) values (${name.trim()}) returning id`;
@@ -131,7 +141,16 @@ export function erstelleApp({
           message: "Code ungültig, abgelaufen oder schon benutzt",
         });
       }
-      await pruefeKeinHaushalt(tx, nutzer.id);
+      const [schonDrin] = await tx`
+        select 1 from haushalt_mitglieder
+        where haushalt_id = ${einladung.haushalt_id} and nutzer_id = ${nutzer.id}
+      `;
+      if (schonDrin) {
+        throw new HTTPException(409, {
+          message: "Du bist schon Mitglied dieses Haushalts",
+        });
+      }
+      await pruefeHaushaltLimit(tx, nutzer.id);
       await tx`
         insert into haushalt_mitglieder (haushalt_id, nutzer_id, anzeigename, rolle)
         values (${einladung.haushalt_id}, ${nutzer.id}, ${nutzer.name}, 'mitglied')
@@ -140,6 +159,88 @@ export function erstelleApp({
       return { id: einladung.haushalt_id };
     });
     return c.json(haushalt);
+  });
+
+  /**
+   * Haushalt verlassen. War man Besitzer, übernimmt das am längsten dabei gewesene
+   * Mitglied. Geht das letzte Mitglied, wird der Haushalt mit allen Daten gelöscht.
+   */
+  app.delete("/haushalte/:id/mitgliedschaft", async (c) => {
+    const nutzer = c.get("nutzer");
+    const haushaltId = c.req.param("id");
+    await pruefeMitglied(sql, haushaltId, nutzer.id);
+    const ergebnis = await sql.begin(async (tx) => {
+      // Sperrt den Haushalt, damit zwei, die gleichzeitig gehen, ihn nicht verwaist lassen.
+      await tx`select 1 from haushalte where id = ${haushaltId} for update`;
+      const [ich] = await tx<{ rolle: string }[]>`
+        delete from haushalt_mitglieder
+        where haushalt_id = ${haushaltId} and nutzer_id = ${nutzer.id}
+        returning rolle
+      `;
+      const [naechster] = await tx<{ id: string }[]>`
+        select id from haushalt_mitglieder where haushalt_id = ${haushaltId}
+        order by beigetreten_am limit 1
+      `;
+      if (!naechster) {
+        await tx`delete from haushalte where id = ${haushaltId}`;
+        return { geloescht: true };
+      }
+      if (ich?.rolle === "besitzer") {
+        await tx`update haushalt_mitglieder set rolle = 'besitzer' where id = ${naechster.id}`;
+      }
+      return { geloescht: false };
+    });
+    return c.json(ergebnis);
+  });
+
+  /** Wer bin ich – für Dinge, die nicht synchronisiert werden (z. B. Admin). */
+  app.get("/ich", (c) =>
+    c.json({ admin: istAdmin(c.get("nutzer").email, adminEmails) }),
+  );
+
+  /** Admin: alle Konten mit ihren Haushalten (nur lesend). */
+  app.get("/admin/uebersicht", async (c) => {
+    if (!istAdmin(c.get("nutzer").email, adminEmails)) {
+      return c.json({ fehler: "Nur für Admins" }, 403);
+    }
+    const nutzer = await sql<
+      {
+        id: string;
+        name: string;
+        email: string;
+        erstellt_am: string;
+        zuletzt_aktiv: string | null;
+        haushalte: {
+          id: string;
+          name: string;
+          rolle: string;
+          mitglieder: number;
+        }[];
+      }[]
+    >`
+      select u.id, u.name, u.email, u.created_at as erstellt_am,
+             (select max(s.updated_at) from session s where s.user_id = u.id) as zuletzt_aktiv,
+             coalesce(
+               json_agg(json_build_object(
+                 'id', h.id, 'name', h.name, 'rolle', m.rolle,
+                 'mitglieder', (select count(*) from haushalt_mitglieder m2 where m2.haushalt_id = h.id)
+               ) order by h.name) filter (where h.id is not null),
+               '[]'
+             ) as haushalte
+      from "user" u
+      left join haushalt_mitglieder m on m.nutzer_id = u.id
+      left join haushalte h on h.id = m.haushalt_id
+      group by u.id
+      order by u.created_at
+    `;
+    const [zahlen] = await sql<
+      { haushalte: number; rezepte: number; eintraege: number }[]
+    >`
+      select (select count(*)::int from haushalte) as haushalte,
+             (select count(*)::int from rezepte) as rezepte,
+             (select count(*)::int from listeneintraege) as eintraege
+    `;
+    return c.json({ nutzer, zahlen });
   });
 
   /** Nimmt die lokalen Änderungen eines Geräts entgegen (PowerSync-Upload). */
@@ -285,17 +386,27 @@ async function pruefeMitglied(
   }
 }
 
-async function pruefeKeinHaushalt(
+async function pruefeHaushaltLimit(
   tx: postgres.TransactionSql,
   nutzerId: string,
 ) {
-  const [vorhanden] =
-    await tx`select 1 from haushalt_mitglieder where nutzer_id = ${nutzerId}`;
-  if (vorhanden) {
+  const [{ n } = { n: 0 }] = await tx<{ n: number }[]>`
+    select count(*)::int as n from haushalt_mitglieder where nutzer_id = ${nutzerId}
+  `;
+  if (n >= HAUSHALTE_HOECHSTENS) {
     throw new HTTPException(409, {
-      message: "Du gehörst bereits zu einem Haushalt",
+      message: `Höchstens ${HAUSHALTE_HOECHSTENS} Haushalte pro Konto`,
     });
   }
+}
+
+/** Eintrag „name@domain“ oder „@domain“ (alle Konten der Domain, z. B. für Tests). */
+function istAdmin(email: string, admins: string[]): boolean {
+  const e = email.toLowerCase();
+  return admins.some((roh) => {
+    const a = roh.trim().toLowerCase();
+    return a.startsWith("@") ? e.endsWith(a) : a === e;
+  });
 }
 
 function istConstraintFehler(fehler: unknown): fehler is Error {

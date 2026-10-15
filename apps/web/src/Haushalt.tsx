@@ -1,22 +1,42 @@
 import { useQuery } from "@powersync/react";
-import { Check, Copy, LogOut, Share2, UserPlus } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Check,
+  Copy,
+  DoorOpen,
+  LogOut,
+  Share2,
+  ShieldCheck,
+  UserPlus,
+} from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { AdminPanel, useIstAdmin } from "./AdminPanel";
 import { authClient } from "./auth";
 import { Darstellung } from "./Darstellung";
+import { HaushaltVerlassen } from "./HaushaltVerlassen";
+import type { MeinHaushalt } from "./haushaltwahl";
 import { vergessen } from "./nutzer";
 import { useStandardPortionen } from "./plan/daten";
 import { trennenUndLeeren } from "./powersync";
 import { PortionenWahl } from "./rezepte/RezeptDetail";
 
-/** Bereich „Haushalt“: Mitglieder, Einladen, Konto. */
+/** Bereich „Haushalt“: Haushalt wechseln/verlassen, Mitglieder, Einladen, Konto. */
 export function Haushalt({
   haushaltId,
   name,
+  haushalte,
+  wechseln,
 }: {
   haushaltId: string;
   name: string;
+  haushalte: MeinHaushalt[];
+  wechseln: () => void;
 }) {
+  const [verlassenOffen, setVerlassenOffen] = useState(false);
+  const [adminOffen, setAdminOffen] = useState(false);
+  const admin = useIstAdmin();
+  const haushalt = haushalte.find((h) => h.id === haushaltId);
   const { data: mitglieder } = useQuery<{
     id: string;
     anzeigename: string;
@@ -34,6 +54,37 @@ export function Haushalt({
 
   return (
     <div className="space-y-6 pt-2">
+      <section>
+        <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">
+          Haushalt
+        </h2>
+        <div className="divide-y rounded-xl border bg-card">
+          <button
+            type="button"
+            onClick={wechseln}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-muted"
+          >
+            <span className="flex-1">
+              <span className="block font-medium">{haushalt?.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {haushalte.length > 1
+                  ? `${haushalte.length} Haushalte – antippen zum Wechseln`
+                  : "Wechseln oder weiteren hinzufügen"}
+              </span>
+            </span>
+            <ArrowLeftRight className="size-5 text-muted-foreground" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setVerlassenOffen(true)}
+            className="flex w-full items-center gap-3 px-4 py-3 text-left text-destructive active:bg-muted"
+          >
+            <DoorOpen className="size-5" />
+            <span className="flex-1 font-medium">Haushalt verlassen</span>
+          </button>
+        </div>
+      </section>
+
       <section>
         <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">
           Mitglieder
@@ -61,6 +112,28 @@ export function Haushalt({
 
       <Darstellung />
 
+      {admin && (
+        <section>
+          <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">
+            Admin
+          </h2>
+          <button
+            type="button"
+            onClick={() => setAdminOffen(true)}
+            className="flex w-full items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left active:bg-muted"
+          >
+            <ShieldCheck className="size-5 text-primary" />
+            <span className="flex-1 font-medium">
+              Alle Nutzer und Haushalte
+            </span>
+          </button>
+          <AdminPanel
+            offen={adminOffen}
+            schliessen={() => setAdminOffen(false)}
+          />
+        </section>
+      )}
+
       <section>
         <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">
           Konto
@@ -78,6 +151,13 @@ export function Haushalt({
           Server bleiben sie erhalten.
         </p>
       </section>
+      <HaushaltVerlassen
+        offen={verlassenOffen}
+        schliessen={() => setVerlassenOffen(false)}
+        haushaltId={haushaltId}
+        name={haushalt?.name ?? ""}
+        mitglieder={mitglieder.length}
+      />
     </div>
   );
 }

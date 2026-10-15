@@ -307,10 +307,14 @@ function Uebersicht({
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-3">
-          {treffer.map((r) => {
+          {treffer.map((r, i) => {
             const v = kochbar.get(r.id);
             return (
-              <li key={r.id}>
+              <li
+                key={r.id}
+                className="einblenden"
+                style={{ "--i": i } as React.CSSProperties}
+              >
                 <button
                   type="button"
                   onClick={() => gehe([r.id])}

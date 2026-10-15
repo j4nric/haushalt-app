@@ -88,10 +88,11 @@ export function AufDieListe({
     const anzahl = await zutatenAufListe(db, {
       haushaltId,
       nutzerId,
+      // Nur der Name kommt auf die Liste – die Mengen hier sind zur Orientierung.
       zutaten: gewaehlt.map((v) => ({
         name: v.name,
-        menge: v.listenEinheit ? v.zutat.menge : null,
-        einheit: v.zutat.menge != null ? v.listenEinheit : null,
+        menge: null,
+        einheit: null,
       })),
     });
     schliessen();

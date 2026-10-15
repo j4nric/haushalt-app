@@ -24,6 +24,7 @@ app.route(
     sql,
     auth,
     importLokalErlaubt: env.importLokalErlaubt,
+    adminEmails: env.adminEmails,
   }),
 );
 // In Produktion liefert das API auch das Frontend aus (siehe Dockerfile).

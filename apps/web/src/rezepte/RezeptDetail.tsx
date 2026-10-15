@@ -298,21 +298,15 @@ export function RezeptDetail({
                 )}
               >
                 <span className="w-20 shrink-0 text-right font-semibold tabular-nums">
-                  {/* Optionale zeigen die Menge mit in der Klammer: „(100 g Salami)“. */}
-                  {!z.optional && (
-                    <>
-                      {z.menge != null &&
-                        formatiereZutatMenge(z.menge * faktor)}{" "}
-                      {z.einheit &&
-                        einheitAnzeige(
-                          z.einheit,
-                          z.menge != null ? z.menge * faktor : null,
-                        )}
-                    </>
-                  )}
+                  {z.menge != null && formatiereZutatMenge(z.menge * faktor)}{" "}
+                  {z.einheit &&
+                    einheitAnzeige(
+                      z.einheit,
+                      z.menge != null ? z.menge * faktor : null,
+                    )}
                 </span>
                 <span>
-                  {z.optional ? `(${zutatAlsText(z, faktor)}` : z.name}
+                  {z.optional ? `(${z.name}` : z.name}
                   {z.zusatz && (
                     <span className="text-muted-foreground">, {z.zusatz}</span>
                   )}
