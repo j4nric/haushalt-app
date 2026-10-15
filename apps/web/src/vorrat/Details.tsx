@@ -26,6 +26,7 @@ import {
   mindestbestandPruefen,
 } from "../vorratsaktionen";
 import { stueck, type VorratsZeile, vorratVon } from "./daten";
+import type { Gericht, Lagerort } from "./gerichte";
 import { Zaehler } from "./Zaehler";
 
 const EINHEIT_NAME: Record<Einheit, string> = {
@@ -100,6 +101,10 @@ function Formular({
   const [offen, setOffen] = useState(vorrat.angebrochen);
   const [mindest, setMindest] = useState(zeile.mindestbestand ?? 0);
   const [loeschenFragen, setLoeschenFragen] = useState(false);
+  const [gericht, setGericht] = useState<Gericht | null>(zeile.gericht);
+  const [lagerort, setLagerort] = useState<Lagerort>(
+    zeile.lagerort ?? (zeile.kategorie === "tiefkuehl" ? "tk" : "kuehlschrank"),
+  );
 
   async function speichern() {
     const neuerName = ersterBuchstabeGross(name.trim());
@@ -128,7 +133,8 @@ function Formular({
         }
       }
       await tx.execute(
-        `UPDATE artikel SET name = ?, kategorie = ?, packung_menge = ?, packung_einheit = ?, mindestbestand = ?
+        `UPDATE artikel SET name = ?, kategorie = ?, packung_menge = ?, packung_einheit = ?, mindestbestand = ?,
+                gericht = ?, lagerort = ?, eingelagert_am = ?, archiviert = CASE WHEN ? = 'rest' THEN 1 ELSE archiviert END
           WHERE id = ?`,
         [
           neuerName,
@@ -136,6 +142,15 @@ function Formular({
           packung?.menge ?? null,
           packung?.einheit ?? null,
           mindest > 0 ? mindest : null,
+          gericht,
+          gericht ? lagerort : null,
+          // Neu eingelagert (z. B. eingefroren): Die Zeit läuft ab jetzt.
+          gericht && (lagerort !== zeile.lagerort || !zeile.eingelagert_am)
+            ? new Date().toISOString()
+            : gericht
+              ? zeile.eingelagert_am
+              : null,
+          gericht,
           zeile.id,
         ],
       );
@@ -185,7 +200,11 @@ function Formular({
           <div>
             <p className="font-medium">Bestand</p>
             <p className="text-xs text-muted-foreground">
-              {vorrat.packung ? "Packungen" : "Stück"}
+              {gericht === "rest"
+                ? "Portionen"
+                : vorrat.packung
+                  ? "Packungen"
+                  : "Stück"}
             </p>
           </div>
           <Zaehler
@@ -236,6 +255,57 @@ function Formular({
             label={`Mindestbestand ${zeile.name}`}
             leer="–"
           />
+        </div>
+
+        <div className="space-y-2 rounded-xl border p-3">
+          <p className="text-sm font-medium">Art</p>
+          <fieldset
+            aria-label="Art"
+            className="m-0 grid min-w-0 grid-cols-3 gap-1 rounded-full border-0 bg-muted p-1"
+          >
+            {(
+              [
+                [null, "Produkt"],
+                ["fertig", "Fertiggericht"],
+                ["rest", "Rest"],
+              ] as const
+            ).map(([wert, text]) => (
+              <button
+                key={text}
+                type="button"
+                aria-pressed={gericht === wert}
+                onClick={() => setGericht(wert)}
+                className={cn(
+                  "rounded-full px-2 py-1.5 text-sm",
+                  gericht === wert
+                    ? "bg-background font-medium shadow-xs"
+                    : "text-muted-foreground",
+                )}
+              >
+                {text}
+              </button>
+            ))}
+          </fieldset>
+          {gericht && (
+            <div className="flex gap-2 pt-1">
+              {(["kuehlschrank", "tk"] as const).map((ort) => (
+                <button
+                  key={ort}
+                  type="button"
+                  aria-pressed={lagerort === ort}
+                  onClick={() => setLagerort(ort)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm",
+                    lagerort === ort
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "bg-card",
+                  )}
+                >
+                  {ort === "tk" ? "Eingefroren" : "Kühlschrank"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-3 rounded-xl border p-3">

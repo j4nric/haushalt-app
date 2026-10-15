@@ -10,17 +10,24 @@ export type VorratsZeile = {
   packung_menge: number | null;
   packung_einheit: string | null;
   angebrochen: number;
+  gericht: "fertig" | "rest" | null;
+  lagerort: "kuehlschrank" | "tk" | null;
+  eingelagert_am: string | null;
   bestand: number;
   auf_liste: number;
 };
 
 export const VORRAT_ABFRAGE = `SELECT a.id, a.name, a.kategorie, a.mindestbestand, a.packung_menge, a.packung_einheit,
-       COALESCE(a.angebrochen, 0) AS angebrochen,
+       COALESCE(a.angebrochen, 0) AS angebrochen, a.gericht, a.lagerort, a.eingelagert_am,
        COALESCE((SELECT SUM(b.menge) FROM vorratsbuchungen b WHERE b.artikel_id = a.id), 0) AS bestand,
        EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
   FROM artikel a
  WHERE a.haushalt_id = ? AND a.im_vorrat = 1
  ORDER BY a.name`;
+
+/** Aufgegessene Reste verschwinden – sie waren ja einmalig. */
+export const istSichtbar = (z: VorratsZeile) =>
+  !(z.gericht === "rest" && z.bestand <= 0);
 
 export function vorratVon(z: VorratsZeile): {
   bestand: number;

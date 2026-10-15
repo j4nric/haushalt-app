@@ -17,7 +17,11 @@ export type SammlungsRezept = {
   zutaten: string;
   /** Gewürze und Kräuter, Mengen optional. */
   gewuerze: string;
-  /** Ein Schritt je Zeile, kurz und klar. */
+  /**
+   * Ein Schritt je Zeile, kurz und klar. Garzeiten immer als Zahl mit Einheit
+   * („20 Minuten köcheln“, „8–10 Minuten“, „1 Stunde“) – daraus werden im Kochmodus
+   * Timer. Nicht „nach Packungsangabe“.
+   */
   schritte: string;
 };
 

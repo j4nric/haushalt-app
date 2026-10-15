@@ -21,7 +21,7 @@ const REZEPTE: SammlungsRezept[] = [
 Teig 10 Minuten quellen lassen.
 Etwas Butter in einer beschichteten Pfanne erhitzen.
 Eine kleine Kelle Teig hineingeben und durch Schwenken dünn verteilen.
-Pfannkuchen goldbraun backen, wenden und die zweite Seite kurz backen.
+Pfannkuchen 2–3 Minuten goldbraun backen, wenden und die zweite Seite 1–2 Minuten backen.
 Mit Zimt und Zucker oder Apfelmus servieren.`,
   },
   {
@@ -43,9 +43,9 @@ Mit Zimt und Zucker oder Apfelmus servieren.`,
     schritte: `Eier trennen, Eiweiß mit einer Prise Salz steif schlagen.
 Eigelb, Mehl, Milch, Zucker und Vanillezucker glatt rühren, Eischnee unterheben.
 Butter in einer großen Pfanne schmelzen, Teig hineingießen und Rosinen darüberstreuen.
-Bei mittlerer Hitze stocken lassen, bis die Unterseite gebräunt ist.
-Teig vierteln, wenden und mit zwei Pfannenwendern in Stücke reißen.
-Mit etwas Zucker kurz karamellisieren lassen.
+Bei mittlerer Hitze 5–6 Minuten stocken lassen, bis die Unterseite gebräunt ist.
+Teig vierteln, wenden, 3–4 Minuten backen und mit zwei Pfannenwendern in Stücke reißen.
+Mit etwas Zucker 1–2 Minuten karamellisieren lassen.
 Mit Puderzucker bestäuben und mit Apfelmus servieren.`,
   },
   {
@@ -66,7 +66,7 @@ Zimt
     schritte: `Milch mit Zucker, Vanillezucker, Butter und einer Prise Salz aufkochen.
 Milchreis einrühren und einmal aufkochen lassen.
 Bei kleinster Hitze mit Deckel etwa 30 Minuten quellen lassen, dabei gelegentlich umrühren.
-Milchreis kurz ruhen lassen, bis er schön cremig ist.
+Milchreis 5 Minuten ruhen lassen, bis er schön cremig ist.
 Mit Apfelmus sowie Zimt und Zucker servieren.`,
   },
   {
@@ -85,9 +85,9 @@ Mit Apfelmus sowie Zimt und Zucker servieren.`,
     gewuerze: `Zimt
 Zucker`,
     schritte: `Eier, Milch, Zucker und Vanillezucker in einem tiefen Teller verquirlen.
-Toastscheiben kurz von beiden Seiten in der Eiermilch einweichen.
+Toastscheiben von jeder Seite 30 Sekunden in der Eiermilch einweichen.
 Butter in einer Pfanne erhitzen.
-Brotscheiben darin von jeder Seite goldbraun braten.
+Brotscheiben darin von jeder Seite 2–3 Minuten goldbraun braten.
 Mit Zimt und Zucker bestreuen und warm servieren, gern mit Apfelmus.`,
   },
   {
@@ -109,7 +109,7 @@ Pfeffer
 Masse in einem Sieb gut ausdrücken.
 Mit Eiern und Mehl vermengen, mit Salz, Pfeffer und Muskat würzen.
 Öl in einer großen Pfanne erhitzen.
-Je einen Esslöffel Teig hineingeben, flach drücken und von beiden Seiten knusprig braten.
+Je einen Esslöffel Teig hineingeben, flach drücken und von jeder Seite 3–4 Minuten knusprig braten.
 Puffer auf Küchenpapier abtropfen lassen und mit Apfelmus servieren.`,
   },
   {
@@ -156,10 +156,10 @@ Mit Kartoffelsalat und Zitronenspalten servieren.`,
 Pfeffer
 (Paprikapulver)`,
     schritte: `Gekochte Kartoffeln pellen und in Scheiben schneiden, Zwiebel würfeln.
-Öl in einer großen Pfanne erhitzen und die Kartoffeln darin rundum knusprig braten.
-Zwiebel zugeben, kurz mitbraten und mit Salz, Pfeffer und Paprika würzen.
+Öl in einer großen Pfanne erhitzen und die Kartoffeln darin rundum 10–12 Minuten knusprig braten.
+Zwiebel zugeben, 2 Minuten mitbraten und mit Salz, Pfeffer und Paprika würzen.
 Eier mit Milch, Salz und Pfeffer verquirlen.
-Butter in einer zweiten Pfanne schmelzen, Eier hineingeben und bei kleiner Hitze langsam stocken lassen.
+Butter in einer zweiten Pfanne schmelzen, Eier hineingeben und bei kleiner Hitze 3–4 Minuten langsam stocken lassen.
 Schnittlauch schneiden, über das Rührei streuen und mit den Bratkartoffeln servieren.`,
   },
   {
@@ -185,7 +185,7 @@ Paprikapulver
 Fleisch im Öl rundum 6–8 Minuten braten, bis es durch ist.
 Paprika in Streifen schneiden, Tomaten würfeln, Salat in Streifen schneiden, Mais abtropfen lassen.
 Joghurt mit Salz und etwas Knoblauch verrühren.
-Wraps in einer trockenen Pfanne kurz erwärmen.
+Wraps in einer trockenen Pfanne je 30 Sekunden erwärmen.
 Wraps mit Joghurt bestreichen, mit Fleisch, Gemüse und Käse belegen und einrollen.`,
   },
   {
@@ -298,7 +298,7 @@ Oregano`,
 Zwiebel in feine Ringe schneiden und mit dem Gemüse und den Oliven mischen.
 Öl, Essig, Salz, Pfeffer und Oregano zu einem Dressing verrühren und unterheben.
 Feta in Würfel brechen und auf den Salat geben.
-Fladenbrot im Ofen kurz aufbacken und dazu servieren.`,
+Fladenbrot im Ofen bei 200 °C 5 Minuten aufbacken und dazu servieren.`,
   },
   {
     id: "caesar-salad",
@@ -318,7 +318,7 @@ Fladenbrot im Ofen kurz aufbacken und dazu servieren.`,
 3 EL Olivenöl`,
     gewuerze: `Salz
 Pfeffer`,
-    schritte: `Toastbrot würfeln und in 1 EL Öl goldbraun rösten.
+    schritte: `Toastbrot würfeln und in 1 EL Öl 3–4 Minuten goldbraun rösten.
 Hähnchenbrust salzen, pfeffern und im restlichen Öl von beiden Seiten 10–12 Minuten braten, dann in Streifen schneiden.
 Mayonnaise, Joghurt, Zitronensaft, Senf, gepressten Knoblauch und die Hälfte des fein geriebenen Parmesans verrühren und abschmecken.
 Salat waschen und in breite Streifen schneiden.
@@ -343,7 +343,7 @@ Mit dem übrigen Parmesan bestreuen.`,
     gewuerze: `Salz
 Pfeffer
 (Zitronensaft)`,
-    schritte: `Nudeln in Salzwasser bissfest kochen, in den letzten 2 Minuten die Erbsen mitgaren.
+    schritte: `Nudeln in Salzwasser 10–12 Minuten bissfest kochen, in den letzten 2 Minuten die Erbsen mitgaren.
 Alles abgießen, kalt abspülen und abtropfen lassen.
 Paprika und Gewürzgurken würfeln, Mais und Thunfisch abtropfen lassen.
 Joghurt mit Mayonnaise, etwas Gurkenwasser, Salz und Pfeffer verrühren.
@@ -369,7 +369,7 @@ Mindestens 15 Minuten durchziehen lassen und nochmals abschmecken.`,
 Pfeffer
 (Zucker)`,
     schritte: `Kartoffeln in der Schale etwa 20 Minuten garen, Eier 10 Minuten hart kochen.
-Kartoffeln pellen, abkühlen lassen und in Scheiben schneiden.
+Kartoffeln pellen, 10 Minuten abkühlen lassen und in Scheiben schneiden.
 Eier pellen und würfeln, Gewürzgurken und Zwiebel fein würfeln.
 Mayonnaise, Joghurt, Senf und etwas Gurkenwasser verrühren, mit Salz, Pfeffer und einer Prise Zucker abschmecken.
 Alles mit den Kartoffeln mischen und 20 Minuten ziehen lassen.
@@ -396,8 +396,8 @@ Pfeffer`,
     schritte: `Hackfleisch zu 5 flachen Patties formen, in der Mitte leicht eindrücken.
 Tomaten, Zwiebel und Gewürzgurken in Scheiben schneiden, Salat waschen.
 Patties im heißen Öl von jeder Seite 3–4 Minuten braten, dann salzen und pfeffern.
-Kurz vor Ende je eine Scheibe Käse auflegen und schmelzen lassen.
-Brötchen aufschneiden und mit den Schnittflächen in der Pfanne kurz anrösten.
+Je eine Scheibe Käse auflegen und 1 Minute schmelzen lassen.
+Brötchen aufschneiden und mit den Schnittflächen in der Pfanne 1–2 Minuten anrösten.
 Brötchen mit Ketchup und Mayonnaise bestreichen, mit Salat, Patty, Tomate, Zwiebel und Gurke belegen.`,
   },
   {
@@ -460,7 +460,7 @@ Mit dem Kräuterquark servieren.`,
 1 Ciabatta`,
     gewuerze: `Salz
 Pfeffer`,
-    schritte: `Ciabatta im Ofen nach Packungsangabe aufbacken.
+    schritte: `Ciabatta im Ofen bei 200 °C 8–10 Minuten aufbacken.
 Tomaten und Mozzarella in Scheiben schneiden.
 Abwechselnd dachziegelartig auf einer Platte anrichten.
 Basilikumblätter dazwischenstecken.
@@ -484,10 +484,10 @@ Mit dem warmen Ciabatta servieren.`,
 3 EL Butter`,
     gewuerze: `Salz
 (Puderzucker)`,
-    schritte: `Mehl, Eier, Milch, 1 EL Zucker und eine Prise Salz glatt verrühren und kurz quellen lassen.
+    schritte: `Mehl, Eier, Milch, 1 EL Zucker und eine Prise Salz glatt verrühren und 10 Minuten quellen lassen.
 Erdbeeren waschen, putzen und in Stücke schneiden.
 Quark mit Joghurt, restlichem Zucker und Vanillezucker cremig rühren.
-Butter portionsweise in einer Pfanne erhitzen und dünne Pfannkuchen ausbacken.
+Butter portionsweise in einer Pfanne erhitzen und dünne Pfannkuchen je Seite 1–2 Minuten ausbacken.
 Pfannkuchen mit Quark bestreichen, Erdbeeren darauf verteilen und zusammenklappen.
 Nach Belieben mit Puderzucker bestäuben.`,
   },
@@ -508,7 +508,7 @@ Nach Belieben mit Puderzucker bestäuben.`,
     schritte: `Milch mit Zucker, Vanillezucker, Butter und einer Prise Salz aufkochen.
 Topf vom Herd ziehen und den Grieß mit dem Schneebesen einrühren.
 Bei kleiner Hitze unter Rühren 3–5 Minuten quellen lassen, bis der Brei andickt.
-Kurz ruhen lassen und mit Zimt oder warmen Himbeeren servieren.`,
+2 Minuten ruhen lassen und mit Zimt oder warmen Himbeeren servieren.`,
   },
   {
     id: "ofenkartoffel-spalten-mit-dip",
@@ -551,10 +551,10 @@ Spalten mit dem Dip und nach Belieben Gurkensticks servieren.`,
 Pfeffer
 Muskat`,
     schritte: `Kartoffeln schälen und in Salzwasser etwa 20 Minuten garen.
-Zwiebel und Knoblauch fein würfeln und in 1 EL Butter glasig dünsten.
-Spinat zugeben, bei mittlerer Hitze auftauen lassen und mit Sahne verfeinern.
+Zwiebel und Knoblauch fein würfeln und in 1 EL Butter 2–3 Minuten glasig dünsten.
+Spinat zugeben, bei mittlerer Hitze 8–10 Minuten auftauen lassen und mit Sahne verfeinern.
 Spinat mit Salz, Pfeffer und Muskat abschmecken.
-Restliche Butter in einer Pfanne erhitzen und die Eier als Spiegeleier braten.
+Restliche Butter in einer Pfanne erhitzen und die Eier 4–5 Minuten als Spiegeleier braten.
 Kartoffeln abgießen und mit Spinat und Spiegelei servieren.`,
   },
   {
@@ -578,10 +578,10 @@ Pfeffer
 (Kreuzkümmel)
 (Minze)`,
     schritte: `Brühe aufkochen, über den Couscous gießen und abgedeckt 5 Minuten quellen lassen.
-Couscous mit einer Gabel auflockern und abkühlen lassen.
+Couscous mit einer Gabel auflockern und 10 Minuten abkühlen lassen.
 Gurke, Paprika und Tomaten klein schneiden, Frühlingszwiebeln in Ringe schneiden, Petersilie hacken.
 Zitronensaft mit Öl, Salz, Pfeffer und Kreuzkümmel verrühren.
-Alles mit dem Couscous mischen und kurz durchziehen lassen.
+Alles mit dem Couscous mischen und 10 Minuten durchziehen lassen.
 Nach Belieben mit zerbröseltem Feta servieren.`,
   },
 ];

@@ -19,6 +19,13 @@ import { ARTIKEL_STAND } from "@/rezepte/daten";
 import type { GespeicherteZutat } from "./aktionen";
 
 /** Ganze verbrauchte Packungen und ob danach eine offen ist. */
+/** Was übrig ist: Portionen, wo es hinkommt und ob es morgen geplant wird. */
+export type Reste = {
+  portionen: number;
+  lagerort: "kuehlschrank" | "tk";
+  morgen: boolean;
+};
+
 export type Abbuchung = {
   artikelId: string;
   menge: number;
@@ -74,9 +81,10 @@ export function Abbuchen({
   offen: boolean;
   zeilen: Zeile[];
   schliessen: () => void;
-  bestaetigen: (abbuchen: Abbuchung[]) => void;
+  bestaetigen: (abbuchen: Abbuchung[], reste: Reste | null) => void;
 }) {
   const [wahl, setWahl] = useState<Record<string, Wahl> | null>(null);
+  const [reste, setReste] = useState<Reste>(KEINE_RESTE);
   const [aus, setAus] = useState<Set<string> | null>(null);
   const werte =
     wahl ??
@@ -102,7 +110,9 @@ export function Abbuchen({
   function zuruecksetzen() {
     setWahl(null);
     setAus(null);
+    setReste(KEINE_RESTE);
   }
+  const resteWahl = reste.portionen > 0 ? reste : null;
 
   function fertig() {
     bestaetigen(
@@ -125,6 +135,7 @@ export function Abbuchen({
                   .angebrochen,
               ),
         ),
+      resteWahl,
     );
     zuruecksetzen();
   }
@@ -140,112 +151,225 @@ export function Abbuchen({
       }}
     >
       <DrawerContent>
-        <div className="mx-auto w-full max-w-lg">
+        <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
           <DrawerHeader>
-            <DrawerTitle>Aus dem Vorrat abbuchen?</DrawerTitle>
+            <DrawerTitle>
+              {zeilen.length > 0
+                ? "Aus dem Vorrat abbuchen?"
+                : "Guten Appetit!"}
+            </DrawerTitle>
             <DrawerDescription>
-              Ganze Packungen, die leer sind – und ob eine offen ist.
+              {zeilen.length > 0
+                ? "Ganze Packungen, die leer sind – und ob eine offen ist."
+                : "Ist noch etwas übrig?"}
             </DrawerDescription>
           </DrawerHeader>
-          <ul className="max-h-[50dvh] space-y-1 overflow-y-auto px-4">
-            {zeilen.map((z) => {
-              const id = z.artikel.id;
-              const an = !abgewaehlt.has(id);
-              const w = werte[id] ?? { ganze: 0, angebrochen: false };
-              return (
-                <li key={id} className="flex items-center gap-2 py-1.5">
-                  <input
-                    type="checkbox"
-                    checked={an}
-                    aria-label={`${z.name} abbuchen`}
-                    onChange={() => {
-                      const neu = new Set(abgewaehlt);
-                      if (an) {
-                        neu.add(id);
-                      } else {
-                        neu.delete(id);
-                      }
-                      setAus(neu);
-                    }}
-                    className="size-5 shrink-0 accent-[var(--primary)]"
-                  />
-                  <span className="min-w-0 flex-1">
-                    {z.name}
-                    <span className="block text-xs text-muted-foreground">
-                      Da: {bestandKurz(vorratVon(z.artikel))}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4">
+            <ul className="space-y-1">
+              {zeilen.map((z) => {
+                const id = z.artikel.id;
+                const an = !abgewaehlt.has(id);
+                const w = werte[id] ?? { ganze: 0, angebrochen: false };
+                return (
+                  <li key={id} className="flex items-center gap-2 py-1.5">
+                    <input
+                      type="checkbox"
+                      checked={an}
+                      aria-label={`${z.name} abbuchen`}
+                      onChange={() => {
+                        const neu = new Set(abgewaehlt);
+                        if (an) {
+                          neu.add(id);
+                        } else {
+                          neu.delete(id);
+                        }
+                        setAus(neu);
+                      }}
+                      className="size-5 shrink-0 accent-[var(--primary)]"
+                    />
+                    <span className="min-w-0 flex-1">
+                      {z.name}
+                      <span className="block text-xs text-muted-foreground">
+                        Da: {bestandKurz(vorratVon(z.artikel))}
+                      </span>
                     </span>
-                  </span>
-                  <div
-                    className={cn(
-                      "flex items-center gap-1",
-                      !an && "pointer-events-none opacity-40",
-                    )}
-                  >
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8 rounded-full"
-                      aria-label={`${z.name} eine weniger`}
-                      disabled={!an || w.ganze <= 0}
-                      onClick={() => aendern(id, { ganze: w.ganze - 1 })}
-                    >
-                      <Minus />
-                    </Button>
-                    <span
-                      className="w-6 text-center tabular-nums"
-                      data-testid={`leer-${z.name}`}
-                    >
-                      {w.ganze}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="size-8 rounded-full"
-                      aria-label={`${z.name} eine mehr`}
-                      disabled={!an || w.ganze >= z.artikel.bestand}
-                      onClick={() => aendern(id, { ganze: w.ganze + 1 })}
-                    >
-                      <Plus />
-                    </Button>
-                    <button
-                      type="button"
-                      aria-pressed={w.angebrochen}
-                      aria-label={`${z.name} offen`}
-                      disabled={!an}
-                      onClick={() =>
-                        aendern(id, { angebrochen: !w.angebrochen })
-                      }
+                    <div
                       className={cn(
-                        "ml-1 rounded-full border px-2.5 py-1 text-xs",
-                        w.angebrochen
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "bg-card text-muted-foreground",
+                        "flex items-center gap-1",
+                        !an && "pointer-events-none opacity-40",
                       )}
                     >
-                      offen
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <DrawerFooter className="grid grid-cols-2">
-            <Button
-              variant="outline"
-              className="h-12 rounded-full"
-              onClick={() => {
-                bestaetigen([]);
-                zuruecksetzen();
-              }}
-            >
-              Nichts abbuchen
-            </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-8 rounded-full"
+                        aria-label={`${z.name} eine weniger`}
+                        disabled={!an || w.ganze <= 0}
+                        onClick={() => aendern(id, { ganze: w.ganze - 1 })}
+                      >
+                        <Minus />
+                      </Button>
+                      <span
+                        className="w-6 text-center tabular-nums"
+                        data-testid={`leer-${z.name}`}
+                      >
+                        {w.ganze}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="size-8 rounded-full"
+                        aria-label={`${z.name} eine mehr`}
+                        disabled={!an || w.ganze >= z.artikel.bestand}
+                        onClick={() => aendern(id, { ganze: w.ganze + 1 })}
+                      >
+                        <Plus />
+                      </Button>
+                      <button
+                        type="button"
+                        aria-pressed={w.angebrochen}
+                        aria-label={`${z.name} offen`}
+                        disabled={!an}
+                        onClick={() =>
+                          aendern(id, { angebrochen: !w.angebrochen })
+                        }
+                        className={cn(
+                          "ml-1 rounded-full border px-2.5 py-1 text-xs",
+                          w.angebrochen
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "bg-card text-muted-foreground",
+                        )}
+                      >
+                        offen
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <ResteWahl reste={reste} aendern={setReste} />
+          </div>
+          <DrawerFooter
+            className={cn(zeilen.length > 0 ? "grid grid-cols-2" : "grid")}
+          >
+            {zeilen.length > 0 && (
+              <Button
+                variant="outline"
+                className="h-12 rounded-full"
+                onClick={() => {
+                  bestaetigen([], resteWahl);
+                  zuruecksetzen();
+                }}
+              >
+                Nichts abbuchen
+              </Button>
+            )}
             <Button className="h-12 rounded-full" onClick={fertig}>
-              <ChefHat /> Abbuchen
+              <ChefHat /> {zeilen.length > 0 ? "Abbuchen" : "Fertig"}
             </Button>
           </DrawerFooter>
         </div>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+const KEINE_RESTE: Reste = {
+  portionen: 0,
+  lagerort: "kuehlschrank",
+  morgen: false,
+};
+
+/** „Reste übrig?“ – Portionen, Kühlschrank oder eingefroren, morgen einplanen. */
+function ResteWahl({
+  reste,
+  aendern,
+}: {
+  reste: Reste;
+  aendern: (r: Reste) => void;
+}) {
+  const chip = (an: boolean) =>
+    cn(
+      "rounded-full border px-3 py-1.5 text-sm",
+      an ? "border-primary bg-primary text-primary-foreground" : "bg-card",
+    );
+  return (
+    <section
+      aria-label="Reste"
+      className="mt-3 space-y-3 rounded-xl border bg-card p-3"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-medium">Reste übrig?</p>
+          <p className="text-xs text-muted-foreground">
+            Landen als Gericht im Vorrat.
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9 rounded-full"
+            aria-label="Eine Portion weniger"
+            disabled={reste.portionen <= 0}
+            onClick={() =>
+              aendern({ ...reste, portionen: reste.portionen - 1 })
+            }
+          >
+            <Minus />
+          </Button>
+          <span
+            className="w-16 text-center text-sm tabular-nums"
+            data-testid="reste-portionen"
+          >
+            {reste.portionen === 0
+              ? "keine"
+              : `${reste.portionen} ${reste.portionen === 1 ? "Portion" : "Port."}`}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            className="size-9 rounded-full"
+            aria-label="Eine Portion mehr"
+            onClick={() =>
+              aendern({ ...reste, portionen: reste.portionen + 1 })
+            }
+          >
+            <Plus />
+          </Button>
+        </div>
+      </div>
+      {reste.portionen > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={reste.lagerort === "kuehlschrank"}
+            className={chip(reste.lagerort === "kuehlschrank")}
+            onClick={() => aendern({ ...reste, lagerort: "kuehlschrank" })}
+          >
+            Kühlschrank
+          </button>
+          <button
+            type="button"
+            aria-pressed={reste.lagerort === "tk"}
+            className={chip(reste.lagerort === "tk")}
+            onClick={() => aendern({ ...reste, lagerort: "tk", morgen: false })}
+          >
+            Einfrieren
+          </button>
+          {reste.lagerort === "kuehlschrank" && (
+            <label className="ml-auto flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={reste.morgen}
+                onChange={() => aendern({ ...reste, morgen: !reste.morgen })}
+                className="size-4 accent-[var(--primary)]"
+              />
+              Morgen einplanen
+            </label>
+          )}
+        </div>
+      )}
+    </section>
   );
 }

@@ -20,9 +20,9 @@ const REZEPTE: SammlungsRezept[] = [
 1 TL Garam Masala
 Salz
 (Koriander)`,
-    schritte: `Reis nach Packungsangabe kochen.
-Zwiebel, Knoblauch und Ingwer fein hacken und im Öl glasig anschwitzen.
-Gewürze kurz mitrösten.
+    schritte: `Reis in Salzwasser 15 Minuten garen.
+Zwiebel, Knoblauch und Ingwer fein hacken und im Öl 3 Minuten glasig anschwitzen.
+Gewürze 1 Minute mitrösten.
 Linsen abspülen, mit Tomaten, Kokosmilch und 300 ml Wasser dazugeben.
 Etwa 15 Minuten köcheln lassen, bis die Linsen zerfallen, dabei gelegentlich umrühren.
 Mit Salz abschmecken und mit Reis servieren, nach Belieben Koriander darüberstreuen.`,
@@ -47,12 +47,12 @@ Mit Salz abschmecken und mit Reis servieren, nach Belieben Koriander darüberstr
 1 TL Kreuzkümmel
 Salz
 (Chili)`,
-    schritte: `Reis nach Packungsangabe kochen.
-Zwiebel, Knoblauch und Ingwer hacken und im Öl anbraten.
-Gewürze zugeben und kurz mitrösten.
+    schritte: `Reis in Salzwasser 15 Minuten garen.
+Zwiebel, Knoblauch und Ingwer hacken und im Öl 3 Minuten anbraten.
+Gewürze zugeben und 1 Minute mitrösten.
 Tomaten und Kokosmilch angießen, Kichererbsen abgießen und dazugeben.
 10 Minuten köcheln lassen.
-Spinat unterheben, zusammenfallen lassen und mit Salz abschmecken.
+Spinat unterheben, 2 Minuten zusammenfallen lassen und mit Salz abschmecken.
 Mit dem Reis servieren.`,
   },
   {
@@ -149,7 +149,7 @@ Pfeffer`,
     schritte: `Ofen auf 180 °C Umluft vorheizen.
 Couscous mit heißer Brühe übergießen und 5 Minuten quellen lassen.
 Zucchini längs halbieren und mit einem Löffel aushöhlen, das Fruchtfleisch hacken.
-Zwiebel, Paprika und Zucchinifleisch im Olivenöl anbraten, mit Couscous und der Hälfte des Fetas mischen und würzen.
+Zwiebel, Paprika und Zucchinifleisch im Olivenöl 5 Minuten anbraten, mit Couscous und der Hälfte des Fetas mischen und würzen.
 Passierte Tomaten in eine Auflaufform geben, Zucchini hineinsetzen und füllen.
 Mit restlichem Feta bestreuen und 25 Minuten backen.`,
   },
@@ -173,7 +173,7 @@ Salz
 Pfeffer
 (Basilikum)`,
     schritte: `Aubergine, Zucchini, Paprika und Zwiebel in mundgerechte Würfel schneiden, Knoblauch hacken.
-Aubergine im Olivenöl kräftig anbraten, dann das übrige Gemüse zugeben.
+Aubergine im Olivenöl 5 Minuten kräftig anbraten, dann das übrige Gemüse zugeben.
 Tomaten, Kräuter und Lorbeer zufügen und alles salzen.
 Zugedeckt bei mittlerer Hitze 25 Minuten schmoren lassen.
 Lorbeer entfernen, mit Pfeffer abschmecken und mit Baguette servieren.`,
@@ -196,8 +196,8 @@ Salz
 Pfeffer
 (Kürbiskernöl)`,
     schritte: `Kürbis waschen, entkernen und mit Schale würfeln, Möhren schälen und klein schneiden.
-Zwiebel und Ingwer hacken und im Öl anschwitzen.
-Kürbis, Möhren und Curry dazugeben und kurz mitbraten.
+Zwiebel und Ingwer hacken und im Öl 3 Minuten anschwitzen.
+Kürbis, Möhren und Curry dazugeben und 2 Minuten mitbraten.
 Mit Brühe ablöschen und 15 Minuten weich kochen.
 Kokosmilch einrühren und alles fein pürieren.
 Abschmecken und nach Belieben mit ein paar Tropfen Kürbiskernöl servieren.`,
@@ -221,10 +221,10 @@ Abschmecken und nach Belieben mit ein paar Tropfen Kürbiskernöl servieren.`,
 Basilikum
 Salz
 Pfeffer`,
-    schritte: `Zwiebel und Knoblauch würfeln und im Olivenöl glasig dünsten.
+    schritte: `Zwiebel und Knoblauch würfeln und im Olivenöl 3 Minuten glasig dünsten.
 Tomaten und Brühe zugeben, mit Zucker, Salz und Pfeffer würzen und 15 Minuten köcheln lassen.
 Inzwischen je zwei Toastscheiben mit Käse belegen und außen dünn mit Butter bestreichen.
-Die Sandwiches in einer Pfanne von beiden Seiten goldbraun braten, bis der Käse schmilzt.
+Die Sandwiches in einer Pfanne je Seite 3 Minuten goldbraun braten, bis der Käse schmilzt.
 Suppe pürieren, Sahne einrühren und mit Basilikum abschmecken.
 Mit den Käsetoasts servieren.`,
   },
@@ -249,7 +249,7 @@ Salz
 Pfeffer
 (Petersilie)`,
     schritte: `Kartoffeln, Möhren und Sellerie schälen und würfeln, Lauch in Ringe und Zwiebel in Würfel schneiden.
-Zwiebel und Lauch in Butter andünsten.
+Zwiebel und Lauch in Butter 3 Minuten andünsten.
 Übriges Gemüse zugeben, mit Brühe auffüllen und 20 Minuten weich kochen.
 Etwa die Hälfte grob pürieren, sodass noch Stücke bleiben.
 Sahne einrühren, mit Majoran, Muskat, Salz und Pfeffer abschmecken.
@@ -276,7 +276,7 @@ Würstchen in Scheiben schneiden und in der Suppe 5 Minuten erwärmen.`,
 Salz
 Pfeffer
 1 Prise Zucker`,
-    schritte: `Zwiebel würfeln und im Öl anschwitzen.
+    schritte: `Zwiebel würfeln und im Öl 3 Minuten anschwitzen.
 Linsen abspülen, mit Brühe und Lorbeer zugeben und 15 Minuten köcheln lassen.
 Kartoffeln, Möhren und Sellerie schälen und würfeln, Lauch in Ringe schneiden und alles dazugeben.
 Mettwürste in den Topf legen und weitere 20 Minuten garen.
@@ -301,7 +301,7 @@ Mit Essig, Majoran, Salz, Pfeffer und einer Prise Zucker abschmecken.`,
 1 TL Majoran
 Salz
 Pfeffer`,
-    schritte: `Speck in einem großen Topf auslassen, gewürfelte Zwiebel darin anschwitzen.
+    schritte: `Speck in einem großen Topf 3 Minuten auslassen, gewürfelte Zwiebel darin 2 Minuten anschwitzen.
 Erbsen abspülen, mit Brühe und Lorbeer zugeben und zugedeckt 45 Minuten köcheln lassen.
 Möhren, Sellerie und Kartoffeln schälen und würfeln, Lauch in Ringe schneiden.
 Gemüse zugeben und weitere 25 Minuten garen, bis die Erbsen zerfallen.
@@ -354,7 +354,7 @@ Pfeffer`,
     schritte: `Kartoffeln schälen und in Salzwasser etwa 20 Minuten garen.
 Spargel schälen, holzige Enden abschneiden.
 Spargel in Wasser mit Salz, Zucker und etwas Butter 12 bis 15 Minuten bissfest kochen.
-Für die Hollandaise Butter schmelzen; Eigelbe mit 2 EL Wasser und etwas Zitronensaft über einem heißen Wasserbad cremig aufschlagen.
+Für die Hollandaise Butter schmelzen; Eigelbe mit 2 EL Wasser und etwas Zitronensaft über einem heißen Wasserbad etwa 5 Minuten cremig aufschlagen.
 Die flüssige Butter langsam unterschlagen, mit Salz, Pfeffer und Zitrone abschmecken.
 Spargel und Kartoffeln mit der Sauce anrichten, nach Belieben Petersilie darüberstreuen.`,
   },
@@ -378,7 +378,7 @@ Spargel und Kartoffeln mit der Sauce anrichten, nach Belieben Petersilie darübe
 1 TL Kreuzkümmel
 Salz`,
     schritte: `Kartoffeln schälen und in 2 cm große Würfel schneiden.
-Zwiebel, Knoblauch und Ingwer fein hacken und im Öl anbraten.
+Zwiebel, Knoblauch und Ingwer fein hacken und im Öl 3 Minuten anbraten.
 Gewürze und Kartoffeln zugeben und 2 Minuten mitrösten.
 Tomaten, Kokosmilch und 150 ml Wasser angießen und zugedeckt 20 Minuten köcheln lassen.
 Spinat einrühren und weitere 5 Minuten garen.
@@ -455,7 +455,7 @@ Teig ausrollen, in eine gefettete Quicheform legen, am Rand hochdrücken und mit
 Lauch in Ringe schneiden, Paprika würfeln und beides in einer Pfanne mit wenig Wasser 5 Minuten dünsten.
 Eier mit Schmand, Milch und der Hälfte des Käses verquirlen und kräftig würzen.
 Gemüse auf dem Teig verteilen, Eiermasse darübergießen und mit restlichem Käse bestreuen.
-35 bis 40 Minuten goldgelb backen und kurz abkühlen lassen.`,
+35 bis 40 Minuten goldgelb backen und 10 Minuten abkühlen lassen.`,
   },
   {
     id: "falafel-bowl",
@@ -481,7 +481,7 @@ Salz
 Pfeffer`,
     schritte: `Bulgur mit der doppelten Menge Salzwasser aufkochen und 10 Minuten quellen lassen.
 Kichererbsen gut abtropfen lassen und mit der halben Zwiebel, Knoblauch, halber Petersilie, Mehl und Gewürzen grob pürieren.
-Aus der Masse kleine Bällchen formen, etwas flach drücken und im Öl von beiden Seiten knusprig braten.
+Aus der Masse kleine Bällchen formen, etwas flach drücken und im Öl je Seite 3 Minuten knusprig braten.
 Gurke, Tomaten und restliche Zwiebel klein schneiden.
 Joghurt mit etwas Zitronensaft, Minze und Salz verrühren, Bulgur mit Zitrone und restlicher Petersilie abschmecken.
 Alles in Schalen anrichten und mit dem Dip servieren.`,
@@ -507,9 +507,9 @@ Alles in Schalen anrichten und mit dem Dip servieren.`,
 1 TL Chiliflocken
 1 TL Kakao
 Salz`,
-    schritte: `Reis nach Packungsangabe kochen.
-Zwiebel, Knoblauch und Paprika würfeln und im Öl anbraten.
-Gewürze zugeben und kurz mitrösten.
+    schritte: `Reis in Salzwasser 15 Minuten garen.
+Zwiebel, Knoblauch und Paprika würfeln und im Öl 5 Minuten anbraten.
+Gewürze zugeben und 1 Minute mitrösten.
 Tomaten, Brühe und abgespülte Linsen einrühren und 15 Minuten köcheln lassen.
 Bohnen und Mais abgießen, unterrühren und weitere 10 Minuten garen.
 Mit Salz abschmecken und mit Reis servieren.`,
@@ -532,7 +532,7 @@ Salz
 Pfeffer
 (Petersilie)`,
     schritte: `Bohnen putzen und in Stücke brechen, Kartoffeln und Möhren schälen und würfeln.
-Speck und Zwiebelwürfel in Butter anbraten.
+Speck und Zwiebelwürfel in Butter 5 Minuten anbraten.
 Gemüse und Bohnenkraut zugeben und mit Brühe auffüllen.
 Zugedeckt 25 bis 30 Minuten köcheln lassen, bis alles weich ist.
 Mit Salz und Pfeffer abschmecken und nach Belieben mit Petersilie servieren.`,
@@ -556,9 +556,9 @@ Mit Salz und Pfeffer abschmecken und nach Belieben mit Petersilie servieren.`,
 Salz
 Pfeffer`,
     schritte: `Brötchen klein würfeln, mit warmer Milch übergießen und 10 Minuten ziehen lassen.
-Eine Zwiebel fein würfeln und in 1 EL Butter glasig dünsten, mit Eiern, der Hälfte der Petersilie, Salz und Muskat zur Brotmasse geben und verkneten.
+Eine Zwiebel fein würfeln und in 1 EL Butter 3 Minuten glasig dünsten, mit Eiern, der Hälfte der Petersilie, Salz und Muskat zur Brotmasse geben und verkneten.
 Mit nassen Händen 6 Knödel formen und in siedendem Salzwasser 20 Minuten ziehen lassen.
-Champignons in Scheiben schneiden, zweite Zwiebel würfeln und beides in restlicher Butter kräftig anbraten.
+Champignons in Scheiben schneiden, zweite Zwiebel würfeln und beides in restlicher Butter 8 Minuten kräftig anbraten.
 Sahne angießen, mit Thymian, Salz und Pfeffer würzen und 5 Minuten einkochen lassen.
 Knödel mit den Rahmpilzen anrichten und mit Petersilie bestreuen.`,
   },
@@ -604,8 +604,8 @@ Kartoffeln und Brokkoli in die Form geben, Guss darübergießen und mit restlich
 Salz
 Pfeffer
 (Minze)`,
-    schritte: `Zwiebel, Knoblauch und Möhren klein würfeln und im Olivenöl andünsten.
-Tomatenmark und Gewürze zugeben und kurz anrösten.
+    schritte: `Zwiebel, Knoblauch und Möhren klein würfeln und im Olivenöl 5 Minuten andünsten.
+Tomatenmark und Gewürze zugeben und 1 Minute anrösten.
 Linsen abspülen, mit der Brühe dazugeben und 15 Minuten köcheln lassen.
 Suppe fein pürieren und mit Zitronensaft, Salz und Pfeffer abschmecken.
 Nach Belieben mit Minze und Fladenbrot servieren.`,

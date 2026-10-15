@@ -66,6 +66,22 @@ Im Alltag zählt man „2 Packungen Nudeln“, nicht „1000 g“. Deshalb:
 - Artikel werden per Namen **in JavaScript** gesucht – SQLites `lower()` kennt keine
   Umlaute, „Äpfel“ wäre sonst jedes Mal ein neuer Artikel geworden.
 
+## Gerichte: Reste und Fertiggerichte (Oktober 2026)
+
+- Ein Artikel kann ein **Gericht** sein (`gericht`): `fertig` (gekauft, z. B. TK-Pizza)
+  oder `rest` (selbst gekocht, Bestand = Portionen), mit `lagerort` (Kühlschrank/TK)
+  und `eingelagert_am`. Sie stehen im Vorrat in einem eigenen Bereich oben, Reste
+  älteste zuerst, mit Alter („seit 3 Tagen“) und Warnung (Kühlschrank ab 3 Tagen,
+  TK ab 90 Tagen).
+- **Reste** entstehen nach „Fertig gekocht“: Portionen, Kühlschrank oder einfrieren,
+  auf Wunsch „Reste: …“ morgen im Plan. Sie sind archiviert (nicht im Verlauf der
+  Liste), werden bei der Artikelsuche übersprungen und verschwinden, wenn sie
+  aufgegessen sind. „Rückgängig“ nach dem Kochen nimmt sie wieder weg.
+- **Fertiggerichte**: Neue TK-Artikel mit typischem Namen (Pizza, Lasagne,
+  Fischstäbchen …) gelten automatisch als Fertiggericht; im Dialog umstellbar
+  (Produkt / Fertiggericht / Rest, Lagerort). Wird ein Rest eingefroren, läuft die
+  Zeit ab dem Einfrieren.
+
 ## Bekannte Grenzen
 
 - Verbrauchen zwei Geräte offline gleichzeitig unter den Mindestbestand, landet der

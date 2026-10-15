@@ -13,8 +13,9 @@ Rezepte aus anderen Apps ohne Kopieren übernehmen.
 - **Eigene Startsammlung statt fremder Datenbank.** Geprüft: Wikibooks-Kochbuch (frei,
   CC BY-SA, aber uneinheitlich und als Wiki-Text), TheMealDB (englisch, Testschlüssel
   nur für Entwicklung, für Veröffentlichung kostenpflichtig), Chefkoch (keine offizielle
-  Schnittstelle, Massenabruf rechtlich nicht gedeckt). Stattdessen gut 100 selbst
-  geschriebene Rezepte in `apps/web/src/entdecken/sammlung/` – im Format des
+  Schnittstelle, Massenabruf rechtlich nicht gedeckt). Stattdessen 200 selbst
+  geschriebene Rezepte (seit Oktober 2026 auch Asiatisches, Klassiker und
+  Saisonales für Frühling/Sommer und Herbst/Winter) in `apps/web/src/entdecken/sammlung/` – im Format des
   Rezept-Editors, immer für 2 Personen, mit Gramm-Angaben, Gewürzen getrennt,
   Schlagwörtern und Saison. Keine Lizenzfragen, offline, ohne fremden Dienst; dafür
   ohne Fotos.
@@ -22,6 +23,10 @@ Rezepte aus anderen Apps ohne Kopieren übernehmen.
   einkaufbares Produkt benannt („1 Zwiebel, rot“ statt „1 rote Zwiebel“), damit Liste,
   Vorrat und „Was kann ich kochen?“ funktionieren; erlaubte Schlagwörter; vegetarisch
   schließt Fleisch/Fisch aus; Mindestanteile für Vegetarisches, Kinder, Fisch, Schnelles.
+- **Garzeiten als Timer:** Jeder Schritt mit Warte-, Gar- oder Backzeit nennt sie als
+  Zahl („9–11 Minuten“, „1,5 Stunden“) statt „nach Packungsangabe“ – im Kochmodus
+  wird daraus ein antippbarer Timer (`lib/timer.ts`). Der Sammlungstest verlangt bei
+  Rezepten ab 15 Minuten mindestens eine erkennbare Zeit.
 - **„Entdecken“** (`#rezepte/entdecken`, erst beim Öffnen geladen): Vorschläge nach
   Vorrat (je Hauptzutat im Vorrat Punkte), Saison (passt: Plus, außerhalb: Minus) und
   einem Tageszufall – die Liste springt nicht bei jedem Öffnen, „🎲 Andere“ würfelt neu.
