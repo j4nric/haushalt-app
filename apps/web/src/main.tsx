@@ -7,6 +7,7 @@ import { Toaster } from "./components/ui/sonner";
 import { themaAnwenden } from "./einstellungen";
 import { haushaltWaehlen } from "./haushaltwahl";
 import { haengendeSperrenLoesen } from "./lib/haenger";
+import { tastaturBeobachten } from "./lib/tastatur";
 import { db } from "./powersync";
 import { geteiltenLinkMerken } from "./rezepte/geteilt";
 import "./index.css";
@@ -16,6 +17,8 @@ themaAnwenden();
 
 // Bleibt nach einem Dialog die Seite gesperrt, löst sich das von selbst.
 haengendeSperrenLoesen();
+// Eingabeleiste über der Bildschirmtastatur halten (iPhone).
+tastaturBeobachten();
 
 // Service Worker: speichert die App für den Offline-Start und aktualisiert sich selbst.
 registerSW({ immediate: true });

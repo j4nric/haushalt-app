@@ -94,7 +94,7 @@ export function Navigation({
   return (
     <nav
       aria-label="Bereiche"
-      className="fixed inset-x-0 bottom-0 z-30 border-t bg-background pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 z-30 border-t bg-background pb-[env(safe-area-inset-bottom)] in-data-[tastatur=offen]:hidden"
     >
       <div className="mx-auto grid h-16 max-w-lg grid-cols-5">
         {ANSICHTEN.map(({ id, name, symbol: Icon }) => (
