@@ -240,11 +240,16 @@ function Wochenplan({
       </div>
 
       <ol className="space-y-3">
-        {tage.map((tag) => {
+        {tage.map((tag, i) => {
           const eintraege = kommend.filter((e) => e.datum === tag);
           const istHeute = tag === start;
           return (
-            <li key={tag} aria-label={tagName(tag)}>
+            <li
+              key={tag}
+              aria-label={tagName(tag)}
+              className="einblenden"
+              style={{ "--i": i } as React.CSSProperties}
+            >
               <div className="flex items-center justify-between px-1 pb-1.5">
                 <h3
                   className={cn(

@@ -10,7 +10,11 @@ import { Netzwerk } from "./netzwerk";
  * Ein simuliertes Gerät: eigener Browser, eigene lokale Datenbank, eigenes
  * abschaltbares Netz. Registriert sich mit einem frischen Konto.
  */
-export async function geraet(browserType: BrowserType, name: string) {
+export async function geraet(
+  browserType: BrowserType,
+  name: string,
+  { domain = "test.local" }: { domain?: string } = {},
+) {
   const netz = await Netzwerk.starten();
   const browser = await browserType.launch({ proxy: netz.proxy });
   const page = await browser.newPage({ baseURL: "http://localhost:4173" });
@@ -22,7 +26,7 @@ export async function geraet(browserType: BrowserType, name: string) {
   await page.getByLabel("Dein Name").fill(name);
   await page
     .getByLabel("E-Mail")
-    .fill(`${name.toLowerCase()}-${Date.now()}@test.local`);
+    .fill(`${name.toLowerCase()}-${Date.now()}@${domain}`);
   await page.getByLabel("Passwort").fill("ein-sicheres-passwort");
   await page.getByRole("button", { name: "Konto anlegen" }).click();
   await expect(

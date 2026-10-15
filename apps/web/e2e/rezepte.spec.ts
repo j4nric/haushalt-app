@@ -51,7 +51,9 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
       .getByRole("list")
       .first()
       .getByRole("listitem");
-    await expect(zutatenListe.last()).toContainText("(150 g Salami)");
+    // Menge in der Mengen-Spalte (umgerechnet), Name in Klammern.
+    await expect(zutatenListe.last()).toContainText("150 g");
+    await expect(zutatenListe.last()).toContainText("(Salami)");
 
     // Auf die Liste: Olivenöl („haben wir immer“), Gewürze und Optionales sind abgewählt.
     await page.getByRole("button", { name: "Auf die Liste" }).click();
@@ -83,10 +85,11 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
     await expect(spaghetti).toBeChecked();
     await page.getByRole("button", { name: "Kochen beenden" }).click();
 
-    // Die Liste kennt jetzt Spaghetti (300 g) und Tomaten (2 Stk. für 1,5 Dosen).
+    // Auf die Liste kommen nur die Namen, ohne Mengen.
     await zuBereich(page, "Einkaufsliste");
-    await expect(eintrag(page, "Spaghetti")).toContainText("300 g");
-    await expect(eintrag(page, "Tomaten")).toContainText("2 Stk.");
+    await expect(eintrag(page, "Spaghetti")).toBeVisible();
+    await expect(eintrag(page, "Spaghetti")).not.toContainText(/\d/);
+    await expect(eintrag(page, "Tomaten")).not.toContainText(/\d/);
     await expect(eintrag(page, "Salz")).toHaveCount(0);
 
     // Suche nach Zutat, dann bearbeiten und löschen (mit Rückgängig).

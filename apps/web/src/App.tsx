@@ -1,10 +1,13 @@
-import { useQuery, useStatus } from "@powersync/react";
-import { useEffect } from "react";
+import { useStatus } from "@powersync/react";
+import { ChevronsUpDown } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Anmeldung } from "./Anmeldung";
 import { Navigation, useAnsicht } from "./Ansicht";
 import { Einkaufsliste } from "./Einkaufsliste";
 import { Haushalt } from "./Haushalt";
 import { HaushaltEinrichten } from "./HaushaltEinrichten";
+import { HaushaltWechseln } from "./HaushaltWechseln";
+import { useHaushalte } from "./haushaltwahl";
 import { useNutzer } from "./nutzer";
 import { Plan } from "./plan/Plan";
 import { verbinden } from "./powersync";
@@ -29,11 +32,8 @@ export function App() {
 function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
   const status = useStatus();
   const [ansicht, wechseln] = useAnsicht();
-  // Lokal liegen nur die eigenen Haushalte (siehe sync-config.yaml); vorerst genau einer.
-  const { data: haushalte } = useQuery<{ id: string; name: string }>(
-    "SELECT id, name FROM haushalte LIMIT 1",
-  );
-  const haushalt = haushalte[0];
+  const { haushalte, aktiv: haushalt } = useHaushalte();
+  const [wechselnOffen, setWechselnOffen] = useState(false);
 
   useEffect(() => {
     verbinden();
@@ -43,9 +43,24 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-3 px-4">
-          <h1 className="truncate text-lg font-semibold">
-            {haushalt?.name ?? "Haushalt"}
-          </h1>
+          {/* Mehrere Haushalte: Antippen des Namens wechselt. */}
+          {haushalte.length > 1 ? (
+            <button
+              type="button"
+              onClick={() => setWechselnOffen(true)}
+              className="flex min-w-0 items-center gap-1 rounded-lg active:opacity-70"
+              aria-label={`Haushalt wechseln (aktuell ${haushalt?.name ?? ""})`}
+            >
+              <h1 className="truncate text-lg font-semibold">
+                {haushalt?.name ?? "Haushalt"}
+              </h1>
+              <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          ) : (
+            <h1 className="truncate text-lg font-semibold">
+              {haushalt?.name ?? "Haushalt"}
+            </h1>
+          )}
           <SyncStatus />
         </div>
       </header>
@@ -53,7 +68,8 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
       {haushalt ? (
         <>
           {/* Platz unten für Eingabeleiste und Navigation. */}
-          <main className="mx-auto max-w-lg px-4 pt-2 pb-48">
+          {/* Beim Wechsel des Haushalts alles frisch aufbauen (Filter, offene Dialoge …). */}
+          <main key={haushalt.id} className="mx-auto max-w-lg px-4 pt-2 pb-48">
             {ansicht === "vorrat" ? (
               <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
             ) : ansicht === "plan" ? (
@@ -61,12 +77,23 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
             ) : ansicht === "rezepte" ? (
               <Rezepte haushaltId={haushalt.id} nutzerId={nutzerId} />
             ) : ansicht === "haushalt" ? (
-              <Haushalt haushaltId={haushalt.id} name={name} />
+              <Haushalt
+                haushaltId={haushalt.id}
+                name={name}
+                haushalte={haushalte}
+                wechseln={() => setWechselnOffen(true)}
+              />
             ) : (
               <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
             )}
           </main>
           <Navigation ansicht={ansicht} wechseln={wechseln} />
+          <HaushaltWechseln
+            offen={wechselnOffen}
+            schliessen={() => setWechselnOffen(false)}
+            haushalte={haushalte}
+            aktivId={haushalt.id}
+          />
         </>
       ) : (
         <main className="mx-auto max-w-lg px-4 py-6">

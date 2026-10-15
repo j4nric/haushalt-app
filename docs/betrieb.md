@@ -98,6 +98,17 @@ Unter **Settings → Secrets and variables → Actions** auf Repository-Ebene:
 Danach rollt jeder Merge auf `main` automatisch aus. Den ersten Lauf kann man unter
 Actions → CI → „Re-run all jobs“ auf dem letzten `main`-Commit anstoßen.
 
+## Admin-Panel
+
+Wer in der App unter „Haushalt“ alle Nutzer und Haushalte sehen darf, steht in
+`infra/production/.env`:
+
+```bash
+ADMIN_EMAILS=j4n.ric@gmail.com
+```
+
+Nach einer Änderung: `docker compose up -d app`.
+
 ## Nützliche Befehle auf dem Server
 
 ```bash

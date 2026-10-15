@@ -5,6 +5,8 @@ import { erstelleAuth } from "../src/auth";
 import { testDatenbankUrl } from "./umgebung";
 
 const WEB_URL = "http://localhost:5173";
+/** Dieses Konto ist in den Tests Admin. */
+export const ADMIN_EMAIL = `admin-${randomUUID()}@test.local`;
 
 export function testApp() {
   const { db, sql } = erstelleDb(testDatenbankUrl());
@@ -12,16 +14,22 @@ export function testApp() {
     secret: "test-secret-mindestens-32-zeichen-lang!!",
     webUrl: WEB_URL,
   });
-  const app = erstelleApp({ db, sql, auth, importLokalErlaubt: true });
+  const app = erstelleApp({
+    db,
+    sql,
+    auth,
+    importLokalErlaubt: true,
+    adminEmails: [ADMIN_EMAIL],
+  });
 
   /** Ein angemeldeter Testnutzer, der Anfragen mit seinem Sitzungs-Cookie stellt. */
-  async function nutzer(name: string) {
+  async function nutzer(name: string, { email }: { email?: string } = {}) {
     const antwort = await app.request(`${WEB_URL}/api/auth/sign-up/email`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: WEB_URL },
       body: JSON.stringify({
         name,
-        email: `${name.toLowerCase()}-${randomUUID()}@test.local`,
+        email: email ?? `${name.toLowerCase()}-${randomUUID()}@test.local`,
         password: "ein-sicheres-passwort",
       }),
     });
@@ -52,6 +60,7 @@ export function testApp() {
       get: (pfad: string) => anfrage("GET", pfad),
       post: (pfad: string, body?: unknown) => anfrage("POST", pfad, body ?? {}),
       patch: (pfad: string, body: unknown) => anfrage("PATCH", pfad, body),
+      loeschen: (pfad: string) => anfrage("DELETE", pfad),
       /** Legt einen Haushalt an und gibt dessen id zurück. */
       async haushaltAnlegen(haushaltName = `Haushalt von ${name}`) {
         const res = await anfrage("POST", "/haushalte", { name: haushaltName });
