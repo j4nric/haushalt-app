@@ -13,6 +13,7 @@ import { Wagen, ZumWagenKnopf } from "./liste/Wagen";
 import type { Zeile } from "./liste/zeile";
 import { artikelFindenOderAnlegen, aufListeSetzen } from "./listenaktionen";
 import { HeuteKarte } from "./plan/HeuteKarte";
+import { BarcodeScan } from "./scanner/BarcodeScan";
 import { Vergessen } from "./Vergessen";
 import { type VerlaufArtikel, VerlaufBlock } from "./Verlauf";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
@@ -377,6 +378,29 @@ export function Einkaufsliste({
         kategorieAendern={setManuell}
         auswahl={vorschlag.auswahl}
         vorschlaege={bekannteArtikel.map((a) => a.name)}
+        zusatz={
+          <BarcodeScan
+            haushaltId={haushaltId}
+            titel="Scannen: auf die Liste oder abhaken"
+            aktionText="Auf die Liste"
+            aktion={async (a) => {
+              // Steht es offen auf der Liste, wandert es in den Wagen (im Laden).
+              const offenerEintrag = eintraege.find(
+                (e) => e.artikel_id === a.id && !e.erledigt,
+              );
+              if (offenerEintrag) {
+                await umschalten(offenerEintrag);
+                return `✓ ${a.name} abgehakt`;
+              }
+              const neu = await db.writeTransaction((tx) =>
+                aufListeSetzen(tx, { haushaltId, nutzerId, artikelId: a.id }),
+              );
+              return neu
+                ? `${a.name} auf die Liste`
+                : `${a.name} steht schon auf der Liste`;
+            }}
+          />
+        }
       />
     </>
   );

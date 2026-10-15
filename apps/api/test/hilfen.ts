@@ -11,7 +11,7 @@ export const ADMIN_EMAIL = `admin-${randomUUID()}@test.local`;
 export function testApp(
   extra: Pick<
     Parameters<typeof erstelleApp>[0],
-    "grenzen" | "fotoSpeicher"
+    "grenzen" | "fotoSpeicher" | "produktQuelle"
   > = {},
 ) {
   const { db, sql } = erstelleDb(testDatenbankUrl());

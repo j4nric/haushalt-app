@@ -419,3 +419,50 @@ export const planEintraege = pgTable(
     ),
   ],
 );
+
+/**
+ * Gescannte Barcodes (EAN/UPC) → Artikel des Haushalts. Ein Artikel kann mehrere
+ * haben („Milch“ von verschiedenen Marken). Synchronisiert, damit einmal Gescanntes
+ * auch offline erkannt wird. Bewusst ohne Unique-Regel (offline von zwei Geräten
+ * gleichzeitig verknüpft darf nicht scheitern); die App nimmt den neuesten Eintrag.
+ */
+export const artikelBarcodes = pgTable(
+  "artikel_barcodes",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    artikelId: uuid("artikel_id").notNull(),
+    barcode: text("barcode").notNull(),
+    /** Packungsgröße laut Produktdaten („500 g“) – bucht später gleich die richtige Menge. */
+    packungMenge: doublePrecision("packung_menge"),
+    packungEinheit: text("packung_einheit", { enum: EINHEITEN }),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [
+    index().on(t.haushaltId, t.barcode),
+    foreignKey({
+      columns: [t.artikelId, t.haushaltId],
+      foreignColumns: [artikel.id, artikel.haushaltId],
+    }).onDelete("cascade"),
+    check("artikel_barcodes_format", sql`${t.barcode} ~ '^[0-9]{8,14}$'`),
+  ],
+);
+
+/**
+ * Zwischenspeicher für Produktdaten aus Open Food Facts (für alle Haushalte gleich,
+ * nicht synchronisiert). Auch „nicht gefunden“ wird gemerkt, damit derselbe Code
+ * nicht ständig neu angefragt wird.
+ */
+export const produkte = pgTable("produkte", {
+  barcode: text("barcode").primaryKey(),
+  gefunden: boolean("gefunden").notNull(),
+  name: text("name"),
+  marke: text("marke"),
+  menge: text("menge"),
+  bildUrl: text("bild_url"),
+  abgerufenAm: timestamp("abgerufen_am", { withTimezone: true, mode: "string" })
+    .notNull()
+    .defaultNow(),
+});

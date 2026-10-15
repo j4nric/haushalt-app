@@ -13,10 +13,16 @@ import { Netzwerk } from "./netzwerk";
 export async function geraet(
   browserType: BrowserType,
   name: string,
-  { domain = "test.local" }: { domain?: string } = {},
+  {
+    domain = "test.local",
+    browserArgs = [],
+  }: { domain?: string; browserArgs?: string[] } = {},
 ) {
   const netz = await Netzwerk.starten();
-  const browser = await browserType.launch({ proxy: netz.proxy });
+  const browser = await browserType.launch({
+    proxy: netz.proxy,
+    args: browserArgs,
+  });
   const page = await browser.newPage({ baseURL: "http://localhost:4173" });
   await page.goto("/");
 

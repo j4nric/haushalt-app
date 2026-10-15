@@ -21,7 +21,12 @@ export default defineConfig({
       url: "http://localhost:3000/api/health",
       reuseExistingServer: true,
       // Rezept-Import von der lokalen Testseite erlauben (sonst gesperrt).
-      env: { REZEPT_IMPORT_LOKAL: "1", ADMIN_EMAILS: "@admin.test" },
+      env: {
+        REZEPT_IMPORT_LOKAL: "1",
+        ADMIN_EMAILS: "@admin.test",
+        // Attrappe von Open Food Facts, gestartet in e2e/barcode.spec.ts.
+        PRODUKT_QUELLE: "http://127.0.0.1:4180",
+      },
     },
     {
       command: "pnpm build && pnpm preview --port 4173 --strictPort",

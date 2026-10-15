@@ -78,6 +78,13 @@
       "when": 1792060662947,
       "tag": "0010_optionale_zutaten",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792074288377,
+      "tag": "0011_barcodes",
+      "breakpoints": true
     }
   ]
 }

@@ -97,6 +97,17 @@ export const schema = new Schema({
     },
     { indexes: { rezept: ["rezept_id"] } },
   ),
+  artikel_barcodes: new Table(
+    {
+      haushalt_id: column.text,
+      artikel_id: column.text,
+      barcode: column.text,
+      packung_menge: column.real,
+      packung_einheit: column.text,
+      erstellt_am: column.text,
+    },
+    { indexes: { barcode: ["barcode"] } },
+  ),
   plan_eintraege: new Table(
     {
       haushalt_id: column.text,
