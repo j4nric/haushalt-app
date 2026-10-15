@@ -4,6 +4,8 @@ import {
   istGewuerz,
   istGrundzutat,
   mengeFuerListe,
+  zeileAlsText,
+  zerlegeZeile,
   zerlegeZutat,
   zutatAlsText,
 } from "./zutaten";
@@ -205,5 +207,36 @@ describe("istGewuerz", () => {
     ["Zimtschnecken", false],
   ])("%s → %s", (zeile, erwartet) => {
     expect(istGewuerz(zerlegeZutat(zeile))).toBe(erwartet);
+  });
+});
+
+describe("optionale Zutaten", () => {
+  it("erkennt Zeilen in Klammern als optional und zerlegt sie wie sonst", () => {
+    expect(zerlegeZeile("(100g Salami)")).toEqual({
+      menge: 100,
+      einheit: "g",
+      name: "Salami",
+      zusatz: null,
+      optional: true,
+    });
+    expect(zerlegeZeile("( 1 Prise Chili )")).toMatchObject({
+      menge: 1,
+      einheit: "Prise",
+      name: "Chili",
+      optional: true,
+    });
+    expect(zerlegeZeile("1 Dose Tomaten (400 g)")).toMatchObject({
+      name: "Tomaten",
+      zusatz: "(400 g)",
+      optional: false,
+    });
+  });
+
+  it("schreibt optionale wieder in Klammern", () => {
+    expect(zeileAlsText(zerlegeZeile("(100g Salami)"))).toBe("(100 g Salami)");
+    expect(zeileAlsText(zerlegeZeile("(1 Zwiebel, gewürfelt)"))).toBe(
+      "(1 Zwiebel, gewürfelt)",
+    );
+    expect(zeileAlsText(zerlegeZeile("Salz"))).toBe("Salz");
   });
 });

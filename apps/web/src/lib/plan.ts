@@ -51,7 +51,10 @@ export function wochentag(tag: string): string {
 
 // --- Zutaten der Woche ----------------------------------------------------------
 
-export type PlanZutat = Zutat & { gewuerz: number | null };
+export type PlanZutat = Zutat & {
+  gewuerz: number | null;
+  optional?: number | null;
+};
 
 export type Posten = {
   id: string;
@@ -60,6 +63,8 @@ export type Posten = {
   zutat: Zutat;
   listenEinheit: Einheit | null;
   gewuerz: boolean;
+  /** Optional im Rezept – kommt nicht von selbst auf die Liste. */
+  optional: boolean;
   /** Für welche Tage („Mo, Mi“), nur beim Wochen-Einkauf. */
   fuer: string | null;
 };
@@ -88,6 +93,7 @@ export function alsPosten(
     },
     listenEinheit: einheit,
     gewuerz: Boolean(z.gewuerz),
+    optional: Boolean(z.optional),
     fuer,
   };
 }
@@ -115,6 +121,8 @@ export function zutatenSammeln(
       }
       bisher.tage.add(g.tag);
       bisher.gewuerz &&= p.gewuerz;
+      // Braucht es ein Gericht fest, ist es nicht mehr optional.
+      bisher.optional &&= p.optional;
       if (p.zutat.menge != null) {
         bisher.zutat = {
           ...bisher.zutat,

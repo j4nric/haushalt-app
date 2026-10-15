@@ -13,7 +13,7 @@ export type ZutatMitRezept = RezeptZutat & { rezept_id: string };
 /** Alle Rezept-Zutaten des Haushalts, nach Rezept gruppiert. */
 export function useZutatenNachRezept(haushaltId: string) {
   const { data } = useQuery<ZutatMitRezept>(
-    "SELECT rezept_id, name, menge, einheit, zusatz, gewuerz FROM rezept_zutaten WHERE haushalt_id = ? ORDER BY position",
+    "SELECT rezept_id, name, menge, einheit, zusatz, gewuerz, optional FROM rezept_zutaten WHERE haushalt_id = ? ORDER BY position",
     [haushaltId],
   );
   return useMemo(() => {

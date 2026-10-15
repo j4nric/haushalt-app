@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { findeZeitangaben, formatiereRestzeit } from "@/lib/timer";
 import { cn } from "@/lib/utils";
-import type { GespeicherteZutat } from "./aktionen";
+import { type GespeicherteZutat, optionaleZuletzt } from "./aktionen";
 import type { Rezept } from "./RezeptDetail";
 
 type LaufenderTimer = {
@@ -93,7 +93,7 @@ export function Kochansicht({
         <ZutatenAbhaken
           id="koch-zutaten"
           titel="Zutaten"
-          zutaten={zutaten.filter((z) => !z.gewuerz)}
+          zutaten={optionaleZuletzt(zutaten.filter((z) => !z.gewuerz))}
           faktor={faktor}
           erledigt={erledigt}
           umschalten={umschalten}
@@ -101,7 +101,7 @@ export function Kochansicht({
         <ZutatenAbhaken
           id="koch-gewuerze"
           titel="Gewürze"
-          zutaten={zutaten.filter((z) => z.gewuerz)}
+          zutaten={optionaleZuletzt(zutaten.filter((z) => z.gewuerz))}
           faktor={faktor}
           erledigt={erledigt}
           umschalten={umschalten}
@@ -175,7 +175,12 @@ function ZutatenAbhaken({
           const an = erledigt.has(z.id);
           return (
             <li key={z.id}>
-              <label className="flex items-center gap-3 rounded-xl px-2 py-2 text-lg active:bg-muted">
+              <label
+                className={cn(
+                  "flex items-center gap-3 rounded-xl px-2 py-2 text-lg active:bg-muted",
+                  z.optional && "text-muted-foreground opacity-70",
+                )}
+              >
                 <input
                   type="checkbox"
                   checked={an}
@@ -188,12 +193,14 @@ function ZutatenAbhaken({
                     an && "text-muted-foreground line-through opacity-60",
                   )}
                 >
+                  {z.optional ? "(" : ""}
                   {zutatAlsText(z, faktor)}
                   {z.zusatz && (
                     <span className="text-base text-muted-foreground">
                       , {z.zusatz}
                     </span>
                   )}
+                  {z.optional ? ")" : ""}
                 </span>
               </label>
             </li>

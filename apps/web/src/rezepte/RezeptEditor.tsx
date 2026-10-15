@@ -2,7 +2,7 @@ import {
   einheitAnzeige,
   formatiereZutatMenge,
   istGewuerz,
-  type Zutat,
+  type ZutatZeile,
   zerlegeZutat,
 } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   fotoHochladen,
   type GespeicherteZutat,
@@ -197,7 +198,8 @@ export function RezeptEditor({
           className="text-base"
         />
         <p className="text-xs text-muted-foreground">
-          Eine Zutat pro Zeile – Menge und Einheit werden erkannt.
+          Eine Zutat pro Zeile – Menge und Einheit werden erkannt. In Klammern =
+          optional, z. B. „(100 g Salami)“.
         </p>
         <Vorschau label="Erkannte Zutaten" zutaten={erkannt} />
       </div>
@@ -347,7 +349,13 @@ function LinkImport({ uebernehmen }: { uebernehmen: (r: Import) => void }) {
 }
 
 /** Zeigt, was aus den Zeilen erkannt wurde: Menge fett, Einheit farbig. */
-function Vorschau({ label, zutaten }: { label: string; zutaten: Zutat[] }) {
+function Vorschau({
+  label,
+  zutaten,
+}: {
+  label: string;
+  zutaten: ZutatZeile[];
+}) {
   if (zutaten.length === 0) {
     return null;
   }
@@ -357,8 +365,12 @@ function Vorschau({ label, zutaten }: { label: string; zutaten: Zutat[] }) {
         <li
           // biome-ignore lint/suspicious/noArrayIndexKey: Vorschau ohne eigene IDs, Zeilen dürfen gleich sein.
           key={i}
-          className="rounded-full border bg-card px-2.5 py-0.5 text-xs"
+          className={cn(
+            "rounded-full border bg-card px-2.5 py-0.5 text-xs",
+            z.optional && "border-dashed text-muted-foreground opacity-70",
+          )}
         >
+          {z.optional && "("}
           {z.menge != null && (
             <span className="font-semibold">
               {formatiereZutatMenge(z.menge)}{" "}
@@ -370,6 +382,7 @@ function Vorschau({ label, zutaten }: { label: string; zutaten: Zutat[] }) {
             </span>
           )}
           {z.name}
+          {z.optional && ")"}
         </li>
       ))}
     </ul>

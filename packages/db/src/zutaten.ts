@@ -373,3 +373,25 @@ export function istGewuerz(z: Zutat): boolean {
     !/frisch/.test(`${name} ${z.zusatz ?? ""}`)
   );
 }
+
+export type ZutatZeile = Zutat & { optional: boolean };
+
+/**
+ * Eine Zeile aus dem Rezept: steht sie ganz in Klammern („(100g Salami)“), ist die
+ * Zutat optional – sonst wird sie genauso zerlegt.
+ */
+export function zerlegeZeile(zeile: string): ZutatZeile {
+  const innen = zeile
+    .trim()
+    .match(/^\((.*)\)$/s)?.[1]
+    ?.trim();
+  return innen
+    ? { ...zerlegeZutat(innen), optional: true }
+    : { ...zerlegeZutat(zeile), optional: false };
+}
+
+/** Zum Bearbeiten wieder als Zeile, optionale in Klammern. */
+export function zeileAlsText(z: ZutatZeile): string {
+  const text = zutatAlsText(z) + (z.zusatz ? `, ${z.zusatz}` : "");
+  return z.optional ? `(${text})` : text;
+}

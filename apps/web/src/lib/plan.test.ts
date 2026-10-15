@@ -68,6 +68,28 @@ describe("zutatenSammeln", () => {
     expect(nach.salz?.gewuerz).toBe(true);
     expect(posten).toHaveLength(4);
   });
+
+  it("bleibt optional nur, wenn es überall optional ist", () => {
+    const posten = zutatenSammeln([
+      {
+        tag: "2026-10-19",
+        faktor: 1,
+        zutaten: [{ ...z("Parmesan"), optional: 1 }],
+      },
+      {
+        tag: "2026-10-20",
+        faktor: 1,
+        zutaten: [{ ...z("Parmesan"), optional: 0 }],
+      },
+      {
+        tag: "2026-10-20",
+        faktor: 1,
+        zutaten: [{ ...z("Basilikum"), optional: 1 }],
+      },
+    ]);
+    const nach = Object.fromEntries(posten.map((p) => [p.name, p.optional]));
+    expect(nach).toEqual({ Parmesan: false, Basilikum: true });
+  });
 });
 
 describe("Abwechslung", () => {

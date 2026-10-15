@@ -51,6 +51,15 @@ describe("verfuegbarkeit", () => {
     });
   });
 
+  it("Optionales fehlt nicht", () => {
+    expect(
+      verfuegbarkeit(
+        [zutat("400 g Spaghetti"), { ...zutat("100 g Salami"), optional: 1 }],
+        vorrat,
+      ),
+    ).toEqual({ prozent: 100, fehlt: [] });
+  });
+
   it("ohne zählende Zutaten ist alles da", () => {
     expect(verfuegbarkeit([zutat("Salz", 1)], vorrat).prozent).toBe(100);
   });

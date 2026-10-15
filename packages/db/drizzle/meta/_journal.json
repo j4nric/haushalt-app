@@ -71,6 +71,13 @@
       "when": 1792055854204,
       "tag": "0009_wochenplan",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792060662947,
+      "tag": "0010_optionale_zutaten",
+      "breakpoints": true
     }
   ]
 }

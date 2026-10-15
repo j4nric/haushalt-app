@@ -36,6 +36,7 @@ import {
   favoritUmschalten,
   type GespeicherteZutat,
   kochenAbschliessen,
+  optionaleZuletzt,
   rezeptLoeschen,
   schlagwoerterAusText,
 } from "./aktionen";
@@ -110,7 +111,7 @@ export function RezeptDetail({
   }
 
   const schritte = rezept.schritte.split("\n").filter(Boolean);
-  const gewuerze = zutaten.filter((z) => z.gewuerz);
+  const gewuerze = optionaleZuletzt(zutaten.filter((z) => z.gewuerz));
 
   async function loeschen() {
     const wiederherstellen = await rezeptLoeschen(db, id);
@@ -286,23 +287,36 @@ export function RezeptDetail({
           )}
         </div>
         <ul className="divide-y rounded-2xl border bg-card">
-          {zutaten
+          {optionaleZuletzt(zutaten)
             .filter((z) => !z.gewuerz)
             .map((z) => (
-              <li key={z.id} className="flex gap-3 px-4 py-2.5">
+              <li
+                key={z.id}
+                className={cn(
+                  "flex gap-3 px-4 py-2.5",
+                  z.optional && "text-muted-foreground opacity-70",
+                )}
+              >
                 <span className="w-20 shrink-0 text-right font-semibold tabular-nums">
-                  {z.menge != null && formatiereZutatMenge(z.menge * faktor)}{" "}
-                  {z.einheit &&
-                    einheitAnzeige(
-                      z.einheit,
-                      z.menge != null ? z.menge * faktor : null,
-                    )}
+                  {/* Optionale zeigen die Menge mit in der Klammer: „(100 g Salami)“. */}
+                  {!z.optional && (
+                    <>
+                      {z.menge != null &&
+                        formatiereZutatMenge(z.menge * faktor)}{" "}
+                      {z.einheit &&
+                        einheitAnzeige(
+                          z.einheit,
+                          z.menge != null ? z.menge * faktor : null,
+                        )}
+                    </>
+                  )}
                 </span>
                 <span>
-                  {z.name}
+                  {z.optional ? `(${zutatAlsText(z, faktor)}` : z.name}
                   {z.zusatz && (
                     <span className="text-muted-foreground">, {z.zusatz}</span>
                   )}
+                  {z.optional ? ")" : ""}
                 </span>
               </li>
             ))}
@@ -316,12 +330,18 @@ export function RezeptDetail({
               {gewuerze.map((z) => (
                 <li
                   key={z.id}
-                  className="rounded-full border bg-card px-3 py-1 text-sm"
+                  className={cn(
+                    "rounded-full border bg-card px-3 py-1 text-sm",
+                    z.optional &&
+                      "border-dashed text-muted-foreground opacity-70",
+                  )}
                 >
+                  {z.optional ? "(" : ""}
                   {zutatAlsText(z, faktor)}
                   {z.zusatz && (
                     <span className="text-muted-foreground">, {z.zusatz}</span>
                   )}
+                  {z.optional ? ")" : ""}
                 </li>
               ))}
             </ul>

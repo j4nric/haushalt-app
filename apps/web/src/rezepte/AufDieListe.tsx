@@ -49,12 +49,18 @@ export function AufDieListe({
   const { data: artikel } = useQuery<ArtikelStand>(ARTIKEL_STAND, [haushaltId]);
   const nachName = new Map(artikel.map((a) => [a.name, a]));
 
-  const vorschlaege: Vorschlag[] = posten.map((p) => {
+  // Optionale ans Ende der Auswahl.
+  const sortiert = [...posten].sort(
+    (a, b) => Number(a.optional) - Number(b.optional),
+  );
+  const vorschlaege: Vorschlag[] = sortiert.map((p) => {
     const a = nachName.get(p.name.toLowerCase());
     let grund: string | null = a?.auf_liste
       ? "steht schon drauf"
       : imVorrat(p.zutat, a);
-    if (!grund && p.gewuerz) {
+    if (!grund && p.optional) {
+      grund = "optional";
+    } else if (!grund && p.gewuerz) {
       grund = "Gewürz";
     } else if (!grund && istGrundzutat(p.name)) {
       grund = "haben wir immer";
@@ -120,8 +126,8 @@ export function AufDieListe({
           <DrawerHeader>
             <DrawerTitle>Auf die Einkaufsliste</DrawerTitle>
             <DrawerDescription>
-              {beschreibung} Abgewählt: Gewürze und was im Vorrat reicht oder
-              immer da ist.
+              {beschreibung} Abgewählt: Gewürze, Optionales und was im Vorrat
+              reicht oder immer da ist.
             </DrawerDescription>
           </DrawerHeader>
           {vorschlaege.length === 0 ? (
