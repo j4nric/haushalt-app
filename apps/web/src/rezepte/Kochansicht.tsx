@@ -1,5 +1,5 @@
 import { zutatAlsText } from "@haushalt/db/zutaten";
-import { Sun, Timer, X } from "lucide-react";
+import { ChefHat, Sun, Timer, X } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,14 @@ export function Kochansicht({
   faktor,
   portionen,
   schliessen,
+  fertigGekocht,
 }: {
   rezept: Rezept;
   zutaten: GespeicherteZutat[];
   faktor: number;
   portionen: number | null;
   schliessen: () => void;
+  fertigGekocht: () => void;
 }) {
   const wachBleiben = useWachBleiben();
   const [erledigt, setErledigt] = useState<Set<string>>(new Set());
@@ -130,6 +132,16 @@ export function Kochansicht({
             </ol>
           </section>
         )}
+
+        <Button
+          className="mt-10 h-14 w-full rounded-full text-lg"
+          onClick={fertigGekocht}
+        >
+          <ChefHat className="size-5" /> Fertig gekocht
+        </Button>
+        <p className="pt-2 text-center text-xs text-muted-foreground">
+          Zählt fürs „zuletzt gekocht“ und eure Kochstatistik.
+        </p>
       </div>
     </div>
   );

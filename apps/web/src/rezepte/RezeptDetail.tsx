@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
   ShoppingCart,
+  Star,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
@@ -35,15 +36,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { type ArtikelStand, imVorrat } from "@/lib/kochbar";
 import { cn } from "@/lib/utils";
 import {
+  favoritUmschalten,
   type GespeicherteZutat,
+  gekochtMerken,
   type ListenZutat,
   rezeptLoeschen,
+  schlagwoerterAusText,
   zutatenAufListe,
 } from "./aktionen";
 import { Kochansicht } from "./Kochansicht";
-import { RezeptBild } from "./Rezepte";
+import { ARTIKEL_STAND, RezeptBild } from "./Rezepte";
 
 export type Rezept = {
   id: string;
@@ -52,6 +57,10 @@ export type Rezept = {
   quelle_url: string | null;
   bild_url: string | null;
   schritte: string;
+  favorit: number | null;
+  schlagwoerter: string | null;
+  gekocht_anzahl: number;
+  zuletzt_gekocht: string | null;
 };
 
 export function RezeptDetail({
@@ -69,7 +78,10 @@ export function RezeptDetail({
 }) {
   const db = usePowerSync();
   const { data: rezepte, isLoading } = useQuery<Rezept>(
-    "SELECT id, titel, portionen, quelle_url, bild_url, schritte FROM rezepte WHERE id = ?",
+    `SELECT r.id, r.titel, r.portionen, r.quelle_url, r.bild_url, r.schritte, r.favorit, r.schlagwoerter,
+            (SELECT COUNT(*) FROM gekocht g WHERE g.rezept_id = r.id) AS gekocht_anzahl,
+            (SELECT MAX(g.gekocht_am) FROM gekocht g WHERE g.rezept_id = r.id) AS zuletzt_gekocht
+       FROM rezepte r WHERE r.id = ?`,
     [id],
   );
   const { data: zutaten } = useQuery<GespeicherteZutat>(
@@ -116,6 +128,20 @@ export function RezeptDetail({
         faktor={faktor}
         portionen={aktuellePortionen}
         schliessen={() => gehe([id])}
+        fertigGekocht={async () => {
+          const { anzahl, zuruecknehmen } = await gekochtMerken(db, {
+            haushaltId,
+            nutzerId,
+            rezeptId: id,
+          });
+          gehe([id]);
+          toast.success(
+            anzahl === 1
+              ? "Guten Appetit! 🍽️ Zum ersten Mal gekocht"
+              : `Guten Appetit! 🍽️ Zum ${anzahl}. Mal gekocht`,
+            { action: { label: "Rückgängig", onClick: () => zuruecknehmen() } },
+          );
+        }}
       />
     );
   }
@@ -153,8 +179,46 @@ export function RezeptDetail({
         className="aspect-[16/9] rounded-2xl"
       />
 
-      <header className="space-y-1">
-        <h2 className="text-2xl leading-tight font-bold">{rezept.titel}</h2>
+      <header className="space-y-1.5">
+        <div className="flex items-start gap-2">
+          <h2 className="flex-1 text-2xl leading-tight font-bold">
+            {rezept.titel}
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="-mr-2 size-10 rounded-full"
+            aria-label={
+              rezept.favorit ? "Kein Favorit mehr" : "Als Favorit merken"
+            }
+            aria-pressed={Boolean(rezept.favorit)}
+            onClick={() => favoritUmschalten(db, id, !rezept.favorit)}
+          >
+            <Star
+              className={cn(
+                "size-6 transition-transform active:scale-125",
+                rezept.favorit
+                  ? "fill-amber-400 text-amber-500"
+                  : "text-muted-foreground",
+              )}
+            />
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {kochstatistik(rezept.gekocht_anzahl, rezept.zuletzt_gekocht)}
+        </p>
+        {schlagwoerterAusText(rezept.schlagwoerter).length > 0 && (
+          <ul aria-label="Schlagwörter" className="flex flex-wrap gap-1.5">
+            {schlagwoerterAusText(rezept.schlagwoerter).map((w) => (
+              <li
+                key={w}
+                className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-secondary-foreground"
+              >
+                #{w}
+              </li>
+            ))}
+          </ul>
+        )}
         {rezept.quelle_url?.match(/^https?:\/\//) && (
           <a
             href={rezept.quelle_url}
@@ -308,14 +372,6 @@ export function PortionenWahl({
   );
 }
 
-type ArtikelStand = {
-  name: string;
-  im_vorrat: number;
-  standardeinheit: "stueck" | "g" | "ml";
-  bestand: number;
-  auf_liste: number;
-};
-
 type Vorschlag = ListenZutat & {
   id: string;
   /** Warum nicht vorausgewählt; `null` = kommt auf die Liste. */
@@ -345,28 +401,15 @@ function AufDieListe({
   portionen: number | null;
 }) {
   const db = usePowerSync();
-  const { data: artikel } = useQuery<ArtikelStand>(
-    `SELECT lower(a.name) AS name, COALESCE(a.im_vorrat, 0) AS im_vorrat, a.standardeinheit,
-            COALESCE((SELECT SUM(b.menge) FROM vorratsbuchungen b WHERE b.artikel_id = a.id), 0) AS bestand,
-            EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
-       FROM artikel a WHERE a.haushalt_id = ?`,
-    [haushaltId],
-  );
+  const { data: artikel } = useQuery<ArtikelStand>(ARTIKEL_STAND, [haushaltId]);
   const nachName = new Map(artikel.map((a) => [a.name, a]));
 
   const vorschlaege: Vorschlag[] = zutaten.map((z) => {
     const { menge, einheit } = mengeFuerListe(z, faktor);
     const a = nachName.get(z.name.toLowerCase());
-    let grund: string | null = null;
-    if (a?.auf_liste) {
-      grund = "steht schon drauf";
-    } else if (a?.im_vorrat && a.bestand > 0) {
-      const reicht =
-        menge == null || einheit !== a.standardeinheit || a.bestand >= menge;
-      if (reicht) {
-        grund = `im Vorrat: ${formatiereMenge(a.bestand, a.standardeinheit)}`;
-      }
-    }
+    let grund: string | null = a?.auf_liste
+      ? "steht schon drauf"
+      : imVorrat(z, a, faktor);
     if (!grund && z.gewuerz) {
       grund = "Gewürz";
     } else if (!grund && istGrundzutat(z.name)) {
@@ -493,4 +536,33 @@ function AufDieListe({
       </DrawerContent>
     </Drawer>
   );
+}
+
+/** „3× gekocht · zuletzt vor 5 Tagen“ bzw. „Noch nie gekocht“. */
+export function kochstatistik(anzahl: number, zuletzt: string | null): string {
+  if (!anzahl || !zuletzt) {
+    return "Noch nie gekocht";
+  }
+  return `${anzahl}× gekocht · zuletzt ${vorWann(zuletzt)}`;
+}
+
+export function vorWann(zeitpunkt: string): string {
+  const tage = Math.floor(
+    (new Date().setHours(0, 0, 0, 0) -
+      new Date(zeitpunkt).setHours(0, 0, 0, 0)) /
+      86_400_000,
+  );
+  if (tage <= 0) {
+    return "heute";
+  }
+  if (tage === 1) {
+    return "gestern";
+  }
+  if (tage < 14) {
+    return `vor ${tage} Tagen`;
+  }
+  if (tage < 60) {
+    return `vor ${Math.round(tage / 7)} Wochen`;
+  }
+  return `vor ${Math.round(tage / 30)} Monaten`;
 }

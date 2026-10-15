@@ -57,6 +57,13 @@
       "when": 1792052206311,
       "tag": "0007_gewuerze",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792053576216,
+      "tag": "0008_rezepte_12b",
+      "breakpoints": true
     }
   ]
 }

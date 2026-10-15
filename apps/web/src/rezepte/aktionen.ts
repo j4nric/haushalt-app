@@ -19,7 +19,22 @@ export type RezeptDaten = {
   zutatenText: string;
   /** Eigener Absatz für Gewürze, Mengen optional. */
   gewuerzeText: string;
+  schlagwoerter: string[];
 };
+
+/** „Schnell, vegetarisch,,“ → ["schnell", "vegetarisch"] (klein, ohne Doppelte). */
+export function schlagwoerterAusText(
+  text: string | null | undefined,
+): string[] {
+  return [
+    ...new Set(
+      (text ?? "")
+        .split(",")
+        .map((w) => w.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+}
 
 export type GespeicherteZutat = Zutat & {
   id: string;
@@ -68,7 +83,7 @@ export async function rezeptSpeichern(
   await db.writeTransaction(async (tx) => {
     if (id) {
       await tx.execute(
-        `UPDATE rezepte SET titel = ?, portionen = ?, quelle_url = ?, bild_url = ?, schritte = ?
+        `UPDATE rezepte SET titel = ?, portionen = ?, quelle_url = ?, bild_url = ?, schritte = ?, schlagwoerter = ?
           WHERE id = ?`,
         [
           daten.titel.trim(),
@@ -76,14 +91,15 @@ export async function rezeptSpeichern(
           daten.quelle_url,
           daten.bild_url,
           schritte,
+          daten.schlagwoerter.join(","),
           id,
         ],
       );
       await tx.execute("DELETE FROM rezept_zutaten WHERE rezept_id = ?", [id]);
     } else {
       await tx.execute(
-        `INSERT INTO rezepte (id, haushalt_id, titel, portionen, quelle_url, bild_url, schritte, erstellt_von, erstellt_am)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO rezepte (id, haushalt_id, titel, portionen, quelle_url, bild_url, schritte, schlagwoerter, favorit, erstellt_von, erstellt_am)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
         [
           rezeptId,
           haushaltId,
@@ -92,6 +108,7 @@ export async function rezeptSpeichern(
           daten.quelle_url,
           daten.bild_url,
           schritte,
+          daten.schlagwoerter.join(","),
           nutzerId,
           new Date().toISOString(),
         ],
@@ -142,8 +159,14 @@ export async function rezeptLoeschen(
     "SELECT * FROM rezept_zutaten WHERE rezept_id = ? ORDER BY position",
     [id],
   );
+  // Die Kochhistorie löscht der Server mit – für Rückgängig mit sichern.
+  const gekocht = await db.getAll<Record<string, unknown>>(
+    "SELECT * FROM gekocht WHERE rezept_id = ?",
+    [id],
+  );
   await db.writeTransaction(async (tx) => {
     await tx.execute("DELETE FROM rezept_zutaten WHERE rezept_id = ?", [id]);
+    await tx.execute("DELETE FROM gekocht WHERE rezept_id = ?", [id]);
     await tx.execute("DELETE FROM rezepte WHERE id = ?", [id]);
   });
   return async () => {
@@ -157,6 +180,13 @@ export async function rezeptLoeschen(
         spalten.map((s) => rezept[s]),
       );
       await zutatenEinfuegen(tx, String(rezept.haushalt_id), id, zutaten);
+      for (const g of gekocht) {
+        await tx.execute(
+          `INSERT INTO gekocht (id, haushalt_id, rezept_id, gekocht_am, erstellt_von)
+           VALUES (uuid(), ?, ?, ?, ?)`,
+          [g.haushalt_id, id, g.gekocht_am, g.erstellt_von],
+        );
+      }
     });
   };
 }
@@ -227,4 +257,93 @@ export async function zutatenAufListe(
     }
     return neu;
   });
+}
+
+export function favoritUmschalten(
+  db: AbstractPowerSyncDatabase,
+  id: string,
+  favorit: boolean,
+) {
+  return db.execute("UPDATE rezepte SET favorit = ? WHERE id = ?", [
+    favorit ? 1 : 0,
+    id,
+  ]);
+}
+
+/**
+ * „Fertig gekocht“: merkt sich den Kochvorgang. Gibt zurück, zum wievielten Mal und
+ * eine Funktion zum Zurücknehmen.
+ */
+export async function gekochtMerken(
+  db: AbstractPowerSyncDatabase,
+  {
+    haushaltId,
+    nutzerId,
+    rezeptId,
+  }: { haushaltId: string; nutzerId: string; rezeptId: string },
+): Promise<{ anzahl: number; zuruecknehmen: () => Promise<unknown> }> {
+  const id = crypto.randomUUID();
+  const anzahl = await db.writeTransaction(async (tx) => {
+    await tx.execute(
+      `INSERT INTO gekocht (id, haushalt_id, rezept_id, gekocht_am, erstellt_von)
+       VALUES (?, ?, ?, ?, ?)`,
+      [id, haushaltId, rezeptId, new Date().toISOString(), nutzerId],
+    );
+    const { n } = await tx.get<{ n: number }>(
+      "SELECT COUNT(*) AS n FROM gekocht WHERE rezept_id = ?",
+      [rezeptId],
+    );
+    return n;
+  });
+  return {
+    anzahl,
+    zuruecknehmen: () => db.execute("DELETE FROM gekocht WHERE id = ?", [id]),
+  };
+}
+
+const FOTO_KANTE = 1600;
+
+/**
+ * Verkleinert ein Foto im Browser (längste Kante 1600 px, WebP bzw. JPEG) und lädt es
+ * hoch. Gibt die Adresse zurück, unter der es abrufbar ist. Braucht Netz.
+ */
+export async function fotoHochladen(
+  haushaltId: string,
+  datei: File,
+): Promise<string> {
+  const bild = await createImageBitmap(datei, {
+    imageOrientation: "from-image",
+  });
+  const faktor = Math.min(1, FOTO_KANTE / Math.max(bild.width, bild.height));
+  const leinwand = document.createElement("canvas");
+  leinwand.width = Math.round(bild.width * faktor);
+  leinwand.height = Math.round(bild.height * faktor);
+  leinwand
+    .getContext("2d")
+    ?.drawImage(bild, 0, 0, leinwand.width, leinwand.height);
+  bild.close();
+  const alsBlob = (typ: string, qualitaet: number) =>
+    new Promise<Blob | null>((fertig) =>
+      leinwand.toBlob(fertig, typ, qualitaet),
+    );
+  // Safari kann (noch) kein WebP erzeugen und liefert dann PNG – lieber JPEG.
+  let blob = await alsBlob("image/webp", 0.8);
+  if (blob?.type !== "image/webp") {
+    blob = await alsBlob("image/jpeg", 0.85);
+  }
+  if (!blob) {
+    throw new Error("Das Foto ließ sich nicht verarbeiten");
+  }
+  const antwort = await fetch(`/api/haushalte/${haushaltId}/bilder`, {
+    method: "POST",
+    headers: { "Content-Type": blob.type },
+    body: blob,
+  }).catch(() => null);
+  const inhalt = await antwort?.json().catch(() => ({}));
+  if (!antwort?.ok) {
+    throw new Error(
+      inhalt?.fehler ?? "Hochladen fehlgeschlagen – bist du online?",
+    );
+  }
+  return (inhalt as { url: string }).url;
 }

@@ -45,3 +45,24 @@ Kochansicht. Später: Schlagwörter, Favoriten/„zuletzt gekocht“, eigene Fot
   lokal), Zeitangaben in Schritten werden zu Timern mit Ton und Vibration.
 - **Navigation:** Unterseiten in der Adresse (`#rezepte/<id>/kochen`), damit Zurück
   funktioniert.
+
+## Zweiter Schritt (12b)
+
+- **Favoriten** gelten für den Haushalt (Spalte `rezepte.favorit`), passend zum
+  gemeinsamen Kochbuch.
+- **Schlagwörter** als kommagetrennter Text an `rezepte` (klein, ohne Doppelte); die
+  Übersicht filtert danach, die Suche findet sie mit.
+- **Kochhistorie** `gekocht` (unveränderlich, wie `kaeufe`): „Fertig gekocht“ in der
+  Kochansicht legt eine Zeile an, mit Rückgängig. Daraus: „zuletzt gekocht“,
+  „3× gekocht“, Lieblingsgericht und „diesen Monat“. Löschen eines Rezepts mit
+  Rückgängig stellt auch die Historie wieder her.
+- **Was kann ich kochen?** zählt Zutaten, die im Vorrat geführt werden und reichen;
+  Gewürze und Grundzutaten zählen nicht. Frisches ohne Vorrat zählt als fehlend.
+- **Glücksrad:** bis zu acht Rezepte aus der aktuellen Auswahl (Filter gelten mit),
+  gewichtet: Favorit +2, Vorrat bis +2, mehr als zwei Wochen nicht gekocht +1.
+- **Eigene Fotos** in der Tabelle `bilder` (bytea), nicht synchronisiert: Die App
+  verkleinert auf höchstens 1600 px (WebP, sonst JPEG), das API prüft das Format an
+  den ersten Bytes (JPEG/PNG/WebP, höchstens 3 MB) und liefert nur an Mitglieder des
+  Haushalts aus (`/api/bilder/<id>`, dauerhaft cachebar). So landen Fotos ohne
+  Zusatzaufwand in den Datenbank-Backups. Ersetzte oder zu gelöschten Rezepten
+  gehörende Fotos bleiben vorerst liegen (Aufräumen später).

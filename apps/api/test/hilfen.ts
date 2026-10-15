@@ -63,6 +63,13 @@ export function testApp() {
       },
       hochladen: (operationen: unknown[]) =>
         anfrage("POST", "/powersync/upload", { operationen }),
+      /** Rohdaten senden (z. B. ein Foto). */
+      senden: (pfad: string, daten: Uint8Array, typ: string) =>
+        app.request(`${WEB_URL}/api${pfad}`, {
+          method: "POST",
+          headers: { cookie, origin: WEB_URL, "content-type": typ },
+          body: daten,
+        }),
     };
   }
 
