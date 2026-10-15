@@ -1,9 +1,16 @@
 import type { Db } from "@haushalt/db";
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 import { HTTPException } from "hono/http-exception";
 import type postgres from "postgres";
 import { fotoStatistik, ungenutzteFotosLoeschen } from "./aufraeumen";
 import type { Auth } from "./auth";
+import {
+  Begrenzer,
+  FOTO_SPEICHER_HOECHSTENS,
+  GRENZEN,
+  type Grenze,
+} from "./begrenzer";
 import { neuerCode, normalisiereCode } from "./einladungscode";
 import { ImportFehler, rezeptAusHtml, seiteHolen } from "./rezept-import";
 import {
@@ -49,6 +56,8 @@ export function erstelleApp({
   auth,
   importLokalErlaubt = false,
   adminEmails = [],
+  grenzen = {},
+  fotoSpeicher = FOTO_SPEICHER_HOECHSTENS,
 }: {
   db: Db;
   sql: postgres.Sql;
@@ -57,8 +66,33 @@ export function erstelleApp({
   importLokalErlaubt?: boolean;
   /** Diese Konten sehen das Admin-Panel (E-Mail, ohne Groß/klein). */
   adminEmails?: string[];
+  /** Eigene Grenzen (Tests); sonst die Standard-Grenzen. */
+  grenzen?: Partial<Record<keyof typeof GRENZEN, Grenze[]>>;
+  /** Foto-Speicher pro Haushalt (Tests); sonst 200 MB. */
+  fotoSpeicher?: number;
 }) {
   const app = new Hono<{ Variables: { nutzer: Nutzer } }>().basePath("/api");
+
+  const begrenzer = {
+    import: new Begrenzer(grenzen.import ?? GRENZEN.import),
+    foto: new Begrenzer(grenzen.foto ?? GRENZEN.foto),
+    einladung: new Begrenzer(grenzen.einladung ?? GRENZEN.einladung),
+  };
+  /** 429 mit verständlicher Meldung, wenn ein Konto zu oft hintereinander anfragt. */
+  const begrenzen = (art: keyof typeof begrenzer, wofuer: string) =>
+    createMiddleware<{ Variables: { nutzer: Nutzer } }>(async (c, next) => {
+      const ergebnis = begrenzer[art].versuch(c.get("nutzer").id);
+      if (!ergebnis.erlaubt) {
+        c.header("Retry-After", String(ergebnis.wiederInSekunden));
+        return c.json(
+          {
+            fehler: `Zu viele ${wofuer} – bitte in ${wartezeit(ergebnis.wiederInSekunden)} noch einmal.`,
+          },
+          429,
+        );
+      }
+      await next();
+    });
 
   // Für Docker, Überwachung und Tests: App läuft und erreicht die Datenbank.
   app.get("/health", async (c) => {
@@ -133,42 +167,46 @@ export function erstelleApp({
   });
 
   /** Tritt mit einem Einladungscode einem Haushalt bei. Jeder Code gilt einmal. */
-  app.post("/einladungen/annehmen", async (c) => {
-    const nutzer = c.get("nutzer");
-    const { code } = await c.req.json<{ code?: unknown }>();
-    if (typeof code !== "string") {
-      throw new HTTPException(400, { message: "Code fehlt" });
-    }
-    const haushalt = await sql.begin(async (tx) => {
-      const [einladung] = await tx<{ id: string; haushalt_id: string }[]>`
+  app.post(
+    "/einladungen/annehmen",
+    begrenzen("einladung", "Versuche mit Einladungscodes"),
+    async (c) => {
+      const nutzer = c.get("nutzer");
+      const { code } = await c.req.json<{ code?: unknown }>();
+      if (typeof code !== "string") {
+        throw new HTTPException(400, { message: "Code fehlt" });
+      }
+      const haushalt = await sql.begin(async (tx) => {
+        const [einladung] = await tx<{ id: string; haushalt_id: string }[]>`
         select id, haushalt_id from einladungen
         where code = ${normalisiereCode(code)} and angenommen_von is null and gueltig_bis > now()
         for update
       `;
-      if (!einladung) {
-        throw new HTTPException(404, {
-          message: "Code ungültig, abgelaufen oder schon benutzt",
-        });
-      }
-      const [schonDrin] = await tx`
+        if (!einladung) {
+          throw new HTTPException(404, {
+            message: "Code ungültig, abgelaufen oder schon benutzt",
+          });
+        }
+        const [schonDrin] = await tx`
         select 1 from haushalt_mitglieder
         where haushalt_id = ${einladung.haushalt_id} and nutzer_id = ${nutzer.id}
       `;
-      if (schonDrin) {
-        throw new HTTPException(409, {
-          message: "Du bist schon Mitglied dieses Haushalts",
-        });
-      }
-      await pruefeHaushaltLimit(tx, nutzer.id);
-      await tx`
+        if (schonDrin) {
+          throw new HTTPException(409, {
+            message: "Du bist schon Mitglied dieses Haushalts",
+          });
+        }
+        await pruefeHaushaltLimit(tx, nutzer.id);
+        await tx`
         insert into haushalt_mitglieder (haushalt_id, nutzer_id, anzeigename, rolle)
         values (${einladung.haushalt_id}, ${nutzer.id}, ${nutzer.name}, 'mitglied')
       `;
-      await tx`update einladungen set angenommen_von = ${nutzer.id} where id = ${einladung.id}`;
-      return { id: einladung.haushalt_id };
-    });
-    return c.json(haushalt);
-  });
+        await tx`update einladungen set angenommen_von = ${nutzer.id} where id = ${einladung.id}`;
+        return { id: einladung.haushalt_id };
+      });
+      return c.json(haushalt);
+    },
+  );
 
   /**
    * Haushalt verlassen. War man Besitzer, übernimmt das am längsten dabei gewesene
@@ -307,25 +345,41 @@ export function erstelleApp({
    * Lädt ein Foto hoch (Rohdaten im Body, Typ im Content-Type). Die App verkleinert
    * vorher; hier wird nur das Format an den ersten Bytes geprüft und begrenzt.
    */
-  app.post("/haushalte/:id/bilder", async (c) => {
-    const nutzer = c.get("nutzer");
-    const haushaltId = c.req.param("id");
-    await pruefeMitglied(sql, haushaltId, nutzer.id);
-    const daten = Buffer.from(await c.req.arrayBuffer());
-    if (daten.byteLength > BILD_HOECHSTENS) {
-      return c.json({ fehler: "Das Foto ist zu groß (höchstens 3 MB)" }, 413);
-    }
-    const mime = bildFormat(daten);
-    if (!mime) {
-      return c.json({ fehler: "Nur JPEG-, PNG- oder WebP-Fotos" }, 415);
-    }
-    const [bild] = await sql<{ id: string }[]>`
+  app.post(
+    "/haushalte/:id/bilder",
+    begrenzen("foto", "Fotos in kurzer Zeit"),
+    async (c) => {
+      const nutzer = c.get("nutzer");
+      const haushaltId = c.req.param("id");
+      await pruefeMitglied(sql, haushaltId, nutzer.id);
+      const daten = Buffer.from(await c.req.arrayBuffer());
+      if (daten.byteLength > BILD_HOECHSTENS) {
+        return c.json({ fehler: "Das Foto ist zu groß (höchstens 3 MB)" }, 413);
+      }
+      const mime = bildFormat(daten);
+      if (!mime) {
+        return c.json({ fehler: "Nur JPEG-, PNG- oder WebP-Fotos" }, 415);
+      }
+      const [{ belegt } = { belegt: 0 }] = await sql<{ belegt: number }[]>`
+      select coalesce(sum(octet_length(daten)), 0)::bigint::float8 as belegt
+      from bilder where haushalt_id = ${haushaltId}
+    `;
+      if (belegt + daten.byteLength > fotoSpeicher) {
+        return c.json(
+          {
+            fehler: `Der Foto-Speicher des Haushalts ist voll (${Math.round(fotoSpeicher / 1024 / 1024)} MB).`,
+          },
+          413,
+        );
+      }
+      const [bild] = await sql<{ id: string }[]>`
       insert into bilder (haushalt_id, mime, daten, erstellt_von)
       values (${haushaltId}, ${mime}, ${daten}, ${nutzer.id})
       returning id
     `;
-    return c.json({ url: `/api/bilder/${bild?.id}` }, 201);
-  });
+      return c.json({ url: `/api/bilder/${bild?.id}` }, 201);
+    },
+  );
 
   /** Liefert ein Foto – nur an Mitglieder des Haushalts, dem es gehört. */
   app.get("/bilder/:id", async (c) => {
@@ -350,30 +404,34 @@ export function erstelleApp({
   });
 
   /** Liest ein Rezept von einer Webseite aus (Link-Import). */
-  app.post("/rezepte/import", async (c) => {
-    const { url } = await c.req.json<{ url?: unknown }>();
-    if (typeof url !== "string" || url.trim() === "") {
-      return c.json({ fehler: "Link fehlt" }, 400);
-    }
-    try {
-      const seite = await seiteHolen(url.trim(), {
-        lokalErlaubt: importLokalErlaubt,
-      });
-      const rezept = rezeptAusHtml(seite.html, seite.url);
-      if (!rezept) {
-        throw new ImportFehler(
-          "Auf dieser Seite wurde kein Rezept gefunden",
-          422,
-        );
+  app.post(
+    "/rezepte/import",
+    begrenzen("import", "Importe in kurzer Zeit"),
+    async (c) => {
+      const { url } = await c.req.json<{ url?: unknown }>();
+      if (typeof url !== "string" || url.trim() === "") {
+        return c.json({ fehler: "Link fehlt" }, 400);
       }
-      return c.json(rezept);
-    } catch (fehler) {
-      if (fehler instanceof ImportFehler) {
-        return c.json({ fehler: fehler.message }, fehler.status);
+      try {
+        const seite = await seiteHolen(url.trim(), {
+          lokalErlaubt: importLokalErlaubt,
+        });
+        const rezept = rezeptAusHtml(seite.html, seite.url);
+        if (!rezept) {
+          throw new ImportFehler(
+            "Auf dieser Seite wurde kein Rezept gefunden",
+            422,
+          );
+        }
+        return c.json(rezept);
+      } catch (fehler) {
+        if (fehler instanceof ImportFehler) {
+          return c.json({ fehler: fehler.message }, fehler.status);
+        }
+        throw fehler;
       }
-      throw fehler;
-    }
-  });
+    },
+  );
 
   app.onError((fehler, c) => {
     if (fehler instanceof HTTPException) {
@@ -432,4 +490,14 @@ function istConstraintFehler(fehler: unknown): fehler is Error {
     return false;
   }
   return typeof fehler.code === "string" && fehler.code.startsWith("23");
+}
+
+function wartezeit(sekunden: number): string {
+  if (sekunden < 90) {
+    return `${sekunden} Sekunden`;
+  }
+  const minuten = Math.ceil(sekunden / 60);
+  return minuten < 90
+    ? `${minuten} Minuten`
+    : `${Math.ceil(minuten / 60)} Stunden`;
 }

@@ -116,6 +116,23 @@ Von Hand starten: Actions → Überwachung → „Run workflow“.
 GitHub pausiert geplante Workflows, wenn 60 Tage nichts im Repository passiert –
 dann in Actions wieder aktivieren.
 
+## Begrenzungen
+
+Schutz vor versehentlichen Schleifen und Missbrauch, pro Konto (im Speicher des
+API – nach einem Neustart zählt es von vorn):
+
+| Was | Grenze | Warum |
+|---|---|---|
+| Rezept-Import | 5 pro Minute, 30 pro Stunde | Server ruft fremde Seiten ab |
+| Foto-Upload | 20 pro 10 Minuten, 100 pro Tag | Fotos belegen Speicher |
+| Foto-Speicher | 200 MB pro Haushalt | Datenbank und Backups bleiben klein |
+| Einladungscode einlösen | 10 pro 10 Minuten | gegen Durchprobieren |
+| Anmelden/Registrieren | 3 pro 10 Sekunden pro IP | Better Auth (in Produktion aktiv) |
+
+Bei Überschreitung antwortet das API mit `429` (bzw. `413` beim vollen
+Foto-Speicher) und einer Meldung, die die App anzeigt („bitte in 40 Sekunden noch
+einmal“). Werte in `apps/api/src/begrenzer.ts`.
+
 ## Updates der Abhängigkeiten
 
 Dependabot (`.github/dependabot.yml`) öffnet jeden Montag um 6 Uhr Pull Requests:

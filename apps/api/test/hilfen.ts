@@ -8,7 +8,12 @@ const WEB_URL = "http://localhost:5173";
 /** Dieses Konto ist in den Tests Admin. */
 export const ADMIN_EMAIL = `admin-${randomUUID()}@test.local`;
 
-export function testApp() {
+export function testApp(
+  extra: Pick<
+    Parameters<typeof erstelleApp>[0],
+    "grenzen" | "fotoSpeicher"
+  > = {},
+) {
   const { db, sql } = erstelleDb(testDatenbankUrl());
   const auth = erstelleAuth(db, {
     secret: "test-secret-mindestens-32-zeichen-lang!!",
@@ -20,6 +25,7 @@ export function testApp() {
     auth,
     importLokalErlaubt: true,
     adminEmails: [ADMIN_EMAIL],
+    ...extra,
   });
 
   /** Ein angemeldeter Testnutzer, der Anfragen mit seinem Sitzungs-Cookie stellt. */
