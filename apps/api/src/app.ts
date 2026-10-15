@@ -13,6 +13,30 @@ import {
 } from "./upload";
 
 const EINLADUNG_GUELTIG_TAGE = 7;
+const BILD_HOECHSTENS = 3 * 1024 * 1024;
+const UUID_MUSTER =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Erkennt das Bildformat an den ersten Bytes (nicht am angegebenen Typ). */
+export function bildFormat(daten: Buffer): string | null {
+  if (daten[0] === 0xff && daten[1] === 0xd8 && daten[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (
+    daten
+      .subarray(0, 8)
+      .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
+    return "image/png";
+  }
+  if (
+    daten.subarray(0, 4).toString("ascii") === "RIFF" &&
+    daten.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  return null;
+}
 
 type Nutzer = { id: string; name: string };
 
@@ -142,6 +166,52 @@ export function erstelleApp({
     }
   });
 
+  /**
+   * Lädt ein Foto hoch (Rohdaten im Body, Typ im Content-Type). Die App verkleinert
+   * vorher; hier wird nur das Format an den ersten Bytes geprüft und begrenzt.
+   */
+  app.post("/haushalte/:id/bilder", async (c) => {
+    const nutzer = c.get("nutzer");
+    const haushaltId = c.req.param("id");
+    await pruefeMitglied(sql, haushaltId, nutzer.id);
+    const daten = Buffer.from(await c.req.arrayBuffer());
+    if (daten.byteLength > BILD_HOECHSTENS) {
+      return c.json({ fehler: "Das Foto ist zu groß (höchstens 3 MB)" }, 413);
+    }
+    const mime = bildFormat(daten);
+    if (!mime) {
+      return c.json({ fehler: "Nur JPEG-, PNG- oder WebP-Fotos" }, 415);
+    }
+    const [bild] = await sql<{ id: string }[]>`
+      insert into bilder (haushalt_id, mime, daten, erstellt_von)
+      values (${haushaltId}, ${mime}, ${daten}, ${nutzer.id})
+      returning id
+    `;
+    return c.json({ url: `/api/bilder/${bild?.id}` }, 201);
+  });
+
+  /** Liefert ein Foto – nur an Mitglieder des Haushalts, dem es gehört. */
+  app.get("/bilder/:id", async (c) => {
+    const id = c.req.param("id");
+    if (!UUID_MUSTER.test(id)) {
+      return c.json({ fehler: "Nicht gefunden" }, 404);
+    }
+    const [bild] = await sql<{ mime: string; daten: Buffer }[]>`
+      select b.mime, b.daten from bilder b
+      join haushalt_mitglieder m on m.haushalt_id = b.haushalt_id
+      where b.id = ${id} and m.nutzer_id = ${c.get("nutzer").id}
+    `;
+    if (!bild) {
+      return c.json({ fehler: "Nicht gefunden" }, 404);
+    }
+    // Bilder ändern sich nie (neue ID je Upload) – dauerhaft zwischenspeichern.
+    return c.body(new Uint8Array(bild.daten), 200, {
+      "content-type": bild.mime,
+      "cache-control": "private, max-age=31536000, immutable",
+      "x-content-type-options": "nosniff",
+    });
+  });
+
   /** Liest ein Rezept von einer Webseite aus (Link-Import). */
   app.post("/rezepte/import", async (c) => {
     const { url } = await c.req.json<{ url?: unknown }>();
@@ -177,6 +247,23 @@ export function erstelleApp({
   });
 
   return app;
+}
+
+/** 403, wenn der Nutzer nicht zum Haushalt gehört (auch bei ungültiger ID). */
+async function pruefeMitglied(
+  sql: postgres.Sql,
+  haushaltId: string,
+  nutzerId: string,
+) {
+  const [mitglied] = await sql`
+    select 1 from haushalt_mitglieder
+    where haushalt_id::text = ${haushaltId} and nutzer_id = ${nutzerId}
+  `;
+  if (!mitglied) {
+    throw new HTTPException(403, {
+      message: "Kein Mitglied dieses Haushalts",
+    });
+  }
 }
 
 async function pruefeKeinHaushalt(

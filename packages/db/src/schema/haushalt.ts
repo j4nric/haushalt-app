@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  customType,
   doublePrecision,
   foreignKey,
   index,
@@ -261,6 +262,10 @@ export const rezepte = pgTable(
     quelleUrl: text("quelle_url"),
     bildUrl: text("bild_url"),
     schritte: text("schritte").notNull().default(""),
+    /** Favorit des Haushalts (ein Stern für alle). */
+    favorit: boolean("favorit").notNull().default(false),
+    /** Freie Schlagwörter, kommagetrennt („schnell,vegetarisch“). */
+    schlagwoerter: text("schlagwoerter").notNull().default(""),
     erstelltVon: text("erstellt_von").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -310,4 +315,58 @@ export const rezeptZutaten = pgTable(
       sql`${t.menge} is null or ${t.menge} > 0`,
     ),
   ],
+);
+
+/**
+ * Kochhistorie: eine Zeile je „Fertig gekocht“. Grundlage für „zuletzt gekocht“ und
+ * die Kochstatistik. Unveränderlich; Zurücknehmen löscht.
+ */
+export const gekocht = pgTable(
+  "gekocht",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    rezeptId: uuid("rezept_id").notNull(),
+    gekochtAm: timestamp("gekocht_am", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [
+    index().on(t.haushaltId),
+    index().on(t.rezeptId),
+    foreignKey({
+      columns: [t.rezeptId, t.haushaltId],
+      foreignColumns: [rezepte.id, rezepte.haushaltId],
+    }).onDelete("cascade"),
+  ],
+);
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+/**
+ * Eigene Fotos (Rezepte). Bewusst in der Datenbank statt als Dateien: Die App
+ * verkleinert sie vor dem Hochladen (wenige hundert KB), und so sind sie ohne
+ * Zusatzaufwand in den Backups. Wird nicht synchronisiert – Geräte laden die Bilder
+ * über /api/bilder/<id> und der Service Worker speichert sie zwischen.
+ */
+export const bilder = pgTable(
+  "bilder",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    mime: text("mime").notNull(),
+    daten: bytea("daten").notNull(),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [index().on(t.haushaltId)],
 );

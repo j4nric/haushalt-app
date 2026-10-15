@@ -42,13 +42,22 @@ const optionalerText =
     return wert.trim();
   };
 /** Nur http(s)-Adressen – sie landen in Links und Bildern. */
-const optionaleUrl = (spalte: string) => (wert: unknown) => {
-  const url = optionalerText(spalte, 2000)(wert);
-  if (url != null && !/^https?:\/\//i.test(url)) {
-    throw new UngueltigeOperation(`${spalte} muss mit http(s):// beginnen`);
-  }
-  return url;
-};
+const optionaleUrl =
+  (spalte: string, { eigeneBilder = false } = {}) =>
+  (wert: unknown) => {
+    const url = optionalerText(spalte, 2000)(wert);
+    if (
+      url != null &&
+      !/^https?:\/\//i.test(url) &&
+      !(eigeneBilder && EIGENES_BILD.test(url))
+    ) {
+      throw new UngueltigeOperation(`${spalte} muss mit http(s):// beginnen`);
+    }
+    return url;
+  };
+/** Hochgeladene Fotos liegen unter /api/bilder/<uuid>. */
+const EIGENES_BILD =
+  /^\/api\/bilder\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ganzzahl =
   (spalte: string, { min, optional }: { min: number; optional: boolean }) =>
   (wert: unknown) => {
@@ -170,7 +179,12 @@ const ERLAUBT = {
       umwandeln: ganzzahl("portionen", { min: 1, optional: true }),
     },
     quelle_url: { umwandeln: optionaleUrl("quelle_url") },
-    bild_url: { umwandeln: optionaleUrl("bild_url") },
+    bild_url: { umwandeln: optionaleUrl("bild_url", { eigeneBilder: true }) },
+    favorit: { umwandeln: bool },
+    schlagwoerter: {
+      umwandeln: (wert: unknown) =>
+        optionalerText("schlagwoerter", 500)(wert) ?? "",
+    },
     schritte: {
       umwandeln: (wert: unknown) =>
         optionalerText("schritte", 20_000)(wert) ?? "",
@@ -187,6 +201,13 @@ const ERLAUBT = {
     name: { umwandeln: text("name") },
     zusatz: { umwandeln: optionalerText("zusatz") },
     gewuerz: { umwandeln: bool },
+  },
+  // Kochhistorie: unveränderlich, nur PUT und DELETE.
+  gekocht: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    rezept_id: { umwandeln: uuid("rezept_id"), fest: true },
+    gekocht_am: { umwandeln: zeitpunkt, fest: true },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
   },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
@@ -304,7 +325,8 @@ export async function wendeAn(
         o.table === "listeneintraege" ||
         o.table === "vorratsbuchungen" ||
         o.table === "kaeufe" ||
-        o.table === "rezepte"
+        o.table === "rezepte" ||
+        o.table === "gekocht"
       ) {
         data.erstellt_von = nutzerId;
       }
