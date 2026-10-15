@@ -57,7 +57,7 @@ export function Eingabeleiste({
   return (
     <form
       onSubmit={senden}
-      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t in-data-[tastatur=offen]:bottom-(--tastatur) bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
       // Bleibt beim Seitenwechsel stehen statt mitzugleiten (siehe index.css).
       style={{ viewTransitionName: "eingabe" }}
     >
