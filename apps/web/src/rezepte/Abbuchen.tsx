@@ -14,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import type { ArtikelStand } from "@/lib/kochbar";
 import { alsPosten } from "@/lib/plan";
+import { ARTIKEL_STAND } from "@/rezepte/daten";
 import type { GespeicherteZutat } from "./aktionen";
-import { ARTIKEL_STAND } from "./Rezepte";
 
 const EINHEIT_KURZ = { stueck: "Stk.", g: "g", ml: "ml" } as const;
 

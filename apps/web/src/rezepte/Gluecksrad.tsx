@@ -8,7 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { rezeptEmoji } from "./Rezepte";
+import { rezeptEmoji } from "@/rezepte/RezeptBild";
 
 export type RadRezept = {
   id: string;

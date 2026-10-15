@@ -19,7 +19,7 @@ import {
   wocheFuellen,
 } from "@/lib/plan";
 import { zeitWert } from "@/lib/zeit";
-import { rezeptEmoji } from "../rezepte/Rezepte";
+import { rezeptEmoji } from "@/rezepte/RezeptBild";
 import { useKochbar } from "../rezepte/useKochbar";
 import { einplanen } from "./aktionen";
 import { useStandardPortionen } from "./daten";

@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { useUnterseite } from "@/Ansicht";
+import { PortionenWahl } from "@/components/PortionenWahl";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -34,9 +35,9 @@ import {
 } from "@/lib/plan";
 import { cn } from "@/lib/utils";
 import { zeitWert } from "@/lib/zeit";
+import { RezeptBild } from "@/rezepte/RezeptBild";
 import { AufDieListe } from "../rezepte/AufDieListe";
-import { PortionenWahl, RezeptDetail } from "../rezepte/RezeptDetail";
-import { RezeptBild } from "../rezepte/Rezepte";
+import { RezeptDetail } from "../rezepte/RezeptDetail";
 import { useZutatenNachRezept } from "../rezepte/useKochbar";
 import { Auswahl } from "./Auswahl";
 import {

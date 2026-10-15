@@ -12,3 +12,32 @@ export function zeitWert(zeitpunkt: string): number {
     .replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
   return Date.parse(iso);
 }
+
+/** „3× gekocht · zuletzt vor 5 Tagen“ bzw. „Noch nie gekocht“. */
+export function kochstatistik(anzahl: number, zuletzt: string | null): string {
+  if (!anzahl || !zuletzt) {
+    return "Noch nie gekocht";
+  }
+  return `${anzahl}× gekocht · zuletzt ${vorWann(zuletzt)}`;
+}
+
+export function vorWann(zeitpunkt: string): string {
+  const tage = Math.floor(
+    (new Date().setHours(0, 0, 0, 0) -
+      new Date(zeitWert(zeitpunkt)).setHours(0, 0, 0, 0)) /
+      86_400_000,
+  );
+  if (tage <= 0) {
+    return "heute";
+  }
+  if (tage === 1) {
+    return "gestern";
+  }
+  if (tage < 14) {
+    return `vor ${tage} Tagen`;
+  }
+  if (tage < 60) {
+    return `vor ${Math.round(tage / 7)} Wochen`;
+  }
+  return `vor ${Math.round(tage / 30)} Monaten`;
+}

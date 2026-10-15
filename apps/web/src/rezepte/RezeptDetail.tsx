@@ -9,16 +9,15 @@ import {
   CalendarPlus,
   ChefHat,
   ExternalLink,
-  Minus,
   MoreVertical,
   Pencil,
-  Plus,
   ShoppingCart,
   Star,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { PortionenWahl } from "@/components/PortionenWahl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,7 +27,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { alsPosten } from "@/lib/plan";
 import { cn } from "@/lib/utils";
-import { zeitWert } from "@/lib/zeit";
+import { kochstatistik } from "@/lib/zeit";
+import type { Rezept } from "@/rezepte/daten";
+import { RezeptBild } from "@/rezepte/RezeptBild";
 import { Einplanen } from "../plan/Einplanen";
 import { Abbuchen, type Abbuchung, useAbbuchbar } from "./Abbuchen";
 import { AufDieListe } from "./AufDieListe";
@@ -41,20 +42,6 @@ import {
   schlagwoerterAusText,
 } from "./aktionen";
 import { Kochansicht } from "./Kochansicht";
-import { RezeptBild } from "./Rezepte";
-
-export type Rezept = {
-  id: string;
-  titel: string;
-  portionen: number | null;
-  quelle_url: string | null;
-  bild_url: string | null;
-  schritte: string;
-  favorit: number | null;
-  schlagwoerter: string | null;
-  gekocht_anzahl: number;
-  zuletzt_gekocht: string | null;
-};
 
 export function RezeptDetail({
   id,
@@ -381,71 +368,4 @@ export function RezeptDetail({
       />
     </article>
   );
-}
-
-export function PortionenWahl({
-  wert,
-  aendern,
-}: {
-  wert: number;
-  aendern: (n: number) => void;
-}) {
-  return (
-    <div className="flex items-center gap-1 rounded-full border bg-card p-0.5">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8 rounded-full"
-        aria-label="Weniger Portionen"
-        disabled={wert <= 1}
-        onClick={() => aendern(wert - 1)}
-      >
-        <Minus />
-      </Button>
-      <span
-        className="min-w-20 text-center text-sm font-medium"
-        aria-live="polite"
-      >
-        {wert} {wert === 1 ? "Portion" : "Portionen"}
-      </span>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-8 rounded-full"
-        aria-label="Mehr Portionen"
-        onClick={() => aendern(wert + 1)}
-      >
-        <Plus />
-      </Button>
-    </div>
-  );
-}
-
-/** „3× gekocht · zuletzt vor 5 Tagen“ bzw. „Noch nie gekocht“. */
-export function kochstatistik(anzahl: number, zuletzt: string | null): string {
-  if (!anzahl || !zuletzt) {
-    return "Noch nie gekocht";
-  }
-  return `${anzahl}× gekocht · zuletzt ${vorWann(zuletzt)}`;
-}
-
-export function vorWann(zeitpunkt: string): string {
-  const tage = Math.floor(
-    (new Date().setHours(0, 0, 0, 0) -
-      new Date(zeitWert(zeitpunkt)).setHours(0, 0, 0, 0)) /
-      86_400_000,
-  );
-  if (tage <= 0) {
-    return "heute";
-  }
-  if (tage === 1) {
-    return "gestern";
-  }
-  if (tage < 14) {
-    return `vor ${tage} Tagen`;
-  }
-  if (tage < 60) {
-    return `vor ${Math.round(tage / 7)} Wochen`;
-  }
-  return `vor ${Math.round(tage / 30)} Monaten`;
 }

@@ -4,12 +4,12 @@ import { useState } from "react";
 import { useUnterseite } from "@/Ansicht";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { produktEmoji } from "@/lib/persoenlichkeit";
 import { cn } from "@/lib/utils";
-import { zeitWert } from "@/lib/zeit";
+import { vorWann, zeitWert } from "@/lib/zeit";
+import { RezeptBild } from "@/rezepte/RezeptBild";
 import { schlagwoerterAusText } from "./aktionen";
 import { Gluecksrad } from "./Gluecksrad";
-import { RezeptDetail, vorWann } from "./RezeptDetail";
+import { RezeptDetail } from "./RezeptDetail";
 import { RezeptEditor } from "./RezeptEditor";
 import { useKochbar } from "./useKochbar";
 
@@ -398,85 +398,4 @@ function FilterChip({
 function monatsanfang() {
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
-}
-
-/** Vorratsstand aller Artikel des Haushalts (für „kochbar“ und „Auf die Liste“). */
-export const ARTIKEL_STAND = `SELECT a.id, lower(a.name) AS name, COALESCE(a.im_vorrat, 0) AS im_vorrat, a.standardeinheit,
-       COALESCE((SELECT SUM(b.menge) FROM vorratsbuchungen b WHERE b.artikel_id = a.id), 0) AS bestand,
-       EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
-  FROM artikel a WHERE a.haushalt_id = ?`;
-
-/** Typische Gerichte – vor den Produkt-Emojis geprüft („Kürbissuppe“ → 🍲). */
-const GERICHTE: [RegExp, string][] = [
-  [/pfannkuchen|pancake|crêpe|eierkuchen/i, "🥞"],
-  [/waffel/i, "🧇"],
-  [/suppe|eintopf|brühe/i, "🍲"],
-  [/curry|dal\b/i, "🍛"],
-  [/salat|salad|bowl/i, "🥗"],
-  [/kuchen|torte/i, "🍰"],
-  [/muffin|cupcake/i, "🧁"],
-  [/plätzchen|cookie/i, "🍪"],
-  [/burger/i, "🍔"],
-  [/taco|chili/i, "🌮"],
-  [/wrap|burrito/i, "🌯"],
-  [/döner|kebab|falafel/i, "🥙"],
-  [/sushi/i, "🍣"],
-  [/risotto|paella/i, "🥘"],
-  [/omelett|rührei|spiegelei/i, "🍳"],
-  [/smoothie|shake/i, "🥤"],
-  [/gratin|auflauf/i, "🥘"],
-];
-
-/** Emoji passend zum Titel („Spaghetti …“ → 🍝), sonst eine Pfanne. */
-export function rezeptEmoji(titel: string) {
-  // Nudel- und Fleischgerichte zeigt das Produkt-Emoji besser („Nudelauflauf“ → 🍝).
-  const produkt = produktEmoji(titel, null);
-  const gericht = GERICHTE.find(([m]) => m.test(titel))?.[1];
-  if (/nudel|pasta|spaghetti|lasagne|pizza/i.test(titel)) {
-    return produkt;
-  }
-  return gericht ?? (produkt === "🛍️" ? "🍳" : produkt);
-}
-
-/**
- * Bild des Rezepts; ohne Bild (oder wenn es nicht lädt, z. B. offline und nie
- * zwischengespeichert) eine farbige Fläche mit Emoji.
- */
-export function RezeptBild({
-  url,
-  titel,
-  className,
-}: {
-  url: string | null;
-  titel: string;
-  className?: string;
-}) {
-  const [kaputt, setKaputt] = useState(false);
-  if (url && !kaputt) {
-    return (
-      <img
-        src={url}
-        alt=""
-        loading="lazy"
-        referrerPolicy="no-referrer"
-        onError={() => setKaputt(true)}
-        className={cn("w-full bg-muted object-cover", className)}
-      />
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "flex w-full items-center justify-center text-5xl",
-        className,
-      )}
-      style={{
-        background:
-          "linear-gradient(135deg, color-mix(in oklab, var(--primary) 18%, var(--card)), color-mix(in oklab, #f59e0b 22%, var(--card)))",
-      }}
-    >
-      {rezeptEmoji(titel)}
-    </span>
-  );
 }

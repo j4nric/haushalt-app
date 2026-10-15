@@ -7,7 +7,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { vorWann } from "./rezepte/RezeptDetail";
+import { vorWann } from "@/lib/zeit";
 
 type Uebersicht = {
   nutzer: {
