@@ -11,6 +11,12 @@ import {
   GRENZEN,
   type Grenze,
 } from "./begrenzer";
+import {
+  type Benachrichtiger,
+  istArt,
+  istPushAdresse,
+  STANDARD_ARTEN,
+} from "./benachrichtigungen";
 import { neuerCode, normalisiereCode } from "./einladungscode";
 import { BARCODE, produktNachschlagen } from "./produkte";
 import { ImportFehler, rezeptAusHtml, seiteHolen } from "./rezept-import";
@@ -60,6 +66,7 @@ export function erstelleApp({
   grenzen = {},
   fotoSpeicher = FOTO_SPEICHER_HOECHSTENS,
   produktQuelle = "https://world.openfoodfacts.org",
+  benachrichtiger = null,
 }: {
   db: Db;
   sql: postgres.Sql;
@@ -74,6 +81,8 @@ export function erstelleApp({
   fotoSpeicher?: number;
   /** Basis-Adresse von Open Food Facts (Tests: lokale Attrappe). */
   produktQuelle?: string;
+  /** Verschickt Push-Benachrichtigungen; ohne gibt es keine. */
+  benachrichtiger?: Benachrichtiger | null;
 }) {
   const app = new Hono<{ Variables: { nutzer: Nutzer } }>().basePath("/api");
 
@@ -209,6 +218,7 @@ export function erstelleApp({
         await tx`update einladungen set angenommen_von = ${nutzer.id} where id = ${einladung.id}`;
         return { id: einladung.haushalt_id };
       });
+      benachrichtiger?.mitgliedBeigetreten(haushalt.id, nutzer.id);
       return c.json(haushalt);
     },
   );
@@ -303,14 +313,102 @@ export function erstelleApp({
     return c.json(await ungenutzteFotosLoeschen(sql, 1));
   });
 
+  // --- Push-Benachrichtigungen (ein Abo je Gerät) ---------------------------------
+
+  /** Öffentlicher VAPID-Schlüssel – braucht der Browser zum Abonnieren. */
+  app.get("/push/schluessel", (c) => {
+    if (!benachrichtiger) {
+      return c.json(
+        { fehler: "Benachrichtigungen sind nicht eingerichtet" },
+        503,
+      );
+    }
+    return c.json({
+      schluessel: benachrichtiger.oeffentlicherSchluessel,
+      standard: STANDARD_ARTEN,
+    });
+  });
+
+  /** Gerät an- oder ummelden (gleicher Endpoint = dasselbe Gerät). */
+  app.put("/push/abo", async (c) => {
+    const nutzer = c.get("nutzer");
+    const { endpoint, keys, arten } = await c.req.json<{
+      endpoint?: unknown;
+      keys?: { p256dh?: unknown; auth?: unknown };
+      arten?: unknown;
+    }>();
+    const schluesselOk = (w: unknown): w is string =>
+      typeof w === "string" && w.length > 0 && w.length <= 200;
+    if (
+      !istPushAdresse(endpoint) ||
+      !schluesselOk(keys?.p256dh) ||
+      !schluesselOk(keys?.auth) ||
+      !Array.isArray(arten) ||
+      !arten.every(istArt)
+    ) {
+      return c.json({ fehler: "Ungültiges Abo" }, 400);
+    }
+    const gewaehlt = [...new Set(arten)];
+    await sql.begin(async (tx) => {
+      await tx`
+        insert into push_abos (nutzer_id, endpoint, p256dh, auth, arten)
+        values (${nutzer.id}, ${endpoint}, ${keys.p256dh as string}, ${keys.auth as string}, ${gewaehlt})
+        on conflict (endpoint) do update set
+          nutzer_id = excluded.nutzer_id, p256dh = excluded.p256dh,
+          auth = excluded.auth, arten = excluded.arten
+      `;
+      // Höchstens 20 Geräte je Konto; die ältesten fallen raus.
+      await tx`
+        delete from push_abos where nutzer_id = ${nutzer.id} and id not in (
+          select id from push_abos where nutzer_id = ${nutzer.id}
+          order by erstellt_am desc limit 20
+        )
+      `;
+    });
+    return c.json({ arten: gewaehlt });
+  });
+
+  /** Ist dieses Gerät angemeldet, und wofür? */
+  app.get("/push/abo", async (c) => {
+    const [abo] = await sql<{ arten: string[] }[]>`
+      select arten from push_abos
+      where endpoint = ${c.req.query("endpoint") ?? ""} and nutzer_id = ${c.get("nutzer").id}
+    `;
+    return abo ? c.json(abo) : c.json({ fehler: "Nicht angemeldet" }, 404);
+  });
+
+  app.delete("/push/abo", async (c) => {
+    const { endpoint } = await c.req.json<{ endpoint?: unknown }>();
+    if (typeof endpoint !== "string") {
+      return c.json({ fehler: "endpoint fehlt" }, 400);
+    }
+    await sql`
+      delete from push_abos where endpoint = ${endpoint} and nutzer_id = ${c.get("nutzer").id}
+    `;
+    return c.body(null, 204);
+  });
+
+  /** Testnachricht an dieses Gerät. */
+  app.post("/push/test", async (c) => {
+    const { endpoint } = await c.req.json<{ endpoint?: unknown }>();
+    if (!benachrichtiger || typeof endpoint !== "string") {
+      return c.json({ fehler: "Nicht möglich" }, 400);
+    }
+    return (await benachrichtiger.test(c.get("nutzer").id, endpoint))
+      ? c.json({ ok: true })
+      : c.json({ fehler: "Dieses Gerät ist nicht angemeldet" }, 404);
+  });
+
   /** Nimmt die lokalen Änderungen eines Geräts entgegen (PowerSync-Upload). */
   app.post("/powersync/upload", async (c) => {
     try {
-      await wendeAn(
+      const nutzerId = c.get("nutzer").id;
+      const ereignisse = await wendeAn(
         sql,
-        c.get("nutzer").id,
+        nutzerId,
         parseOperationen(await c.req.json()),
       );
+      benachrichtiger?.ereignisse(nutzerId, ereignisse);
       return c.json({ ok: true });
     } catch (fehler) {
       if (fehler instanceof UngueltigeOperation) {

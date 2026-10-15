@@ -161,6 +161,25 @@ ADMIN_EMAILS=j4n.ric@gmail.com
 
 Nach einer Änderung: `docker compose up -d app`.
 
+## Benachrichtigungen (Web Push)
+
+Einmalig Schlüssel erzeugen und in `infra/production/.env` eintragen:
+
+```bash
+docker compose exec app npx --yes web-push@3.6.7 generate-vapid-keys
+```
+
+```bash
+VAPID_PUBLIC_KEY=…
+VAPID_PRIVATE_KEY=…
+VAPID_SUBJECT=mailto:j4n.ric@gmail.com
+```
+
+Danach `docker compose up -d app`. Ohne Schlüssel startet das API trotzdem, aber
+ohne Benachrichtigungen (Warnung im Log). **Schlüssel nicht wechseln** – sonst
+müssen alle Geräte Benachrichtigungen neu einschalten. Fehler beim Senden:
+`docker compose logs app | grep -i push`. Hintergrund: Entscheidung 0011.
+
 ## Fotos aufräumen
 
 Das API löscht kurz nach dem Start und dann täglich Fotos, die kein Rezept mehr als

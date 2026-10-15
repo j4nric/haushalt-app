@@ -4,6 +4,11 @@ import { Hono } from "hono";
 import { erstelleApp } from "./app";
 import { aufraeumenPlanen } from "./aufraeumen";
 import { erstelleAuth } from "./auth";
+import {
+  Benachrichtiger,
+  vapidAusUmgebung,
+  webPushSender,
+} from "./benachrichtigungen";
 import { ladeEnv } from "./env";
 import { statischesFrontend } from "./statisch";
 
@@ -17,6 +22,12 @@ const auth = erstelleAuth(db, {
   webUrl: env.webUrl,
   weitereOrigins: env.weitereOrigins,
 });
+const vapid = vapidAusUmgebung(process.env.NODE_ENV === "production");
+const benachrichtiger = vapid
+  ? new Benachrichtiger(sql, webPushSender(vapid), vapid.publicKey)
+  : null;
+benachrichtiger?.planen();
+
 const app = new Hono();
 app.route(
   "/",
@@ -27,6 +38,7 @@ app.route(
     importLokalErlaubt: env.importLokalErlaubt,
     adminEmails: env.adminEmails,
     produktQuelle: env.produktQuelle,
+    benachrichtiger,
   }),
 );
 // In Produktion liefert das API auch das Frontend aus (siehe Dockerfile).

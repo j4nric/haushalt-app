@@ -14,9 +14,11 @@ import { PortionenWahl } from "@/components/PortionenWahl";
 import { Button } from "@/components/ui/button";
 import { AdminPanel, useIstAdmin } from "./AdminPanel";
 import { authClient } from "./auth";
+import { Benachrichtigungen } from "./Benachrichtigungen";
 import { Darstellung } from "./Darstellung";
 import { HaushaltVerlassen } from "./HaushaltVerlassen";
 import type { MeinHaushalt } from "./haushaltwahl";
+import { ausschalten } from "./lib/push";
 import { vergessen } from "./nutzer";
 import { useStandardPortionen } from "./plan/daten";
 import { trennenUndLeeren } from "./powersync";
@@ -47,6 +49,8 @@ export function Haushalt({
   );
 
   async function abmelden() {
+    // Abgemeldete Geräte sollen nichts mehr gemeldet bekommen.
+    await ausschalten().catch(() => {});
     await trennenUndLeeren();
     vergessen();
     await authClient.signOut();
@@ -109,6 +113,8 @@ export function Haushalt({
       <Einladen haushaltId={haushaltId} />
 
       <StandardPortionen haushaltId={haushaltId} />
+
+      <Benachrichtigungen />
 
       <Darstellung />
 

@@ -38,6 +38,10 @@ services:
       WEB_URL: https://${DOMAIN}
       # Konten mit Admin-Panel (kommagetrennt), z. B. ADMIN_EMAILS=jan@example.de
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # Push-Benachrichtigungen; ohne Schlüssel gibt es keine (siehe docs/betrieb.md).
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     depends_on:
       postgres:
         condition: service_healthy

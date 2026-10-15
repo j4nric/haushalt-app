@@ -85,6 +85,13 @@
       "when": 1792074288377,
       "tag": "0011_barcodes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792078066042,
+      "tag": "0012_benachrichtigungen",
+      "breakpoints": true
     }
   ]
 }
