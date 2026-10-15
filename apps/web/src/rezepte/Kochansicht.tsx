@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { findeZeitangaben, formatiereRestzeit } from "@/lib/timer";
 import { cn } from "@/lib/utils";
+import type { Rezept } from "@/rezepte/daten";
 import { type GespeicherteZutat, optionaleZuletzt } from "./aktionen";
-import type { Rezept } from "./RezeptDetail";
 
 type LaufenderTimer = {
   id: number;

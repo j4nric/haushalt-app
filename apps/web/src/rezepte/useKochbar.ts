@@ -6,7 +6,7 @@ import {
   type Verfuegbarkeit,
   verfuegbarkeit,
 } from "@/lib/kochbar";
-import { ARTIKEL_STAND } from "./Rezepte";
+import { ARTIKEL_STAND } from "@/rezepte/daten";
 
 export type ZutatMitRezept = RezeptZutat & { rezept_id: string };
 

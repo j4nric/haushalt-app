@@ -1,7 +1,7 @@
 import { ChefHat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { heute } from "@/lib/plan";
-import { rezeptEmoji } from "../rezepte/Rezepte";
+import { rezeptEmoji } from "@/rezepte/RezeptBild";
 import { usePlan } from "./daten";
 
 /** Oben auf der Einkaufsliste: Was gibt's heute? Ein Tipp führt zum Plan. */

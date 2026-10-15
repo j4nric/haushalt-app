@@ -10,10 +10,7 @@ import type { Transaction } from "@powersync/web";
 
 type Grund = "einkauf" | "verbrauch" | "korrektur";
 
-export async function bestand(
-  tx: Transaction,
-  artikelId: string,
-): Promise<number> {
+async function bestand(tx: Transaction, artikelId: string): Promise<number> {
   const zeile = await tx.get<{ bestand: number }>(
     "SELECT COALESCE(SUM(menge), 0) AS bestand FROM vorratsbuchungen WHERE artikel_id = ?",
     [artikelId],

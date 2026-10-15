@@ -111,16 +111,20 @@ export const schema = new Schema({
     },
     { indexes: { datum: ["datum"] } },
   ),
-  listeneintraege: new Table({
-    haushalt_id: column.text,
-    artikel_id: column.text,
-    menge: column.real,
-    einheit: column.text,
-    erledigt: column.integer,
-    erstellt_von: column.text,
-    erledigt_von: column.text,
-    erstellt_am: column.text,
-  }),
+  // Index: „steht der Artikel schon offen auf der Liste?“ fragen fast alle Ansichten.
+  listeneintraege: new Table(
+    {
+      haushalt_id: column.text,
+      artikel_id: column.text,
+      menge: column.real,
+      einheit: column.text,
+      erledigt: column.integer,
+      erstellt_von: column.text,
+      erledigt_von: column.text,
+      erstellt_am: column.text,
+    },
+    { indexes: { artikel: ["artikel_id", "erledigt"] } },
+  ),
 });
 
 /** PowerSync läuft hinter derselben Adresse wie die App (Vite-Proxy bzw. Caddy). */

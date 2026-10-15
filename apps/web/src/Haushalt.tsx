@@ -10,6 +10,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { useState } from "react";
+import { PortionenWahl } from "@/components/PortionenWahl";
 import { Button } from "@/components/ui/button";
 import { AdminPanel, useIstAdmin } from "./AdminPanel";
 import { authClient } from "./auth";
@@ -19,7 +20,6 @@ import type { MeinHaushalt } from "./haushaltwahl";
 import { vergessen } from "./nutzer";
 import { useStandardPortionen } from "./plan/daten";
 import { trennenUndLeeren } from "./powersync";
-import { PortionenWahl } from "./rezepte/RezeptDetail";
 
 /** Bereich „Haushalt“: Haushalt wechseln/verlassen, Mitglieder, Einladen, Konto. */
 export function Haushalt({

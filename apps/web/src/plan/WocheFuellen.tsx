@@ -11,15 +11,10 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-  type Gericht,
-  gewichtetZiehen,
-  type Kandidat,
-  tagName,
-  wocheFuellen,
-} from "@/lib/plan";
+import { type Gericht, type Kandidat, tagName, wocheFuellen } from "@/lib/plan";
 import { zeitWert } from "@/lib/zeit";
-import { rezeptEmoji } from "../rezepte/Rezepte";
+import { gewichtetZiehen } from "@/lib/zufall";
+import { rezeptEmoji } from "@/rezepte/RezeptBild";
 import { useKochbar } from "../rezepte/useKochbar";
 import { einplanen } from "./aktionen";
 import { useStandardPortionen } from "./daten";

@@ -1,5 +1,6 @@
 import type { Einheit } from "@haushalt/db/einheiten";
 import { mengeFuerListe, type Zutat } from "@haushalt/db/zutaten";
+import { gewichtetZiehen } from "./zufall";
 
 /**
  * Wochenplan: Tage, Zutaten der Woche zusammenzählen, Abwechslung und „Woche füllen“.
@@ -203,19 +204,4 @@ export function wocheFuellen(
     vergeben.add(k.id);
   }
   return vorschlaege;
-}
-
-export function gewichtetZiehen<T extends { gewicht: number }>(
-  liste: T[],
-  zufall: () => number = Math.random,
-): T | undefined {
-  const summe = liste.reduce((s, k) => s + k.gewicht, 0);
-  let wurf = zufall() * summe;
-  for (const k of liste) {
-    wurf -= k.gewicht;
-    if (wurf < 0) {
-      return k;
-    }
-  }
-  return liste.at(-1);
 }

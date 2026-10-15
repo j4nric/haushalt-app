@@ -2,6 +2,7 @@ import { erstelleDb, migriere } from "@haushalt/db";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { erstelleApp } from "./app";
+import { aufraeumenPlanen } from "./aufraeumen";
 import { erstelleAuth } from "./auth";
 import { ladeEnv } from "./env";
 import { statischesFrontend } from "./statisch";
@@ -31,6 +32,8 @@ app.route(
 if (env.frontendVerzeichnis) {
   statischesFrontend(app, env.frontendVerzeichnis);
 }
+
+aufraeumenPlanen(sql);
 
 serve({ fetch: app.fetch, port: env.port }, ({ port }) => {
   console.log(`API läuft auf http://localhost:${port}`);

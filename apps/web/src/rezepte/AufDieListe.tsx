@@ -16,8 +16,8 @@ import {
 import { type ArtikelStand, imVorrat } from "@/lib/kochbar";
 import type { Posten } from "@/lib/plan";
 import { cn } from "@/lib/utils";
+import { ARTIKEL_STAND } from "@/rezepte/daten";
 import { zutatenAufListe } from "./aktionen";
-import { ARTIKEL_STAND } from "./Rezepte";
 
 type Vorschlag = Posten & {
   /** Warum nicht vorausgewählt; `null` = kommt auf die Liste. */
