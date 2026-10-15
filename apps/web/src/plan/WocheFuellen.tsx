@@ -18,6 +18,7 @@ import {
   tagName,
   wocheFuellen,
 } from "@/lib/plan";
+import { zeitWert } from "@/lib/zeit";
 import { rezeptEmoji } from "../rezepte/Rezepte";
 import { useKochbar } from "../rezepte/useKochbar";
 import { einplanen } from "./aktionen";
@@ -62,7 +63,7 @@ export function WocheFuellen({
   const standard = useStandardPortionen(haushaltId);
   const kandidaten: Kandidat[] = rezepte.map((r) => {
     const tage = r.zuletzt
-      ? (Date.now() - Date.parse(r.zuletzt)) / 86_400_000
+      ? (Date.now() - zeitWert(r.zuletzt)) / 86_400_000
       : 999;
     const gewicht =
       1 +

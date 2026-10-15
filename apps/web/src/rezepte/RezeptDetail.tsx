@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { alsPosten } from "@/lib/plan";
 import { cn } from "@/lib/utils";
+import { zeitWert } from "@/lib/zeit";
 import { Einplanen } from "../plan/Einplanen";
 import { Abbuchen, type Abbuchung, useAbbuchbar } from "./Abbuchen";
 import { AufDieListe } from "./AufDieListe";
@@ -417,7 +418,7 @@ export function kochstatistik(anzahl: number, zuletzt: string | null): string {
 export function vorWann(zeitpunkt: string): string {
   const tage = Math.floor(
     (new Date().setHours(0, 0, 0, 0) -
-      new Date(zeitpunkt).setHours(0, 0, 0, 0)) /
+      new Date(zeitWert(zeitpunkt)).setHours(0, 0, 0, 0)) /
       86_400_000,
   );
   if (tage <= 0) {

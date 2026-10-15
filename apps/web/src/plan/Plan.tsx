@@ -33,6 +33,7 @@ import {
   zutatenSammeln,
 } from "@/lib/plan";
 import { cn } from "@/lib/utils";
+import { zeitWert } from "@/lib/zeit";
 import { AufDieListe } from "../rezepte/AufDieListe";
 import { PortionenWahl, RezeptDetail } from "../rezepte/RezeptDetail";
 import { RezeptBild } from "../rezepte/Rezepte";
@@ -155,7 +156,7 @@ function Wochenplan({
   const kommend = alle.filter((e) => e.datum >= start);
   const gekochtAlsGericht: Gericht[] = gekocht.map((g) => ({
     id: g.id,
-    tag: tagText(new Date(g.gekocht_am)),
+    tag: tagText(new Date(zeitWert(g.gekocht_am))),
     rezeptId: g.rezept_id,
   }));
   const frueher: Gericht[] = alle

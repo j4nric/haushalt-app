@@ -2,6 +2,7 @@ import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { produktEmoji, vergessenSatz } from "@/lib/persoenlichkeit";
 import type { Ueberfaellig } from "@/lib/vergessen";
+import { zeitWert } from "@/lib/zeit";
 
 const SCHLUESSEL = "haushalt-vergessen-weggetippt";
 
@@ -28,7 +29,12 @@ export function Vergessen({
   hinzufuegen: (id: string) => void;
 }) {
   const [weggetippt, setWeggetippt] = useState(ladeWeggetippt);
-  const sichtbar = artikel.filter((a) => weggetippt[a.id] !== a.letzterKauf);
+  // Als Zeitwert vergleichen: Derselbe Kauf kommt vom Server anders geschrieben zurück.
+  const sichtbar = artikel.filter(
+    (a) =>
+      weggetippt[a.id] == null ||
+      zeitWert(weggetippt[a.id] ?? "") !== zeitWert(a.letzterKauf),
+  );
   if (sichtbar.length === 0) {
     return null;
   }

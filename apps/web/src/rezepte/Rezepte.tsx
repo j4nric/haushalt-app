@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { produktEmoji } from "@/lib/persoenlichkeit";
 import { cn } from "@/lib/utils";
+import { zeitWert } from "@/lib/zeit";
 import { schlagwoerterAusText } from "./aktionen";
 import { Gluecksrad } from "./Gluecksrad";
 import { RezeptDetail, vorWann } from "./RezeptDetail";
@@ -160,7 +161,7 @@ function Uebersicht({
   // Fürs Glücksrad: Favoriten, gut Vorrätiges und lange nicht Gekochtes zuerst.
   const rad = treffer.map((r) => {
     const tage = r.zuletzt_gekocht
-      ? (Date.now() - Date.parse(r.zuletzt_gekocht)) / 86_400_000
+      ? (Date.now() - zeitWert(r.zuletzt_gekocht)) / 86_400_000
       : 999;
     return {
       id: r.id,

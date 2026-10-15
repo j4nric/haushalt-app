@@ -9,6 +9,7 @@ import { useWischen } from "@/hooks/use-wischen";
 import { istHexFarbe, kontrast, TEXT_HELL, textFarbeAuf } from "@/lib/farben";
 import { vermisstSatz } from "@/lib/persoenlichkeit";
 import { cn } from "@/lib/utils";
+import { zeitWert } from "@/lib/zeit";
 
 export type VerlaufArtikel = {
   id: string;
@@ -165,7 +166,7 @@ function VerlaufKachel({
     !aufListe && artikel.zuletzt
       ? vermisstSatz(
           artikel.name,
-          Math.floor((Date.now() - Date.parse(artikel.zuletzt)) / 86_400_000),
+          Math.floor((Date.now() - zeitWert(artikel.zuletzt)) / 86_400_000),
         )
       : null;
   const { spalten } = useEinstellungen();
