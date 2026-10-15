@@ -466,3 +466,32 @@ export const produkte = pgTable("produkte", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Push-Abos: ein Eintrag je Gerät (Browser), das Benachrichtigungen bekommen will.
+ * `arten` = welche Benachrichtigungen dieses Gerät möchte. Nicht synchronisiert –
+ * nur der Server braucht das.
+ */
+export const pushAbos = pgTable(
+  "push_abos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nutzerId: text("nutzer_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull().unique(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    arten: text("arten").array().notNull().default(sql`'{}'::text[]`),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [index().on(t.nutzerId)],
+);
+
+/** Schon verschickte Tagesmeldungen (z. B. „Heute im Plan“), damit nichts doppelt kommt. */
+export const pushGesendet = pgTable("push_gesendet", {
+  schluessel: text("schluessel").primaryKey(),
+  am: timestamp("am", { withTimezone: true, mode: "string" })
+    .notNull()
+    .defaultNow(),
+});

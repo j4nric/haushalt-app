@@ -319,15 +319,24 @@ export function parseOperationen(body: unknown): Operation[] {
   });
 }
 
+/** Was beim Hochladen Neues passiert ist – Grundlage für Benachrichtigungen. */
+export type Ereignis =
+  | { art: "liste"; haushaltId: string; eintragId: string }
+  | { art: "einkauf"; haushaltId: string }
+  | { art: "rezept"; haushaltId: string; rezeptId: string }
+  | { art: "plan"; haushaltId: string; planId: string };
+
 /**
  * Wendet die Operationen eines Nutzers in einer Transaktion an: alles oder nichts.
  * Jede Zeile muss zu einem Haushalt gehören, in dem der Nutzer Mitglied ist.
+ * Gibt zurück, was neu entstanden ist (neue Einträge, Abgehaktes …).
  */
 export async function wendeAn(
   sql: postgres.Sql,
   nutzerId: string,
   operationen: Operation[],
-): Promise<void> {
+): Promise<Ereignis[]> {
+  const ereignisse: Ereignis[] = [];
   await sql.begin(async (tx) => {
     const zeilen = await tx<{ haushalt_id: string }[]>`
       select haushalt_id from haushalt_mitglieder where nutzer_id = ${nutzerId}
@@ -348,10 +357,21 @@ export async function wendeAn(
 
       if (o.op === "PATCH") {
         if (Object.keys(data).length > 0) {
-          await tx`
+          const [geaendert] = await tx<{ haushalt_id: string }[]>`
             update ${t} set ${tx(data)}
             where id = ${o.id} and haushalt_id = any(${meineHaushalte}::uuid[])
+            returning haushalt_id
           `;
+          if (
+            geaendert &&
+            o.table === "listeneintraege" &&
+            data.erledigt === true
+          ) {
+            ereignisse.push({
+              art: "einkauf",
+              haushaltId: geaendert.haushalt_id,
+            });
+          }
         }
         continue;
       }
@@ -378,14 +398,27 @@ export async function wendeAn(
       );
       // ... und eine bestehende Zeile mit derselben id nur überschreiben, wenn sie
       // im selben Haushalt liegt.
-      await tx`
+      // xmax = 0 heißt: frisch eingefügt (nicht per „on conflict“ aktualisiert).
+      const [ergebnis] = await tx<{ neu: boolean }[]>`
         insert into ${t} ${tx(zeile)}
         on conflict (id) do ${
           aenderbar.length > 0
             ? tx`update set ${tx(data, ...aenderbar)} where ${t}.haushalt_id = ${data.haushalt_id as string}`
             : tx`nothing`
         }
+        returning (xmax = 0) as neu
       `;
+      if (ergebnis?.neu) {
+        const haushaltId = data.haushalt_id as string;
+        if (o.table === "listeneintraege" && !data.erledigt) {
+          ereignisse.push({ art: "liste", haushaltId, eintragId: o.id });
+        } else if (o.table === "rezepte") {
+          ereignisse.push({ art: "rezept", haushaltId, rezeptId: o.id });
+        } else if (o.table === "plan_eintraege") {
+          ereignisse.push({ art: "plan", haushaltId, planId: o.id });
+        }
+      }
     }
   });
+  return ereignisse;
 }

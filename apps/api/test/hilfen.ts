@@ -2,19 +2,31 @@ import { randomUUID } from "node:crypto";
 import { erstelleDb } from "@haushalt/db";
 import { erstelleApp } from "../src/app";
 import { erstelleAuth } from "../src/auth";
+import { Benachrichtiger, type Sender } from "../src/benachrichtigungen";
 import { testDatenbankUrl } from "./umgebung";
 
 const WEB_URL = "http://localhost:5173";
 /** Dieses Konto ist in den Tests Admin. */
 export const ADMIN_EMAIL = `admin-${randomUUID()}@test.local`;
 
-export function testApp(
-  extra: Pick<
-    Parameters<typeof erstelleApp>[0],
-    "grenzen" | "fotoSpeicher" | "produktQuelle"
-  > = {},
-) {
+export function testApp({
+  push,
+  ...extra
+}: Pick<
+  Parameters<typeof erstelleApp>[0],
+  "grenzen" | "fotoSpeicher" | "produktQuelle"
+> & {
+  /** Statt echtem Web Push: sammelt, was verschickt würde. */
+  push?: { sender: Sender; einkaufPauseMs?: number };
+} = {}) {
   const { db, sql } = erstelleDb(testDatenbankUrl());
+  // Gesammelt wird bis `benachrichtiger.leeren()` – Tests warten nicht 90 Sekunden.
+  const benachrichtiger = push
+    ? new Benachrichtiger(sql, push.sender, "test-schluessel", {
+        sammelMs: 60 * 60_000,
+        ...(push.einkaufPauseMs ? { einkaufPauseMs: push.einkaufPauseMs } : {}),
+      })
+    : null;
   const auth = erstelleAuth(db, {
     secret: "test-secret-mindestens-32-zeichen-lang!!",
     webUrl: WEB_URL,
@@ -25,6 +37,7 @@ export function testApp(
     auth,
     importLokalErlaubt: true,
     adminEmails: [ADMIN_EMAIL],
+    benachrichtiger,
     ...extra,
   });
 
@@ -66,6 +79,8 @@ export function testApp(
       get: (pfad: string) => anfrage("GET", pfad),
       post: (pfad: string, body?: unknown) => anfrage("POST", pfad, body ?? {}),
       patch: (pfad: string, body: unknown) => anfrage("PATCH", pfad, body),
+      put: (pfad: string, body: unknown) => anfrage("PUT", pfad, body),
+      anfrage,
       loeschen: (pfad: string) => anfrage("DELETE", pfad),
       /** Legt einen Haushalt an und gibt dessen id zurück. */
       async haushaltAnlegen(haushaltName = `Haushalt von ${name}`) {
@@ -89,7 +104,16 @@ export function testApp(
     };
   }
 
-  return { app, sql, nutzer, beenden: () => sql.end() };
+  return {
+    app,
+    sql,
+    nutzer,
+    benachrichtiger,
+    beenden: async () => {
+      await benachrichtiger?.leeren();
+      await sql.end();
+    },
+  };
 }
 
 export const neueId = () => randomUUID();

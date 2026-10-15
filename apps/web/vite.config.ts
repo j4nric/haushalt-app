@@ -41,6 +41,8 @@ export default defineConfig({
         // Alles für den Offline-Start vorab speichern, auch SQLite (WASM) und
         // die Worker von PowerSync. Die WASM-Dateien sind größer als Workbox' Standardlimit.
         globPatterns: ["**/*.{js,css,html,wasm,svg,png,ico}"],
+        // Push-Benachrichtigungen anzeigen und antippen (public/push-sw.js).
+        importScripts: ["/push-sw.js"],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         navigateFallback: "/index.html",
         // API und Sync immer übers Netz, nie aus dem Cache.
