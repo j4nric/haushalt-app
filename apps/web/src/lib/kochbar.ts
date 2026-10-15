@@ -46,7 +46,7 @@ export function imVorrat(
 }
 
 /** Zählt nur Zutaten, die man wirklich einkaufen müsste (ohne Optionales). */
-export function zaehltFuerKochbar(z: RezeptZutat): boolean {
+function zaehltFuerKochbar(z: RezeptZutat): boolean {
   return !z.gewuerz && !z.optional && !istGrundzutat(z.name);
 }
 

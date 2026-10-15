@@ -115,7 +115,7 @@ export function vergessenSatz(
 }
 
 /** Ab so vielen Tagen ohne Kauf meldet sich ein Produkt im Verlauf. */
-export const VERMISST_AB_TAGEN = 21;
+const VERMISST_AB_TAGEN = 21;
 
 /** Kurzer Satz für lange nicht gekaufte Produkte im Verlauf; sonst `null`. */
 export function vermisstSatz(name: string, seitTagen: number): string | null {

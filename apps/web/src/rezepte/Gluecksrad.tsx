@@ -8,6 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { ziehenOhneZuruecklegen } from "@/lib/zufall";
 import { rezeptEmoji } from "@/rezepte/RezeptBild";
 
 export type RadRezept = {
@@ -34,26 +35,6 @@ function kurz(titel: string) {
   return titel.length > 13 ? `${titel.slice(0, 12).trimEnd()}…` : titel;
 }
 
-/** Gewichtete Zufallsauswahl ohne Zurücklegen. */
-export function ziehen<T extends { gewicht: number }>(
-  liste: T[],
-  anzahl: number,
-  zufall: () => number = Math.random,
-): T[] {
-  const rest = [...liste];
-  const gezogen: T[] = [];
-  while (gezogen.length < anzahl && rest.length > 0) {
-    const summe = rest.reduce((s, r) => s + r.gewicht, 0);
-    let wurf = zufall() * summe;
-    const index = rest.findIndex((r) => {
-      wurf -= r.gewicht;
-      return wurf < 0;
-    });
-    gezogen.push(...rest.splice(index < 0 ? rest.length - 1 : index, 1));
-  }
-  return gezogen;
-}
-
 /**
  * „Ich weiß nicht, was ich kochen soll“: Bis zu acht Rezepte auf einem Rad –
  * Favoriten, gut Vorrätiges und lange nicht Gekochtes kommen eher dran.
@@ -72,14 +53,14 @@ export function Gluecksrad({
   const [gewinner, setGewinner] = useState<RadRezept | null>(null);
 
   function starten() {
-    setFelder(ziehen(rezepte, FELDER));
+    setFelder(ziehenOhneZuruecklegen(rezepte, FELDER));
     setGewinner(null);
     setDrehung(0);
     setOffen(true);
   }
 
   function drehen() {
-    const [sieger] = ziehen(felder, 1);
+    const [sieger] = ziehenOhneZuruecklegen(felder, 1);
     if (!sieger) {
       return;
     }

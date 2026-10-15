@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /** So lange läuft die Animation; so lange lässt sich das Abhaken noch abbrechen. */
-export const ABHAK_DAUER_MS = 1500;
+const ABHAK_DAUER_MS = 1500;
 
 /** CSS-Klasse, die Strich und Ausblenden steuert (siehe index.css). */
 export const ABHAK_KLASSE = "abhaken-kritzeln";
@@ -76,7 +76,7 @@ function zufall(saat: number) {
  * Die Spitzen sind unterschiedlich hoch und tief, wie von Hand gekritzelt; jede Saat
  * ergibt einen anderen Strich.
  */
-export function zickzackPfad(b: number, h: number, saat = 7) {
+function zickzackPfad(b: number, h: number, saat = 7) {
   const r = zufall(saat);
   const punkte: string[] = [];
   for (let i = 0; i <= ZACKEN; i++) {

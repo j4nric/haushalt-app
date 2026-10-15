@@ -5,7 +5,7 @@ export function istHexFarbe(wert: unknown): wert is string {
 }
 
 /** Relative Helligkeit nach WCAG (0 = schwarz, 1 = weiß). */
-export function luminanz(hex: string): number {
+function luminanz(hex: string): number {
   const kanal = (i: number) => {
     const c = Number.parseInt(hex.slice(i, i + 2), 16) / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
