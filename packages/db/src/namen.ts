@@ -57,3 +57,56 @@ export function findeNachName<T>(
   }
   return undefined;
 }
+
+/**
+ * Oberbegriffe, die für ihre Sorten stehen dürfen: „Öl“ im Vorrat reicht für
+ * „Olivenöl“ im Rezept und umgekehrt. Bewusst eine kurze Liste – „Reis“ im Vorrat
+ * macht noch keinen „Milchreis“, „Saft“ keinen „Apfelsaft“ zum Kochen.
+ */
+const OBERBEGRIFFE = [
+  "öl",
+  "essig",
+  "mehl",
+  "zucker",
+  "brühe",
+  "senf",
+  "nudeln",
+  "paprikapulver",
+  "honig",
+];
+
+function oberbegriff(name: string): string | undefined {
+  const klein = name.trim().toLowerCase();
+  return OBERBEGRIFFE.find((o) => klein.endsWith(o));
+}
+
+/**
+ * Wie `findeNachName`, aber für Rezept ↔ Vorrat: Steht nur der Oberbegriff auf einer
+ * Seite („Öl“), passt jede Sorte auf der anderen („Rapsöl“, „Olivenöl“). Zwei
+ * verschiedene Sorten („Rapsöl“ ↔ „Sesamöl“) passen nicht.
+ */
+export function findeImVorrat<T>(
+  nachName: Map<string, T>,
+  name: string,
+): T | undefined {
+  const direkt = findeNachName(nachName, name);
+  if (direkt !== undefined) {
+    return direkt;
+  }
+  const o = oberbegriff(name);
+  if (!o) {
+    return undefined;
+  }
+  const istOberbegriff = name.trim().toLowerCase() === o;
+  if (!istOberbegriff) {
+    // „Olivenöl“ gesucht → reicht „Öl“ im Vorrat?
+    return nachName.get(o);
+  }
+  // „Öl“ gesucht → irgendeine Sorte im Vorrat.
+  for (const [n, wert] of nachName) {
+    if (n.endsWith(o)) {
+      return wert;
+    }
+  }
+  return undefined;
+}

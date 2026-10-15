@@ -33,3 +33,14 @@ Rezepte aus anderen Apps ohne Kopieren übernehmen.
   Der Link wartet in `sessionStorage`, falls erst angemeldet werden muss.
   Funktioniert mit der installierten App unter Android (Chrome); iOS unterstützt
   Share Targets für Web-Apps nicht – dort bleibt Link einfügen.
+
+## Nachtrag: Übereinstimmung mit dem Vorrat
+
+- Rezeptkarten und Vorschläge zeigen einen farbigen Balken (rot < 40 %, gelb < 80 %,
+  sonst grün): Anteil der zählenden Zutaten (ohne Gewürze, Optionales, Salz/Öl & Co.),
+  die im Vorrat sind. „Beste Übereinstimmung“ sortiert danach – auf der Rezeptseite
+  und in „Entdecken“.
+- **Oberbegriffe** (`findeImVorrat`): „Öl“ im Vorrat reicht für „Olivenöl“ oder
+  „Rapsöl“ im Rezept und umgekehrt; ebenso Essig, Mehl, Zucker, Brühe, Senf, Nudeln,
+  Paprikapulver, Honig. Zwei verschiedene Sorten („Rapsöl“ ↔ „Sesamöl“) passen nicht,
+  und andere Wörter bleiben genau („Reis“ macht keinen „Milchreis“).

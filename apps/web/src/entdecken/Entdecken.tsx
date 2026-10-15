@@ -1,8 +1,17 @@
 import { zerlegeZeile, zutatAlsText } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { ArrowLeft, Check, Clock, Plus, Search, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Clock,
+  Dices,
+  Plus,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Uebereinstimmung } from "@/components/Uebereinstimmung";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -30,25 +39,25 @@ const FILTER: {
 }[] = [
   {
     id: "vegetarisch",
-    text: "🌱 Vegetarisch",
+    text: "Vegetarisch",
     passt: (r) =>
       r.schlagwoerter.includes("vegetarisch") ||
       r.schlagwoerter.includes("vegan"),
   },
-  { id: "schnell", text: "⚡ Bis 30 Min.", passt: (r) => r.dauer <= 30 },
+  { id: "schnell", text: "Bis 30 Min.", passt: (r) => r.dauer <= 30 },
   {
     id: "kinder",
-    text: "🧒 Kinder mögen's",
+    text: "Kinder mögen's",
     passt: (r) => r.schlagwoerter.includes("kinder"),
   },
   {
     id: "fisch",
-    text: "🐟 Fisch",
+    text: "Fisch",
     passt: (r) => r.schlagwoerter.includes("fisch"),
   },
   {
     id: "suppe",
-    text: "🍲 Suppen & Eintöpfe",
+    text: "Suppen & Eintöpfe",
     passt: (r) =>
       r.schlagwoerter.includes("suppe") || r.schlagwoerter.includes("eintopf"),
   },
@@ -74,6 +83,7 @@ export function Entdecken({
     [haushaltId],
   );
   const [filter, setFilter] = useState<Filter[]>([]);
+  const [nachVorrat, setNachVorrat] = useState(false);
   const [suche, setSuche] = useState("");
   const [offen, setOffen] = useState<Vorschlag | null>(null);
   const [wurf, setWurf] = useState(0);
@@ -101,7 +111,10 @@ export function Entdecken({
           .includes(w),
       ),
   );
-  const gefiltert = filter.length > 0 || woerter.length > 0;
+  if (nachVorrat) {
+    treffer.sort((a, b) => b.prozent - a.prozent || b.punkte - a.punkte);
+  }
+  const gefiltert = filter.length > 0 || woerter.length > 0 || nachVorrat;
   const heutigeTipps = gefiltert ? [] : treffer.slice(0, 3);
   const rest = gefiltert ? treffer : treffer.slice(3);
 
@@ -165,6 +178,19 @@ export function Entdecken({
         aria-label="Filter"
         className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]"
       >
+        <button
+          type="button"
+          aria-pressed={nachVorrat}
+          onClick={() => setNachVorrat(!nachVorrat)}
+          className={cn(
+            "shrink-0 rounded-full border px-3 py-1.5 text-sm whitespace-nowrap transition-colors",
+            nachVorrat
+              ? "border-primary bg-primary text-primary-foreground"
+              : "bg-card text-muted-foreground",
+          )}
+        >
+          Beste Übereinstimmung
+        </button>
         {FILTER.map((f) => {
           const an = filter.includes(f.id);
           return (
@@ -202,7 +228,7 @@ export function Entdecken({
               className="text-muted-foreground"
               onClick={() => setWurf(wurf + 1)}
             >
-              🎲 Andere
+              <Dices /> Andere
             </Button>
           </div>
           {heutigeTipps.map((v) => (
@@ -278,6 +304,7 @@ function Karte({
             <span key={w}>#{w}</span>
           ))}
         </span>
+        <Uebereinstimmung prozent={v.prozent} className="mt-1.5" />
         {warum && (
           <span className="mt-1 block text-xs font-medium text-primary">
             {warum}

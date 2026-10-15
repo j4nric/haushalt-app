@@ -2,7 +2,7 @@ import { EINHEITEN, type Einheit } from "@haushalt/db/einheiten";
 import { KATEGORIEN, OHNE_KATEGORIE } from "@haushalt/db/kategorien";
 import { namensVarianten } from "@haushalt/db/namen";
 import { usePowerSync, useQuery } from "@powersync/react";
-import { PackageX } from "lucide-react";
+import { PackageX, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { NativeAuswahl } from "@/components/NativeAuswahl";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { zeitWert } from "@/lib/zeit";
 import {
   angebrochenSetzen,
+  artikelLoeschen,
   bestandSetzen,
   mindestbestandPruefen,
 } from "../vorratsaktionen";
@@ -98,6 +99,7 @@ function Formular({
   const [bestand, setBestand] = useState(vorrat.bestand);
   const [offen, setOffen] = useState(vorrat.angebrochen);
   const [mindest, setMindest] = useState(zeile.mindestbestand ?? 0);
+  const [loeschenFragen, setLoeschenFragen] = useState(false);
 
   async function speichern() {
     const neuerName = ersterBuchstabeGross(name.trim());
@@ -294,7 +296,7 @@ function Formular({
 
         <Verlauf artikelId={zeile.id} />
 
-        <div className="flex justify-center pt-1">
+        <div className="flex flex-col items-center gap-1 pt-1">
           <Button
             type="button"
             variant="ghost"
@@ -304,6 +306,52 @@ function Formular({
           >
             <PackageX /> Nicht mehr im Vorrat führen
           </Button>
+          {loeschenFragen ? (
+            <div
+              role="alertdialog"
+              aria-label="Produkt löschen?"
+              className="w-full space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-center text-sm"
+            >
+              <p>
+                „{zeile.name}“ ganz löschen? Bestand, Verlauf, Barcodes und ein
+                offener Listeneintrag gehen mit.
+              </p>
+              <div className="flex justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLoeschenFragen(false)}
+                >
+                  Behalten
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={async () => {
+                    await db.writeTransaction((tx) =>
+                      artikelLoeschen(tx, zeile.id),
+                    );
+                    schliessen();
+                    toast(`${zeile.name} gelöscht`);
+                  }}
+                >
+                  <Trash2 /> Löschen
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={() => setLoeschenFragen(true)}
+            >
+              <Trash2 /> Produkt löschen
+            </Button>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2 border-t p-4">

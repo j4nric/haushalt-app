@@ -1,4 +1,4 @@
-import { findeNachName } from "@haushalt/db/namen";
+import { findeImVorrat } from "@haushalt/db/namen";
 import { useQuery } from "@powersync/react";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
@@ -56,8 +56,8 @@ export function ResteVerwerten({
   )
     .map((t) => ({
       ...t,
-      daheim: t.fehlt.filter((n) => findeNachName(vorrat, n)),
-      kaufen: t.fehlt.filter((n) => !findeNachName(vorrat, n)),
+      daheim: t.fehlt.filter((n) => findeImVorrat(vorrat, n)),
+      kaufen: t.fehlt.filter((n) => !findeImVorrat(vorrat, n)),
     }))
     .sort(
       (a, b) =>

@@ -220,3 +220,21 @@ export async function bestandSetzen(
   });
   await mindestbestandPruefen(tx, b.artikelId, b.nutzerId);
 }
+
+/**
+ * Artikel ganz löschen – mit Bestand, Verlauf, Barcodes und offenen Listeneinträgen.
+ * Der Server löscht Abhängiges ohnehin mit (Fremdschlüssel); lokal gibt es die nicht.
+ */
+export async function artikelLoeschen(tx: Transaction, artikelId: string) {
+  for (const tabelle of [
+    "vorratsbuchungen",
+    "kaeufe",
+    "artikel_barcodes",
+    "listeneintraege",
+  ]) {
+    await tx.execute(`DELETE FROM ${tabelle} WHERE artikel_id = ?`, [
+      artikelId,
+    ]);
+  }
+  await tx.execute("DELETE FROM artikel WHERE id = ?", [artikelId]);
+}

@@ -137,7 +137,7 @@ export async function vorratEintragen(
 ) {
   await page.getByLabel("Vorratsartikel").fill(name);
   await page.getByRole("button", { name: "Eintragen" }).click();
-  await bestand(page, name).click();
+  // Nach dem Eintragen gehen die Details von selbst auf.
   const feld = page.getByRole("textbox", {
     name: `Bestand ${name}`,
     exact: true,

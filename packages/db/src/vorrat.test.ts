@@ -126,7 +126,7 @@ describe("Rezepte und Vorrat", () => {
   });
 
   it("beschreibt den Bestand", () => {
-    expect(bestandBeschreibung(vorrat(2, true))).toBe("à 500 g · 1 offen");
+    expect(bestandBeschreibung(vorrat(2, true))).toBe("à 500 g");
     expect(
       bestandBeschreibung({ bestand: 3, angebrochen: false, packung: null }),
     ).toBe("");

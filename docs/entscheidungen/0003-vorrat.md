@@ -55,6 +55,10 @@ Im Alltag zählt man „2 Packungen Nudeln“, nicht „1000 g“. Deshalb:
 - **Suchen und Filtern:** Was unten getippt wird, filtert zugleich; Filter Alle/Knapp/
   Leer. Leeres steht am Ende seiner Kategorie, ausgegraut.
 - **Wischen:** links = aufgebraucht (mit Rückgängig), rechts = auf die Liste.
+- **Eintragen oder Scannen öffnet die Details** des Produkts – gebucht ist da schon,
+  Speichern ist nur fürs Feinjustieren. „Offen“ steht in der Akzentfarbe in der Zeile.
+- **Löschen** (im Dialog, mit Rückfrage) entfernt das Produkt ganz: Bestand, Verlauf,
+  Barcodes, offene Listeneinträge. „Nicht mehr führen“ behält dagegen alles.
 - **Inventur:** alle Artikel nacheinander in Supermarkt-Reihenfolge; „Stimmt“ oder
   korrigieren, jede Änderung wird sofort gebucht.
 - **Eingabe mit Menge** in Liste und Vorrat: „Mehl 1 kg“, „2 Dosen Tomaten“, „Eier 10“

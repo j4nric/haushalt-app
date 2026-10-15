@@ -45,6 +45,7 @@ export function BarcodeScan({
   titel,
   aktionText,
   aktion,
+  danach,
 }: {
   haushaltId: string;
   titel: string;
@@ -52,6 +53,11 @@ export function BarcodeScan({
   aktionText: string;
   /** Führt die Aktion aus und gibt die Meldung zurück („Milch abgehakt“). */
   aktion: (a: GescannterArtikel) => Promise<string>;
+  /**
+   * Gesetzt: Nach einem Scan schließt der Scanner und es geht hier weiter (z. B. die
+   * Details öffnen). Ohne bleibt er für weitere Scans offen.
+   */
+  danach?: (a: GescannterArtikel) => void;
 }) {
   const db = usePowerSync();
   const [scannen, setScannen] = useState(false);
@@ -71,14 +77,20 @@ export function BarcodeScan({
       [haushaltId, barcode],
     );
     if (bekannt) {
-      const meldung = await aktion({
+      const gescannt: GescannterArtikel = {
         id: bekannt.id,
         name: bekannt.name,
         packung:
           bekannt.packung_menge != null && bekannt.packung_einheit
             ? { menge: bekannt.packung_menge, einheit: bekannt.packung_einheit }
             : null,
-      });
+      };
+      const meldung = await aktion(gescannt);
+      if (danach) {
+        toast.success(meldung);
+        danach(gescannt);
+        return "schliessen";
+      }
       return { meldung };
     }
     setUnbekannt(barcode);
@@ -111,6 +123,7 @@ export function BarcodeScan({
         fertig={async (a) => {
           setUnbekannt(null);
           toast.success(await aktion(a));
+          danach?.(a);
         }}
       />
     </>

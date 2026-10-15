@@ -165,23 +165,14 @@ export function bestandKurz(v: {
   const text = v.packung
     ? `${n} × ${formatiereMenge(v.packung.menge, v.packung.einheit)}`
     : `${n} Stk.`;
-  return v.angebrochen && v.bestand > 0 ? `${text} (1 offen)` : text;
+  return v.angebrochen && v.bestand > 0 ? `${text} (offen)` : text;
 }
 
-/** „2“, „à 500 g“ und „1 offen“ – für Zeilen und Dialoge. */
-export function bestandBeschreibung(v: {
-  bestand: number;
-  angebrochen: boolean;
-  packung: Packung | null;
-}): string {
-  const teile: string[] = [];
-  if (v.packung) {
-    teile.push(`à ${formatiereMenge(v.packung.menge, v.packung.einheit)}`);
-  }
-  if (v.angebrochen && v.bestand > 0) {
-    teile.push("1 offen");
-  }
-  return teile.join(" · ");
+/** „à 500 g“ – Inhalt einer Packung, falls bekannt (sonst leer). */
+export function bestandBeschreibung(v: { packung: Packung | null }): string {
+  return v.packung
+    ? `à ${formatiereMenge(v.packung.menge, v.packung.einheit)}`
+    : "";
 }
 
 /**
