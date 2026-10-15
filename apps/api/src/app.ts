@@ -12,6 +12,7 @@ import {
   type Grenze,
 } from "./begrenzer";
 import { neuerCode, normalisiereCode } from "./einladungscode";
+import { BARCODE, produktNachschlagen } from "./produkte";
 import { ImportFehler, rezeptAusHtml, seiteHolen } from "./rezept-import";
 import {
   KeinZugriff,
@@ -58,6 +59,7 @@ export function erstelleApp({
   adminEmails = [],
   grenzen = {},
   fotoSpeicher = FOTO_SPEICHER_HOECHSTENS,
+  produktQuelle = "https://world.openfoodfacts.org",
 }: {
   db: Db;
   sql: postgres.Sql;
@@ -70,6 +72,8 @@ export function erstelleApp({
   grenzen?: Partial<Record<keyof typeof GRENZEN, Grenze[]>>;
   /** Foto-Speicher pro Haushalt (Tests); sonst 200 MB. */
   fotoSpeicher?: number;
+  /** Basis-Adresse von Open Food Facts (Tests: lokale Attrappe). */
+  produktQuelle?: string;
 }) {
   const app = new Hono<{ Variables: { nutzer: Nutzer } }>().basePath("/api");
 
@@ -77,6 +81,7 @@ export function erstelleApp({
     import: new Begrenzer(grenzen.import ?? GRENZEN.import),
     foto: new Begrenzer(grenzen.foto ?? GRENZEN.foto),
     einladung: new Begrenzer(grenzen.einladung ?? GRENZEN.einladung),
+    produkt: new Begrenzer(grenzen.produkt ?? GRENZEN.produkt),
   };
   /** 429 mit verständlicher Meldung, wenn ein Konto zu oft hintereinander anfragt. */
   const begrenzen = (art: keyof typeof begrenzer, wofuer: string) =>
@@ -402,6 +407,19 @@ export function erstelleApp({
       "x-content-type-options": "nosniff",
     });
   });
+
+  /** Produktdaten zu einem gescannten Barcode (über den Server, zwischengespeichert). */
+  app.get(
+    "/produkte/:barcode",
+    begrenzen("produkt", "Produktabfragen in kurzer Zeit"),
+    async (c) => {
+      const barcode = c.req.param("barcode");
+      if (!BARCODE.test(barcode)) {
+        return c.json({ fehler: "Das ist kein gültiger Barcode" }, 400);
+      }
+      return c.json(await produktNachschlagen(sql, barcode, produktQuelle));
+    },
+  );
 
   /** Liest ein Rezept von einer Webseite aus (Link-Import). */
   app.post(

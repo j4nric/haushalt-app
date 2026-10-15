@@ -70,6 +70,11 @@ export const GRENZEN = {
   ],
   /** Gegen Durchprobieren von Codes. */
   einladung: [{ max: 10, fensterMs: 10 * MINUTE }],
+  /** Produktsuche bei Open Food Facts (schnelles Scannen im Laden erlaubt). */
+  produkt: [
+    { max: 30, fensterMs: MINUTE },
+    { max: 500, fensterMs: 24 * STUNDE },
+  ],
 } satisfies Record<string, Grenze[]>;
 
 /** So viel Foto-Speicher darf ein Haushalt belegen. */

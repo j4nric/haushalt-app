@@ -281,3 +281,13 @@ html[data-uebergang="hoch"]::view-transition-old(root) {
     opacity: 0;
   }
 }
+
+/* Scanner: Linie wandert im Rahmen auf und ab. */
+@keyframes scanlinie {
+  from {
+    top: 12%;
+  }
+  to {
+    top: 86%;
+  }
+}

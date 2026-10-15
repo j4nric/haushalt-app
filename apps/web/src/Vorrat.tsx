@@ -1,6 +1,8 @@
+import { type Einheit, formatiereMenge } from "@haushalt/db/einheiten";
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
 import { kategorieName, kategorieRang } from "@haushalt/db/kategorien";
 import { usePowerSync, useQuery } from "@powersync/react";
+import type { AbstractPowerSyncDatabase } from "@powersync/web";
 import { Minus, PackageOpen, Plus } from "lucide-react";
 import { useState } from "react";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
@@ -19,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
+import { BarcodeScan, type GescannterArtikel } from "./scanner/BarcodeScan";
 import {
   bestandSetzen,
   buchen,
@@ -447,6 +450,16 @@ function NeuerVorratsartikel({
       kategorieAendern={setManuell}
       auswahl={vorschlag.auswahl}
       vorschlaege={bekannte.map((a) => a.name)}
+      zusatz={
+        <BarcodeScan
+          haushaltId={haushaltId}
+          titel="Scannen: in den Vorrat"
+          aktionText="In den Vorrat"
+          aktion={(a) =>
+            scanEinbuchen(db, { haushaltId, nutzerId, artikel: a })
+          }
+        />
+      }
     />
   );
 }
@@ -478,4 +491,45 @@ function gruppieren(
     gruppen.set(name, gruppe);
   }
   return [...gruppen.values()];
+}
+
+/**
+ * Gescannt im Vorrat: als Vorratsartikel führen und die Packung einbuchen – mit ihrer
+ * Größe, wenn sie zur Einheit des Artikels passt, sonst ein Stück (oder nachfragen).
+ */
+async function scanEinbuchen(
+  db: AbstractPowerSyncDatabase,
+  {
+    haushaltId,
+    nutzerId,
+    artikel,
+  }: { haushaltId: string; nutzerId: string; artikel: GescannterArtikel },
+): Promise<string> {
+  return db.writeTransaction(async (tx) => {
+    const { standardeinheit } = await tx.get<{ standardeinheit: Einheit }>(
+      "SELECT standardeinheit FROM artikel WHERE id = ?",
+      [artikel.id],
+    );
+    await tx.execute("UPDATE artikel SET im_vorrat = 1 WHERE id = ?", [
+      artikel.id,
+    ]);
+    const menge =
+      artikel.packung?.einheit === standardeinheit
+        ? artikel.packung.menge
+        : standardeinheit === "stueck"
+          ? 1
+          : null;
+    if (menge == null) {
+      return `${artikel.name} im Vorrat – Menge bitte eintragen`;
+    }
+    await buchen(tx, {
+      haushaltId,
+      artikelId: artikel.id,
+      menge,
+      grund: "einkauf",
+      nutzerId,
+    });
+    await mindestbestandPruefen(tx, artikel.id, nutzerId);
+    return `+${formatiereMenge(menge, standardeinheit)} ${artikel.name} im Vorrat`;
+  });
 }

@@ -4,7 +4,7 @@ import {
   OHNE_KATEGORIE,
 } from "@haushalt/db/kategorien";
 import { Plus } from "lucide-react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ export function Eingabeleiste({
   kategorieAendern,
   auswahl,
   vorschlaege,
+  zusatz,
 }: {
   wert: string;
   aendern: (wert: string) => void;
@@ -35,6 +36,8 @@ export function Eingabeleiste({
   platzhalter: string;
   label: string;
   absendenLabel: string;
+  /** Weiterer Knopf neben „+“ (z. B. Barcode scannen). */
+  zusatz?: ReactNode;
   /** Vorbelegte bzw. gewählte Kategorie ("" = Sonstiges). */
   kategorie: string;
   kategorieAendern: (kategorie: string) => void;
@@ -114,6 +117,7 @@ export function Eingabeleiste({
               ))}
             </datalist>
           )}
+          {zusatz}
           <Button
             type="submit"
             size="icon"

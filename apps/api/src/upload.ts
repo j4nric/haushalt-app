@@ -124,6 +124,13 @@ const optionaleUuid = (spalte: string) => (wert: unknown) =>
   wert == null ? null : uuid(spalte)(wert);
 // SQLite kennt keine Booleans: PowerSync liefert 0/1.
 const bool = (wert: unknown) => wert === 1 || wert === true;
+/** EAN-8/-13, UPC-A/-E, GTIN-14: nur Ziffern, 8 bis 14 Stellen. */
+const barcode = (wert: unknown) => {
+  if (typeof wert !== "string" || !/^[0-9]{8,14}$/.test(wert)) {
+    throw new UngueltigeOperation("Barcode muss aus 8 bis 14 Ziffern bestehen");
+  }
+  return wert;
+};
 /** Kalendertag „2026-10-15“. */
 const datum = (wert: unknown) => {
   if (
@@ -233,6 +240,15 @@ const ERLAUBT = {
     gekocht_id: { umwandeln: optionaleUuid("gekocht_id") },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
     erstellt_von: { umwandeln: () => null, vomServer: true },
+  },
+  // Verknüpfung Barcode → Artikel: unveränderlich, neu verknüpfen = neue Zeile.
+  artikel_barcodes: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
+    barcode: { umwandeln: barcode, fest: true },
+    packung_menge: { umwandeln: menge, fest: true },
+    packung_einheit: { umwandeln: einheit(false), fest: true },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },

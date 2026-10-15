@@ -24,6 +24,9 @@ export function ladeEnv() {
     frontendVerzeichnis: process.env.FRONTEND_DIR,
     /** Rezept-Import von lokalen Adressen erlauben – nur für Entwicklung/E2E-Tests. */
     importLokalErlaubt: process.env.REZEPT_IMPORT_LOKAL === "1",
+    /** Basis-Adresse von Open Food Facts; lokal für E2E-Tests umbiegbar. */
+    produktQuelle:
+      process.env.PRODUKT_QUELLE ?? "https://world.openfoodfacts.org",
     /** Konten mit Admin-Panel, kommagetrennt. */
     adminEmails: (process.env.ADMIN_EMAILS ?? "").split(",").filter(Boolean),
     weitereOrigins: (process.env.TRUSTED_ORIGINS ?? "")
