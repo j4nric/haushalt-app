@@ -3,6 +3,8 @@ import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
 import { type Zutat, zerlegeZutat, zutatAlsText } from "@haushalt/db/zutaten";
 import type { AbstractPowerSyncDatabase, Transaction } from "@powersync/web";
 import { ersterBuchstabeGross } from "@/lib/farben";
+import { heute } from "@/lib/plan";
+import { mindestbestandPruefen } from "../vorratsaktionen";
 
 /**
  * Schreibende Aktionen für Rezepte – alle lokal (offline) und in einer Transaktion.
@@ -271,24 +273,64 @@ export function favoritUmschalten(
 }
 
 /**
- * „Fertig gekocht“: merkt sich den Kochvorgang. Gibt zurück, zum wievielten Mal und
- * eine Funktion zum Zurücknehmen.
+ * „Fertig gekocht“: merkt sich den Kochvorgang, bucht Verbrauchtes aus dem Vorrat
+ * ab und hakt den Plan-Eintrag ab – ohne angegebenen den heutigen mit diesem Rezept.
+ * Gibt zurück, zum wievielten Mal, und eine Funktion zum Zurücknehmen.
  */
-export async function gekochtMerken(
+export async function kochenAbschliessen(
   db: AbstractPowerSyncDatabase,
   {
     haushaltId,
     nutzerId,
     rezeptId,
-  }: { haushaltId: string; nutzerId: string; rezeptId: string },
+    planEintragId,
+    abbuchen,
+  }: {
+    haushaltId: string;
+    nutzerId: string;
+    rezeptId: string;
+    planEintragId: string | null;
+    abbuchen: { artikelId: string; menge: number }[];
+  },
 ): Promise<{ anzahl: number; zuruecknehmen: () => Promise<unknown> }> {
-  const id = crypto.randomUUID();
+  const gekochtId = crypto.randomUUID();
+  const buchungen: string[] = [];
+  const jetzt = new Date();
   const anzahl = await db.writeTransaction(async (tx) => {
     await tx.execute(
       `INSERT INTO gekocht (id, haushalt_id, rezept_id, gekocht_am, erstellt_von)
        VALUES (?, ?, ?, ?, ?)`,
-      [id, haushaltId, rezeptId, new Date().toISOString(), nutzerId],
+      [gekochtId, haushaltId, rezeptId, jetzt.toISOString(), nutzerId],
     );
+    for (const { artikelId, menge } of abbuchen) {
+      if (!(menge > 0)) {
+        continue;
+      }
+      const id = crypto.randomUUID();
+      buchungen.push(id);
+      await tx.execute(
+        `INSERT INTO vorratsbuchungen (id, haushalt_id, artikel_id, menge, grund, erstellt_von, erstellt_am)
+         VALUES (?, ?, ?, ?, 'verbrauch', ?, ?)`,
+        [id, haushaltId, artikelId, -menge, nutzerId, jetzt.toISOString()],
+      );
+      await mindestbestandPruefen(tx, artikelId, nutzerId);
+    }
+    const eintrag =
+      planEintragId ??
+      (
+        await tx.getOptional<{ id: string }>(
+          `SELECT id FROM plan_eintraege
+            WHERE rezept_id = ? AND datum = ? AND COALESCE(erledigt, 0) = 0
+            ORDER BY erstellt_am LIMIT 1`,
+          [rezeptId, heute(jetzt)],
+        )
+      )?.id;
+    if (eintrag) {
+      await tx.execute(
+        "UPDATE plan_eintraege SET erledigt = 1, gekocht_id = ? WHERE id = ?",
+        [gekochtId, eintrag],
+      );
+    }
     const { n } = await tx.get<{ n: number }>(
       "SELECT COUNT(*) AS n FROM gekocht WHERE rezept_id = ?",
       [rezeptId],
@@ -297,7 +339,17 @@ export async function gekochtMerken(
   });
   return {
     anzahl,
-    zuruecknehmen: () => db.execute("DELETE FROM gekocht WHERE id = ?", [id]),
+    zuruecknehmen: () =>
+      db.writeTransaction(async (tx) => {
+        await tx.execute("DELETE FROM gekocht WHERE id = ?", [gekochtId]);
+        for (const id of buchungen) {
+          await tx.execute("DELETE FROM vorratsbuchungen WHERE id = ?", [id]);
+        }
+        await tx.execute(
+          "UPDATE plan_eintraege SET erledigt = 0, gekocht_id = NULL WHERE gekocht_id = ?",
+          [gekochtId],
+        );
+      }),
   };
 }
 

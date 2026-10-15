@@ -51,6 +51,7 @@ export function testApp() {
       id: user.id,
       get: (pfad: string) => anfrage("GET", pfad),
       post: (pfad: string, body?: unknown) => anfrage("POST", pfad, body ?? {}),
+      patch: (pfad: string, body: unknown) => anfrage("PATCH", pfad, body),
       /** Legt einen Haushalt an und gibt dessen id zurück. */
       async haushaltAnlegen(haushaltName = `Haushalt von ${name}`) {
         const res = await anfrage("POST", "/haushalte", { name: haushaltName });

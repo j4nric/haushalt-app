@@ -1,13 +1,20 @@
-import { ChefHat, House, Package, ShoppingCart } from "lucide-react";
+import {
+  CalendarDays,
+  ChefHat,
+  House,
+  Package,
+  ShoppingCart,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-export type Ansicht = "liste" | "vorrat" | "rezepte" | "haushalt";
+export type Ansicht = "liste" | "vorrat" | "plan" | "rezepte" | "haushalt";
 
 const ANSICHTEN: { id: Ansicht; name: string; symbol: typeof ShoppingCart }[] =
   [
     { id: "liste", name: "Einkaufsliste", symbol: ShoppingCart },
     { id: "vorrat", name: "Vorrat", symbol: Package },
+    { id: "plan", name: "Plan", symbol: CalendarDays },
     { id: "rezepte", name: "Rezepte", symbol: ChefHat },
     { id: "haushalt", name: "Haushalt", symbol: House },
   ];
@@ -15,7 +22,10 @@ const ANSICHTEN: { id: Ansicht; name: string; symbol: typeof ShoppingCart }[] =
 function lesen(): Ansicht {
   // Unterseiten hängen mit „/“ an: #rezepte/<id>/kochen
   const bereich = location.hash.slice(1).split("/")[0];
-  return bereich === "vorrat" || bereich === "rezepte" || bereich === "haushalt"
+  return bereich === "vorrat" ||
+    bereich === "plan" ||
+    bereich === "rezepte" ||
+    bereich === "haushalt"
     ? bereich
     : "liste";
 }
@@ -76,7 +86,7 @@ export function Navigation({
       aria-label="Bereiche"
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-background pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="mx-auto grid h-16 max-w-lg grid-cols-4">
+      <div className="mx-auto grid h-16 max-w-lg grid-cols-5">
         {ANSICHTEN.map(({ id, name, symbol: Icon }) => (
           <button
             key={id}

@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { authClient } from "./auth";
 import { Darstellung } from "./Darstellung";
 import { vergessen } from "./nutzer";
+import { useStandardPortionen } from "./plan/daten";
 import { trennenUndLeeren } from "./powersync";
+import { PortionenWahl } from "./rezepte/RezeptDetail";
 
 /** Bereich „Haushalt“: Mitglieder, Einladen, Konto. */
 export function Haushalt({
@@ -54,6 +56,8 @@ export function Haushalt({
       </section>
 
       <Einladen haushaltId={haushaltId} />
+
+      <StandardPortionen haushaltId={haushaltId} />
 
       <Darstellung />
 
@@ -151,6 +155,45 @@ function Einladen({ haushaltId }: { haushaltId: string }) {
         )}
         {fehler && <p className="pt-2 text-sm text-destructive">{fehler}</p>}
       </div>
+    </section>
+  );
+}
+
+/** Für wie viele im Wochenplan standardmäßig gekocht wird (gilt für den Haushalt). */
+function StandardPortionen({ haushaltId }: { haushaltId: string }) {
+  const gespeichert = useStandardPortionen(haushaltId);
+  // Sofort anzeigen; der gespeicherte Wert kommt erst über den Sync zurück.
+  const [lokal, setLokal] = useState<number | null>(null);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const portionen = lokal ?? gespeichert;
+
+  async function setzen(n: number) {
+    setFehler(null);
+    setLokal(n);
+    const antwort = await fetch(`/api/haushalte/${haushaltId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ standard_portionen: n }),
+    }).catch(() => null);
+    if (!antwort?.ok) {
+      setLokal(null);
+      setFehler("Ändern braucht eine Internetverbindung.");
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="px-1 pb-2 text-sm font-semibold text-muted-foreground">
+        Wochenplan
+      </h2>
+      <div className="flex items-center justify-between rounded-xl border bg-card px-4 py-3">
+        <span>Standard-Portionen</span>
+        <PortionenWahl wert={portionen} aendern={setzen} />
+      </div>
+      <p className="px-1 pt-2 text-xs text-muted-foreground">
+        {fehler ??
+          "Neu geplante Gerichte starten mit so vielen Portionen – je Eintrag änderbar."}
+      </p>
     </section>
   );
 }

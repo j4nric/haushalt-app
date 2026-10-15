@@ -97,6 +97,8 @@ test("Favoriten, Schlagwörter, kochbar, gekocht, Statistik, Glücksrad, Foto", 
     await page.getByRole("button", { name: /Nudelauflauf/ }).click();
     await page.getByRole("button", { name: "Kochen" }).click();
     await page.getByRole("button", { name: "Fertig gekocht" }).click();
+    // Nudeln und Tomaten liegen im Vorrat – der Abbuchen-Dialog fragt nach.
+    await page.getByRole("button", { name: "Nichts abbuchen" }).click();
     await expect(page.getByText("Zum ersten Mal gekocht")).toBeVisible();
     await expect(page.getByText("1× gekocht · zuletzt heute")).toBeVisible();
     await page

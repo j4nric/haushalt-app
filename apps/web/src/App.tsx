@@ -6,6 +6,7 @@ import { Einkaufsliste } from "./Einkaufsliste";
 import { Haushalt } from "./Haushalt";
 import { HaushaltEinrichten } from "./HaushaltEinrichten";
 import { useNutzer } from "./nutzer";
+import { Plan } from "./plan/Plan";
 import { verbinden } from "./powersync";
 import { Rezepte } from "./rezepte/Rezepte";
 import { SyncStatus } from "./SyncStatus";
@@ -55,6 +56,8 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
           <main className="mx-auto max-w-lg px-4 pt-2 pb-48">
             {ansicht === "vorrat" ? (
               <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
+            ) : ansicht === "plan" ? (
+              <Plan haushaltId={haushalt.id} nutzerId={nutzerId} />
             ) : ansicht === "rezepte" ? (
               <Rezepte haushaltId={haushalt.id} nutzerId={nutzerId} />
             ) : ansicht === "haushalt" ? (

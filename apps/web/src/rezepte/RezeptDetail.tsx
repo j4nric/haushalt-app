@@ -1,14 +1,12 @@
-import { formatiereMenge } from "@haushalt/db/einheiten";
 import {
   einheitAnzeige,
   formatiereZutatMenge,
-  istGrundzutat,
-  mengeFuerListe,
   zutatAlsText,
 } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import {
   ArrowLeft,
+  CalendarPlus,
   ChefHat,
   ExternalLink,
   Minus,
@@ -23,32 +21,25 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { type ArtikelStand, imVorrat } from "@/lib/kochbar";
+import { alsPosten } from "@/lib/plan";
 import { cn } from "@/lib/utils";
+import { Einplanen } from "../plan/Einplanen";
+import { Abbuchen, type Abbuchung, useAbbuchbar } from "./Abbuchen";
+import { AufDieListe } from "./AufDieListe";
 import {
   favoritUmschalten,
   type GespeicherteZutat,
-  gekochtMerken,
-  type ListenZutat,
+  kochenAbschliessen,
   rezeptLoeschen,
   schlagwoerterAusText,
-  zutatenAufListe,
 } from "./aktionen";
 import { Kochansicht } from "./Kochansicht";
-import { ARTIKEL_STAND, RezeptBild } from "./Rezepte";
+import { RezeptBild } from "./Rezepte";
 
 export type Rezept = {
   id: string;
@@ -69,12 +60,15 @@ export function RezeptDetail({
   nutzerId,
   kochen,
   gehe,
+  plan,
 }: {
   id: string;
   haushaltId: string;
   nutzerId: string;
   kochen: boolean;
   gehe: (pfad: string[]) => void;
+  /** Aus dem Wochenplan gekocht: dessen Portionen, abhaken und dorthin zurück. */
+  plan?: { eintragId: string; portionen: number | null; zurueck: () => void };
 }) {
   const db = usePowerSync();
   const { data: rezepte, isLoading } = useQuery<Rezept>(
@@ -90,8 +84,18 @@ export function RezeptDetail({
   );
   const rezept = rezepte[0];
   // Portionen gelten für Anzeige, Kochansicht und Einkaufsliste.
-  const [portionen, setPortionen] = useState<number | null>(null);
+  const [portionen, setPortionen] = useState<number | null>(
+    plan?.portionen ?? null,
+  );
   const [listeOffen, setListeOffen] = useState(false);
+  const [einplanenOffen, setEinplanenOffen] = useState(false);
+  const [abbuchenOffen, setAbbuchenOffen] = useState(false);
+  const aktuellePortionen = portionen ?? rezept?.portionen ?? null;
+  const faktor =
+    rezept?.portionen && aktuellePortionen
+      ? aktuellePortionen / rezept.portionen
+      : 1;
+  const abbuchbar = useAbbuchbar(haushaltId, zutaten, faktor);
 
   if (!rezept) {
     return isLoading ? null : (
@@ -104,11 +108,6 @@ export function RezeptDetail({
     );
   }
 
-  const aktuellePortionen = portionen ?? rezept.portionen;
-  const faktor =
-    rezept.portionen && aktuellePortionen
-      ? aktuellePortionen / rezept.portionen
-      : 1;
   const schritte = rezept.schritte.split("\n").filter(Boolean);
   const gewuerze = zutaten.filter((z) => z.gewuerz);
 
@@ -120,29 +119,49 @@ export function RezeptDetail({
     });
   }
 
+  const zurueck = () => (plan ? plan.zurueck() : gehe([id]));
+
+  async function abschliessen(abbuchen: Abbuchung[]) {
+    setAbbuchenOffen(false);
+    const { anzahl, zuruecknehmen } = await kochenAbschliessen(db, {
+      haushaltId,
+      nutzerId,
+      rezeptId: id,
+      planEintragId: plan?.eintragId ?? null,
+      abbuchen,
+    });
+    zurueck();
+    toast.success(
+      (anzahl === 1
+        ? "Guten Appetit! 🍽️ Zum ersten Mal gekocht"
+        : `Guten Appetit! 🍽️ Zum ${anzahl}. Mal gekocht`) +
+        (abbuchen.length > 0
+          ? ` · ${abbuchen.length} aus dem Vorrat abgebucht`
+          : ""),
+      { action: { label: "Rückgängig", onClick: () => zuruecknehmen() } },
+    );
+  }
+
   if (kochen) {
     return (
-      <Kochansicht
-        rezept={rezept}
-        zutaten={zutaten}
-        faktor={faktor}
-        portionen={aktuellePortionen}
-        schliessen={() => gehe([id])}
-        fertigGekocht={async () => {
-          const { anzahl, zuruecknehmen } = await gekochtMerken(db, {
-            haushaltId,
-            nutzerId,
-            rezeptId: id,
-          });
-          gehe([id]);
-          toast.success(
-            anzahl === 1
-              ? "Guten Appetit! 🍽️ Zum ersten Mal gekocht"
-              : `Guten Appetit! 🍽️ Zum ${anzahl}. Mal gekocht`,
-            { action: { label: "Rückgängig", onClick: () => zuruecknehmen() } },
-          );
-        }}
-      />
+      <>
+        <Kochansicht
+          rezept={rezept}
+          zutaten={zutaten}
+          faktor={faktor}
+          portionen={aktuellePortionen}
+          schliessen={zurueck}
+          fertigGekocht={() =>
+            abbuchbar.length > 0 ? setAbbuchenOffen(true) : abschliessen([])
+          }
+        />
+        <Abbuchen
+          offen={abbuchenOffen}
+          zeilen={abbuchbar}
+          schliessen={() => setAbbuchenOffen(false)}
+          bestaetigen={abschliessen}
+        />
+      </>
     );
   }
 
@@ -247,6 +266,13 @@ export function RezeptDetail({
         >
           <ChefHat /> Kochen
         </Button>
+        <Button
+          variant="outline"
+          className="col-span-2 h-11 rounded-full"
+          onClick={() => setEinplanenOffen(true)}
+        >
+          <CalendarPlus /> Einplanen
+        </Button>
       </div>
 
       <section aria-labelledby="zutaten-titel" className="space-y-3">
@@ -321,14 +347,22 @@ export function RezeptDetail({
         </section>
       )}
 
+      <Einplanen
+        offen={einplanenOffen}
+        schliessen={() => setEinplanenOffen(false)}
+        haushaltId={haushaltId}
+        nutzerId={nutzerId}
+        rezept={{ id, titel: rezept.titel }}
+      />
       <AufDieListe
         offen={listeOffen}
         schliessen={() => setListeOffen(false)}
         haushaltId={haushaltId}
         nutzerId={nutzerId}
-        zutaten={zutaten}
-        faktor={faktor}
-        portionen={aktuellePortionen}
+        posten={zutaten.map((z) => alsPosten(z, faktor))}
+        beschreibung={
+          aktuellePortionen ? `Für ${aktuellePortionen} Portionen.` : ""
+        }
       />
     </article>
   );
@@ -369,172 +403,6 @@ export function PortionenWahl({
         <Plus />
       </Button>
     </div>
-  );
-}
-
-type Vorschlag = ListenZutat & {
-  id: string;
-  /** Warum nicht vorausgewählt; `null` = kommt auf die Liste. */
-  grund: string | null;
-  sperre: boolean;
-};
-
-/**
- * „Auf die Liste“: alle Zutaten zum Abhaken. Nicht vorausgewählt ist, was schon
- * auf der Liste steht, im Vorrat reicht oder man immer hat (Salz, Öl …).
- */
-function AufDieListe({
-  offen,
-  schliessen,
-  haushaltId,
-  nutzerId,
-  zutaten,
-  faktor,
-  portionen,
-}: {
-  offen: boolean;
-  schliessen: () => void;
-  haushaltId: string;
-  nutzerId: string;
-  zutaten: GespeicherteZutat[];
-  faktor: number;
-  portionen: number | null;
-}) {
-  const db = usePowerSync();
-  const { data: artikel } = useQuery<ArtikelStand>(ARTIKEL_STAND, [haushaltId]);
-  const nachName = new Map(artikel.map((a) => [a.name, a]));
-
-  const vorschlaege: Vorschlag[] = zutaten.map((z) => {
-    const { menge, einheit } = mengeFuerListe(z, faktor);
-    const a = nachName.get(z.name.toLowerCase());
-    let grund: string | null = a?.auf_liste
-      ? "steht schon drauf"
-      : imVorrat(z, a, faktor);
-    if (!grund && z.gewuerz) {
-      grund = "Gewürz";
-    } else if (!grund && istGrundzutat(z.name)) {
-      grund = "haben wir immer";
-    }
-    return {
-      id: z.id,
-      name: z.name,
-      menge,
-      einheit,
-      grund,
-      sperre: Boolean(a?.auf_liste),
-    };
-  });
-
-  // Auswahl je Öffnen neu vorbelegen.
-  const [abgewaehlt, setAbgewaehlt] = useState<Set<string> | null>(null);
-  const aus =
-    abgewaehlt ?? new Set(vorschlaege.filter((v) => v.grund).map((v) => v.id));
-  const gewaehlt = vorschlaege.filter((v) => !v.sperre && !aus.has(v.id));
-
-  function umschalten(id: string) {
-    const neu = new Set(aus);
-    if (neu.has(id)) {
-      neu.delete(id);
-    } else {
-      neu.add(id);
-    }
-    setAbgewaehlt(neu);
-  }
-
-  async function uebernehmen() {
-    const anzahl = await zutatenAufListe(db, {
-      haushaltId,
-      nutzerId,
-      zutaten: gewaehlt,
-    });
-    schliessen();
-    setAbgewaehlt(null);
-    toast.success(
-      anzahl === 1
-        ? "1 Zutat auf der Liste"
-        : `${anzahl} Zutaten auf der Liste`,
-      {
-        action: {
-          label: "Zur Liste",
-          onClick: () => {
-            location.hash = "";
-          },
-        },
-      },
-    );
-  }
-
-  return (
-    <Drawer
-      open={offen}
-      onOpenChange={(o) => {
-        if (!o) {
-          schliessen();
-          setAbgewaehlt(null);
-        }
-      }}
-    >
-      <DrawerContent>
-        <div className="mx-auto w-full max-w-lg">
-          <DrawerHeader>
-            <DrawerTitle>Auf die Einkaufsliste</DrawerTitle>
-            <DrawerDescription>
-              {portionen ? `Für ${portionen} Portionen. ` : ""}Abgewählt:
-              Gewürze und was im Vorrat reicht oder immer da ist.
-            </DrawerDescription>
-          </DrawerHeader>
-          <ul className="max-h-[50dvh] space-y-1 overflow-y-auto px-4">
-            {vorschlaege.map((v) => {
-              const an = !v.sperre && !aus.has(v.id);
-              return (
-                <li key={v.id}>
-                  <label
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl px-2 py-2",
-                      v.sperre ? "opacity-60" : "active:bg-muted",
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={an}
-                      disabled={v.sperre}
-                      onChange={() => umschalten(v.id)}
-                      className="size-5 accent-[var(--primary)]"
-                    />
-                    <span className="flex-1">
-                      {v.name}
-                      {v.menge != null && v.einheit && (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {formatiereMenge(v.menge, v.einheit)}
-                        </span>
-                      )}
-                    </span>
-                    {v.grund && (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {v.grund}
-                      </span>
-                    )}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-          <DrawerFooter>
-            <Button
-              className="h-12 rounded-full text-base"
-              disabled={gewaehlt.length === 0}
-              onClick={uebernehmen}
-            >
-              <ShoppingCart />
-              {gewaehlt.length === 1
-                ? "1 Zutat auf die Liste"
-                : `${gewaehlt.length} Zutaten auf die Liste`}
-            </Button>
-          </DrawerFooter>
-        </div>
-      </DrawerContent>
-    </Drawer>
   );
 }
 

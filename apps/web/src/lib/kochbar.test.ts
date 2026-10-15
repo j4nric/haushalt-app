@@ -9,6 +9,7 @@ const stand = (
 ): [string, ArtikelStand] => [
   name.toLowerCase(),
   {
+    id: name,
     name: name.toLowerCase(),
     im_vorrat: 1,
     standardeinheit,
