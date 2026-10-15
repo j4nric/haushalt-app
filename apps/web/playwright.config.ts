@@ -20,6 +20,8 @@ export default defineConfig({
       command: "pnpm --dir ../api dev",
       url: "http://localhost:3000/api/health",
       reuseExistingServer: true,
+      // Rezept-Import von der lokalen Testseite erlauben (sonst gesperrt).
+      env: { REZEPT_IMPORT_LOKAL: "1" },
     },
     {
       command: "pnpm build && pnpm preview --port 4173 --strictPort",

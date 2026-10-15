@@ -1,3 +1,4 @@
+import { type Einheit, formatiereMenge } from "@haushalt/db/einheiten";
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
 import {
   KATEGORIEN,
@@ -57,6 +58,8 @@ type Zeile = {
   kategorie: string | null;
   erledigt: number;
   erledigt_von_name: string | null;
+  menge: number | null;
+  einheit: Einheit | null;
 };
 
 export function Einkaufsliste({
@@ -68,7 +71,7 @@ export function Einkaufsliste({
 }) {
   const db = usePowerSync();
   const { data: eintraege } = useQuery<Zeile>(
-    `SELECT l.id, l.artikel_id, a.name, a.kategorie, l.erledigt,
+    `SELECT l.id, l.artikel_id, a.name, a.kategorie, l.erledigt, l.menge, l.einheit,
             m.anzeigename AS erledigt_von_name
        FROM listeneintraege l
        JOIN artikel a ON a.id = l.artikel_id
@@ -716,6 +719,13 @@ function Kachel({
 }) {
   const erledigt = eintrag.erledigt === 1;
   const farbe = useKategorieFarbe(eintrag.kategorie);
+  // Menge nur, wenn sie etwas sagt („500 g“, „3 Stk.“) – ein einzelnes Stück nicht.
+  const menge =
+    eintrag.menge != null &&
+    eintrag.einheit &&
+    !(eintrag.einheit === "stueck" && eintrag.menge === 1)
+      ? formatiereMenge(eintrag.menge, eintrag.einheit)
+      : null;
   const { handler, klick } = useWischen({ lang: () => bearbeiten(eintrag) });
   const { spalten } = useEinstellungen();
   // Bei 3 Spalten etwas kompakter, damit weniger Namen umbrechen.
@@ -780,6 +790,9 @@ function Kachel({
         >
           {eintrag.name}
         </span>
+        {menge && (
+          <span className="text-xs text-muted-foreground">{menge}</span>
+        )}
         {erledigt && eintrag.erledigt_von_name && (
           <span className="text-xs">von {eintrag.erledigt_von_name}</span>
         )}

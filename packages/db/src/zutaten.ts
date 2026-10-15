@@ -1,0 +1,251 @@
+import type { Einheit } from "./einheiten";
+
+/**
+ * Zutaten aus Rezepten: aus einer Textzeile („2 EL Olivenöl, kalt gepresst“) wird
+ * Menge, Einheit, Name und Zusatz. Gilt für Eingaben von Hand wie für importierte
+ * Rezepte. Lieber einmal zu wenig erkannt als falsch: Was nicht passt, bleibt Name.
+ */
+
+export type Zutat = {
+  menge: number | null;
+  /** Anzeige-Einheit, z. B. „g“, „EL“, „Dose“; `null` = einfach Stück/ohne. */
+  einheit: string | null;
+  name: string;
+  zusatz: string | null;
+};
+
+const BRUECHE: Record<string, number> = {
+  "½": 1 / 2,
+  "¼": 1 / 4,
+  "¾": 3 / 4,
+  "⅓": 1 / 3,
+  "⅔": 2 / 3,
+  "⅛": 1 / 8,
+};
+
+/** Schreibweisen (klein, ohne Punkt) → Anzeige-Einheit. */
+const EINHEITEN_TEXT: Record<string, string> = {};
+for (const [anzeige, schreibweisen] of Object.entries({
+  g: ["g", "gr", "gramm"],
+  kg: ["kg", "kilo", "kilogramm"],
+  mg: ["mg"],
+  ml: ["ml", "milliliter"],
+  cl: ["cl"],
+  dl: ["dl"],
+  l: ["l", "liter"],
+  EL: ["el", "essl", "esslöffel", "eßlöffel"],
+  TL: ["tl", "teel", "teelöffel"],
+  Prise: ["prise", "prisen"],
+  "Msp.": ["msp", "messerspitze", "messerspitzen"],
+  Bund: ["bund", "bd"],
+  Dose: ["dose", "dosen"],
+  "Pck.": ["pck", "pkg", "päckchen", "packung", "packungen", "pkt"],
+  Becher: ["becher"],
+  Glas: ["glas", "gläser"],
+  Stück: ["stück", "stk", "st"],
+  Zehe: ["zehe", "zehen"],
+  Scheibe: ["scheibe", "scheiben"],
+  Tasse: ["tasse", "tassen"],
+  Handvoll: ["handvoll"],
+  Zweig: ["zweig", "zweige"],
+  Stange: ["stange", "stangen"],
+  Kopf: ["kopf", "köpfe"],
+  Knolle: ["knolle", "knollen"],
+  Würfel: ["würfel"],
+  Schuss: ["schuss"],
+  Tropfen: ["tropfen"],
+  Blatt: ["blatt", "blätter"],
+})) {
+  for (const s of schreibweisen) {
+    EINHEITEN_TEXT[s] = anzeige;
+  }
+}
+
+const ZAHL = String.raw`\d+(?:[.,]\d+)?`;
+const BRUCH = String.raw`\d+\s*\/\s*\d+`;
+const UNICODE = `[${Object.keys(BRUECHE).join("")}]`;
+// „1 1/2“, „1½“, „1/2“, „½“, „1,5“, „2“ – optional als Spanne „2-3“.
+const EINZELMENGE = String.raw`(?:\d+\s+${BRUCH}|\d*\s*${UNICODE}|${BRUCH}|${ZAHL})`;
+const MENGE = new RegExp(
+  String.raw`^(${EINZELMENGE})(?:\s*(?:-|–|bis)\s*(${EINZELMENGE}))?\s*`,
+);
+
+function zahl(text: string): number | null {
+  const t = text.trim();
+  const gemischt = t.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (gemischt) {
+    return Number(gemischt[1]) + Number(gemischt[2]) / Number(gemischt[3] || 1);
+  }
+  const bruch = t.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (bruch) {
+    return Number(bruch[2]) ? Number(bruch[1]) / Number(bruch[2]) : null;
+  }
+  const unicode = t.match(new RegExp(`^(\\d*)\\s*(${UNICODE})$`));
+  if (unicode) {
+    return Number(unicode[1] || 0) + (BRUECHE[unicode[2] ?? ""] ?? 0);
+  }
+  const n = Number(t.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+const VORSATZ =
+  /^(etwas|evtl\.?|eventuell|ca\.?|circa|n\. ?b\.?|nach belieben|einige|ein paar)\s+/i;
+
+/** Zerlegt eine Zutatenzeile. */
+export function zerlegeZutat(zeile: string): Zutat {
+  let rest = zeile
+    .replace(/\s+/g, " ")
+    .replace(/^[-•*–]\s*/, "")
+    .trim();
+  const zusaetze: string[] = [];
+
+  // Klammern und alles nach dem ersten Komma sind Zusatz.
+  rest = rest.replace(/\s*\(([^)]*)\)\s*/g, (_, inhalt: string) => {
+    if (inhalt.trim()) {
+      zusaetze.push(`(${inhalt.trim()})`);
+    }
+    return " ";
+  });
+  // Dezimalkomma („0,5“) ist kein Trenner.
+  const komma = rest.search(/(?<!\d),|,(?!\d)/);
+  if (komma >= 0) {
+    zusaetze.unshift(rest.slice(komma + 1).trim());
+    rest = rest.slice(0, komma);
+  }
+  rest = rest.trim();
+
+  let menge: number | null = null;
+  const treffer = rest.match(MENGE);
+  if (treffer?.[1] && /\d|[½¼¾⅓⅔⅛]/.test(treffer[1])) {
+    // Bei einer Spanne lieber die obere Menge einkaufen.
+    menge = zahl(treffer[2] ?? treffer[1]);
+    rest = rest.slice(treffer[0].length);
+  }
+
+  let einheit: string | null = null;
+  const wort = rest.match(/^([A-Za-zÄÖÜäöüß]+)\.?(?=\s|$)/);
+  const erkannt = wort?.[1] && EINHEITEN_TEXT[wort[1].toLowerCase()];
+  // Nur mit Menge davor oder bei eindeutigen Mengenwörtern („Prise Salz“).
+  if (wort && erkannt && (menge != null || erkannt.length > 2)) {
+    einheit = erkannt;
+    rest = rest.slice(wort[0].length).trim();
+  }
+
+  const vorsatz = rest.match(VORSATZ);
+  if (vorsatz?.[1]) {
+    zusaetze.unshift(vorsatz[1]);
+    rest = rest.slice(vorsatz[0].length);
+  }
+
+  const name = rest.trim() || zeile.trim();
+  const zusatz = zusaetze.filter(Boolean).join(", ");
+  return {
+    menge: menge != null && menge > 0 ? menge : null,
+    einheit,
+    name,
+    zusatz: zusatz || null,
+  };
+}
+
+/** Menge für die Anzeige: kleine Mengen als Bruch (½, ¼ …), große gerundet. */
+export function formatiereZutatMenge(menge: number): string {
+  const ganz = Math.floor(menge);
+  const teil = menge - ganz;
+  if (menge < 10) {
+    for (const [zeichen, wert] of Object.entries(BRUECHE)) {
+      if (Math.abs(teil - wert) < 0.03) {
+        return `${ganz || ""}${zeichen}`;
+      }
+    }
+    if (teil < 0.03 || teil > 0.97) {
+      return String(Math.round(menge));
+    }
+  }
+  // Ohne Tausenderpunkt: „1.000“ würde beim erneuten Einlesen zu 1.
+  return menge.toLocaleString("de-DE", {
+    maximumFractionDigits: menge >= 10 ? 0 : 1,
+    useGrouping: false,
+  });
+}
+
+/** Zeile zum Anzeigen, z. B. „1½ EL Olivenöl“. */
+export function zutatAlsText(z: Zutat, faktor = 1): string {
+  const teile = [
+    z.menge != null ? formatiereZutatMenge(z.menge * faktor) : null,
+    z.einheit,
+    z.name,
+  ].filter(Boolean);
+  return teile.join(" ");
+}
+
+const GROESSER: Record<string, { faktor: number; einheit: Einheit }> = {
+  g: { faktor: 1, einheit: "g" },
+  kg: { faktor: 1000, einheit: "g" },
+  ml: { faktor: 1, einheit: "ml" },
+  cl: { faktor: 10, einheit: "ml" },
+  dl: { faktor: 100, einheit: "ml" },
+  l: { faktor: 1000, einheit: "ml" },
+};
+/** Einheiten, die man im Laden als ganze Stücke kauft. */
+const STUECKWEISE = new Set([
+  "Stück",
+  "Dose",
+  "Pck.",
+  "Becher",
+  "Glas",
+  "Bund",
+  "Kopf",
+  "Knolle",
+  "Stange",
+]);
+
+/**
+ * Was davon auf die Einkaufsliste kommt, in den Artikel-Einheiten (g, ml, Stück).
+ * EL, Prise & Co. lassen sich nicht einkaufen – dann nur der Name, ohne Menge.
+ */
+export function mengeFuerListe(
+  z: Zutat,
+  faktor = 1,
+): { menge: number | null; einheit: Einheit | null } {
+  if (z.menge == null) {
+    return { menge: null, einheit: null };
+  }
+  const menge = z.menge * faktor;
+  const gewicht = z.einheit ? GROESSER[z.einheit] : undefined;
+  if (gewicht) {
+    return {
+      menge: Math.round(menge * gewicht.faktor),
+      einheit: gewicht.einheit,
+    };
+  }
+  if (z.einheit == null || STUECKWEISE.has(z.einheit)) {
+    return { menge: Math.ceil(menge), einheit: "stueck" };
+  }
+  return { menge: null, einheit: null };
+}
+
+const GRUNDZUTATEN = new Set([
+  "salz",
+  "meersalz",
+  "pfeffer",
+  "wasser",
+  "öl",
+  "olivenöl",
+  "sonnenblumenöl",
+  "rapsöl",
+  "pflanzenöl",
+  "speiseöl",
+  "essig",
+  "zucker",
+]);
+
+/** „Haben wir immer“: Salz, Pfeffer, Öl, Wasser … – standardmäßig nicht auf die Liste. */
+export function istGrundzutat(name: string): boolean {
+  const klein = name.toLowerCase().trim();
+  const erstes = klein.split(/[\s,]+/)[0] ?? "";
+  return (
+    GRUNDZUTATEN.has(klein) ||
+    GRUNDZUTATEN.has(erstes) ||
+    /^salz (und|&) pfeffer/.test(klein)
+  );
+}

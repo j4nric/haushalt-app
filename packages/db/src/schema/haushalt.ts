@@ -5,6 +5,7 @@ import {
   doublePrecision,
   foreignKey,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -240,5 +241,71 @@ export const kaeufe = pgTable(
       columns: [t.artikelId, t.haushaltId],
       foreignColumns: [artikel.id, artikel.haushaltId],
     }).onDelete("cascade"),
+  ],
+);
+
+/**
+ * Rezepte des Haushalts. Schritte als Text, ein Schritt je Zeile. Das Bild ist eine
+ * Adresse (z. B. vom Import); eigene Fotos kommen später.
+ */
+export const rezepte = pgTable(
+  "rezepte",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    titel: text("titel").notNull(),
+    /** Für wie viele Portionen die Mengen gelten (Grundlage fürs Umrechnen). */
+    portionen: integer("portionen"),
+    quelleUrl: text("quelle_url"),
+    bildUrl: text("bild_url"),
+    schritte: text("schritte").notNull().default(""),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [
+    index().on(t.haushaltId),
+    unique().on(t.id, t.haushaltId),
+    check(
+      "rezepte_portionen_positiv",
+      sql`${t.portionen} is null or ${t.portionen} > 0`,
+    ),
+  ],
+);
+
+/**
+ * Zutaten eines Rezepts, strukturiert (Menge, Einheit, Name, Zusatz), damit sie sich
+ * umrechnen und über den Namen mit Artikeln, Liste und Vorrat abgleichen lassen.
+ * Die Einheit ist frei („EL“, „Dose“, …) – nicht nur die Artikel-Einheiten.
+ */
+export const rezeptZutaten = pgTable(
+  "rezept_zutaten",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    rezeptId: uuid("rezept_id").notNull(),
+    position: integer("position").notNull(),
+    menge: doublePrecision("menge"),
+    einheit: text("einheit"),
+    name: text("name").notNull(),
+    /** Z. B. „fein gehackt“ oder „(400 g)“ – wird angezeigt, aber nicht abgeglichen. */
+    zusatz: text("zusatz"),
+  },
+  (t) => [
+    index().on(t.haushaltId),
+    index().on(t.rezeptId),
+    foreignKey({
+      columns: [t.rezeptId, t.haushaltId],
+      foreignColumns: [rezepte.id, rezepte.haushaltId],
+    }).onDelete("cascade"),
+    check(
+      "rezept_zutaten_menge_positiv",
+      sql`${t.menge} is null or ${t.menge} > 0`,
+    ),
   ],
 );

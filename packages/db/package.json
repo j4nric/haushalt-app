@@ -13,7 +13,8 @@
     "./einheiten": "./src/einheiten.ts",
     "./kategorien": "./src/kategorien.ts",
     "./vorrat": "./src/vorrat.ts",
-    "./kategorie-erkennung": "./src/kategorie-erkennung.ts"
+    "./kategorie-erkennung": "./src/kategorie-erkennung.ts",
+    "./zutaten": "./src/zutaten.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

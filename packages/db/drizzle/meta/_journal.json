@@ -43,6 +43,13 @@
       "when": 1792016946082,
       "tag": "0005_kaeufe",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792050580328,
+      "tag": "0006_rezepte",
+      "breakpoints": true
     }
   ]
 }

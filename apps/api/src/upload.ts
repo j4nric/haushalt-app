@@ -27,6 +27,41 @@ const text = (spalte: string) => (wert: unknown) => {
   }
   return wert.trim();
 };
+/** Text oder nichts; leer zählt als nichts. Begrenzt, damit niemand die DB flutet. */
+const optionalerText =
+  (spalte: string, hoechstens = 500) =>
+  (wert: unknown) => {
+    if (wert == null || (typeof wert === "string" && wert.trim() === "")) {
+      return null;
+    }
+    if (typeof wert !== "string" || wert.length > hoechstens) {
+      throw new UngueltigeOperation(
+        `${spalte} muss ein Text mit höchstens ${hoechstens} Zeichen sein`,
+      );
+    }
+    return wert.trim();
+  };
+/** Nur http(s)-Adressen – sie landen in Links und Bildern. */
+const optionaleUrl = (spalte: string) => (wert: unknown) => {
+  const url = optionalerText(spalte, 2000)(wert);
+  if (url != null && !/^https?:\/\//i.test(url)) {
+    throw new UngueltigeOperation(`${spalte} muss mit http(s):// beginnen`);
+  }
+  return url;
+};
+const ganzzahl =
+  (spalte: string, { min, optional }: { min: number; optional: boolean }) =>
+  (wert: unknown) => {
+    if (wert == null && optional) {
+      return null;
+    }
+    if (typeof wert !== "number" || !Number.isInteger(wert) || wert < min) {
+      throw new UngueltigeOperation(
+        `${spalte} muss eine ganze Zahl ab ${min} sein`,
+      );
+    }
+    return wert;
+  };
 const kategorie = (wert: unknown) => {
   if (wert == null || wert === "") {
     return null;
@@ -127,6 +162,30 @@ const ERLAUBT = {
     },
     gekauft_am: { umwandeln: zeitpunkt, fest: true },
     erstellt_von: { umwandeln: () => null, vomServer: true },
+  },
+  rezepte: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    titel: { umwandeln: text("titel") },
+    portionen: {
+      umwandeln: ganzzahl("portionen", { min: 1, optional: true }),
+    },
+    quelle_url: { umwandeln: optionaleUrl("quelle_url") },
+    bild_url: { umwandeln: optionaleUrl("bild_url") },
+    schritte: {
+      umwandeln: (wert: unknown) =>
+        optionalerText("schritte", 20_000)(wert) ?? "",
+    },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
+  },
+  rezept_zutaten: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    rezept_id: { umwandeln: uuid("rezept_id"), fest: true },
+    position: { umwandeln: ganzzahl("position", { min: 0, optional: false }) },
+    menge: { umwandeln: menge },
+    einheit: { umwandeln: optionalerText("einheit", 30) },
+    name: { umwandeln: text("name") },
+    zusatz: { umwandeln: optionalerText("zusatz") },
   },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
@@ -243,7 +302,8 @@ export async function wendeAn(
       if (
         o.table === "listeneintraege" ||
         o.table === "vorratsbuchungen" ||
-        o.table === "kaeufe"
+        o.table === "kaeufe" ||
+        o.table === "rezepte"
       ) {
         data.erstellt_von = nutzerId;
       }
