@@ -123,6 +123,8 @@ Dependabot (`.github/dependabot.yml`) öffnet jeden Montag um 6 Uhr Pull Request
 - **npm-Pakete:** kleine Updates (Minor/Patch) gesammelt in einem PR, große
   Versionssprünge einzeln – die lesen sich am besten mit den Release Notes.
 - **GitHub Actions** gesammelt, **Docker-Images** (Node, PowerSync, Caddy) einzeln.
+- **Node** (Docker-Image und `@types/node`) nur innerhalb der LTS-Version 24; die
+  nächste Hauptversion von Hand, wenn sie LTS ist (Node 26: ab Oktober 2026).
 - **Postgres** nur innerhalb der Hauptversion: Von 18 auf 19 müssen die Daten
   umziehen (Dump einspielen) – das bleibt Handarbeit.
 - **Sicherheitslücken** meldet GitHub sofort und Dependabot öffnet dafür einen

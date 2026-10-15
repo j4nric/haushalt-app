@@ -18,6 +18,10 @@ updates:
     groups:
       kleine-updates:
         update-types: [minor, patch]
+    ignore:
+      # Typen passend zur Node-Version (LTS 24) – mit Node zusammen von Hand anheben.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directories: ["/", "/.github/actions/*"]
@@ -43,6 +47,10 @@ updates:
     labels: [abhaengigkeiten]
     commit-message:
       prefix: "Docker"
+    ignore:
+      # Node bleibt auf der LTS-Version (24); neue Hauptversionen von Hand, wenn LTS.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker-compose
     directories: ["/", "/infra/production"]
