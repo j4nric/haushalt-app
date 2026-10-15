@@ -7,6 +7,7 @@ import {
 import { type Spalten, useEinstellungen } from "@/einstellungen";
 import { useWischen } from "@/hooks/use-wischen";
 import { istHexFarbe, kontrast, TEXT_HELL, textFarbeAuf } from "@/lib/farben";
+import { vermisstSatz } from "@/lib/persoenlichkeit";
 import { cn } from "@/lib/utils";
 
 export type VerlaufArtikel = {
@@ -15,6 +16,8 @@ export type VerlaufArtikel = {
   kategorie: string | null;
   /** Steht gerade offen auf der Einkaufsliste. */
   auf_liste: number;
+  /** Letzter Kauf, sonst Zeitpunkt des Anlegens (ISO). */
+  zuletzt: string | null;
 };
 
 // Vollständige Klassennamen, damit Tailwind sie beim Bauen findet.
@@ -157,6 +160,14 @@ function VerlaufKachel({
   ausblenden: (a: VerlaufArtikel) => void;
 }) {
   const aufListe = artikel.auf_liste === 1;
+  // Lange nicht gekaufte Vorschläge melden sich selbst („vermisst dich 💔“).
+  const vermisst =
+    !aufListe && artikel.zuletzt
+      ? vermisstSatz(
+          artikel.name,
+          Math.floor((Date.now() - Date.parse(artikel.zuletzt)) / 86_400_000),
+        )
+      : null;
   const { spalten } = useEinstellungen();
   const { handler, klick } = useWischen(
     aufListe ? {} : { lang: () => ausblenden(artikel) },
@@ -190,8 +201,15 @@ function VerlaufKachel({
         ) : (
           <Plus className="size-4 shrink-0" strokeWidth={3} />
         )}
-        <span className="leading-tight break-words hyphens-auto">
-          {artikel.name}
+        <span className="flex min-w-0 flex-col">
+          <span className="leading-tight break-words hyphens-auto">
+            {artikel.name}
+          </span>
+          {vermisst && (
+            <span className="text-xs leading-tight font-normal italic opacity-90">
+              {vermisst}
+            </span>
+          )}
         </span>
       </button>
     </li>

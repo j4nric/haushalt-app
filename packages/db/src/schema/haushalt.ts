@@ -210,3 +210,35 @@ export const vorratsbuchungen = pgTable(
     ),
   ],
 );
+
+/**
+ * Kaufhistorie: eine Zeile je abgehaktem Listeneintrag, für jeden Artikel (nicht nur
+ * Vorratsartikel). Daraus schätzt die App, wie oft etwas gekauft wird, und erinnert,
+ * wenn es überfällig scheint. Unveränderlich wie die Buchungen; Zurücknehmen löscht.
+ */
+export const kaeufe = pgTable(
+  "kaeufe",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    artikelId: uuid("artikel_id").notNull(),
+    /** Bewusst ohne Fremdschlüssel (siehe vorratsbuchungen.listeneintragId). */
+    listeneintragId: uuid("listeneintrag_id"),
+    gekauftAm: timestamp("gekauft_am", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [
+    index().on(t.haushaltId),
+    index().on(t.artikelId),
+    foreignKey({
+      columns: [t.artikelId, t.haushaltId],
+      foreignColumns: [artikel.id, artikel.haushaltId],
+    }).onDelete("cascade"),
+  ],
+);

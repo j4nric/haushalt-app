@@ -369,3 +369,53 @@ describe("Vorrat", () => {
     ).toThrow(UngueltigeOperation);
   });
 });
+
+describe("Käufe", () => {
+  it("speichert Käufe mit dem Server als Urheber, unveränderlich, löschbar, nur im eigenen Haushalt", async () => {
+    const ben = await t.nutzer("Ben");
+    const fremd = await t.nutzer("Fremd-Kauf");
+    const haushalt = await ben.haushaltAnlegen();
+    const milch = neueId();
+    const kauf = neueId();
+    const put = {
+      op: "PUT",
+      table: "kaeufe",
+      id: kauf,
+      opData: {
+        haushalt_id: haushalt,
+        artikel_id: milch,
+        listeneintrag_id: neueId(),
+        gekauft_am: jetzt(),
+        erstellt_von: fremd.id,
+      },
+    };
+    expect(
+      (await ben.hochladen([artikelPut(milch, haushalt, "Milch"), put])).status,
+    ).toBe(200);
+    const [k] = await t.sql`select erstellt_von from kaeufe where id = ${kauf}`;
+    expect(k).toEqual({ erstellt_von: ben.id });
+
+    expect((await fremd.hochladen([{ ...put, id: neueId() }])).status).toBe(
+      403,
+    );
+    expect(
+      (
+        await ben.hochladen([
+          {
+            op: "PATCH",
+            table: "kaeufe",
+            id: kauf,
+            opData: { gekauft_am: jetzt() },
+          },
+        ])
+      ).status,
+    ).toBe(400);
+    expect(
+      (await ben.hochladen([{ op: "DELETE", table: "kaeufe", id: kauf }]))
+        .status,
+    ).toBe(200);
+    expect(await t.sql`select 1 from kaeufe where id = ${kauf}`).toHaveLength(
+      0,
+    );
+  });
+});

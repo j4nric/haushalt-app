@@ -49,6 +49,18 @@ export const schema = new Schema({
       indexes: { artikel: ["artikel_id"], listeneintrag: ["listeneintrag_id"] },
     },
   ),
+  kaeufe: new Table(
+    {
+      haushalt_id: column.text,
+      artikel_id: column.text,
+      listeneintrag_id: column.text,
+      gekauft_am: column.text,
+      erstellt_von: column.text,
+    },
+    {
+      indexes: { artikel: ["artikel_id"], listeneintrag: ["listeneintrag_id"] },
+    },
+  ),
   listeneintraege: new Table({
     haushalt_id: column.text,
     artikel_id: column.text,

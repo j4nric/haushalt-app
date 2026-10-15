@@ -117,6 +117,17 @@ const ERLAUBT = {
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
     erstellt_von: { umwandeln: () => null, vomServer: true },
   },
+  // Käufe sind unveränderlich wie Buchungen: nur PUT und DELETE.
+  kaeufe: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
+    listeneintrag_id: {
+      umwandeln: optionaleUuid("listeneintrag_id"),
+      fest: true,
+    },
+    gekauft_am: { umwandeln: zeitpunkt, fest: true },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
+  },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
     artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
@@ -229,7 +240,11 @@ export async function wendeAn(
           `Kein Mitglied von Haushalt ${String(data.haushalt_id)}`,
         );
       }
-      if (o.table === "listeneintraege" || o.table === "vorratsbuchungen") {
+      if (
+        o.table === "listeneintraege" ||
+        o.table === "vorratsbuchungen" ||
+        o.table === "kaeufe"
+      ) {
         data.erstellt_von = nutzerId;
       }
       const zeile = { ...data, id: o.id };
