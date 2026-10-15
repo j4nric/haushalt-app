@@ -21,8 +21,14 @@ Kochansicht. Später: Schlagwörter, Favoriten/„zuletzt gekocht“, eigene Fot
   komplett ersetzt.
 - **Zutaten erkennen** (`packages/db/src/zutaten.ts`): Menge (auch ½, 1 1/2, 0,5,
   Spannen → obere Grenze), Einheit (g, kg, ml, l, EL, TL, Prise, Dose, Bund …),
-  Name; Klammern und alles nach dem Komma sind Zusatz. Gleiche Logik für Eingabe von
+  Name; Klammern und alles nach dem Komma sind Zusatz. Die Menge darf auch hinten
+  stehen („Spaghetti 400g“, „Kidneybohnen 2 Dosen“). Gleiche Logik für Eingabe von
   Hand und Import.
+- **Gewürze als eigener Absatz:** Spalte `gewuerz` an `rezept_zutaten` (Migration
+  0007). Mengen dort optional. Rezeptseiten kennen nur eine Zutatenliste; der Import
+  sortiert eindeutige Gewürze (Salz, Pfeffer, Kreuzkümmel …) ohne Menge oder mit
+  TL/EL/Prise/Msp. dorthin. Mehrdeutige („Paprika“, „Petersilie“) nur mit
+  Gewürz-Einheit und nicht „frisch“. Auf der Einkaufsliste sind Gewürze abgewählt.
 - **Link-Import:** Der Server holt die Seite und liest schema.org/Recipe (JSON-LD).
   Schutz vor SSRF: nur http(s), keine privaten/lokalen Adressen (auch nach
   Weiterleitungen), 10 s Zeitlimit, höchstens 5 MB. Lokal nur mit

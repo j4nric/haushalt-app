@@ -80,6 +80,7 @@ export const schema = new Schema({
       einheit: column.text,
       name: column.text,
       zusatz: column.text,
+      gewuerz: column.integer,
     },
     { indexes: { rezept: ["rezept_id"] } },
   ),

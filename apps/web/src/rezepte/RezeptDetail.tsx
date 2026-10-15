@@ -1,8 +1,10 @@
 import { formatiereMenge } from "@haushalt/db/einheiten";
 import {
+  einheitAnzeige,
   formatiereZutatMenge,
   istGrundzutat,
   mengeFuerListe,
+  zutatAlsText,
 } from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import {
@@ -96,6 +98,7 @@ export function RezeptDetail({
       ? aktuellePortionen / rezept.portionen
       : 1;
   const schritte = rezept.schritte.split("\n").filter(Boolean);
+  const gewuerze = zutaten.filter((z) => z.gewuerz);
 
   async function loeschen() {
     const wiederherstellen = await rezeptLoeschen(db, id);
@@ -192,21 +195,47 @@ export function RezeptDetail({
           )}
         </div>
         <ul className="divide-y rounded-2xl border bg-card">
-          {zutaten.map((z) => (
-            <li key={z.id} className="flex gap-3 px-4 py-2.5">
-              <span className="w-20 shrink-0 text-right font-semibold tabular-nums">
-                {z.menge != null && formatiereZutatMenge(z.menge * faktor)}{" "}
-                {z.einheit}
-              </span>
-              <span>
-                {z.name}
-                {z.zusatz && (
-                  <span className="text-muted-foreground">, {z.zusatz}</span>
-                )}
-              </span>
-            </li>
-          ))}
+          {zutaten
+            .filter((z) => !z.gewuerz)
+            .map((z) => (
+              <li key={z.id} className="flex gap-3 px-4 py-2.5">
+                <span className="w-20 shrink-0 text-right font-semibold tabular-nums">
+                  {z.menge != null && formatiereZutatMenge(z.menge * faktor)}{" "}
+                  {z.einheit &&
+                    einheitAnzeige(
+                      z.einheit,
+                      z.menge != null ? z.menge * faktor : null,
+                    )}
+                </span>
+                <span>
+                  {z.name}
+                  {z.zusatz && (
+                    <span className="text-muted-foreground">, {z.zusatz}</span>
+                  )}
+                </span>
+              </li>
+            ))}
         </ul>
+        {gewuerze.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <h4 className="text-sm font-semibold text-muted-foreground">
+              Gewürze
+            </h4>
+            <ul aria-label="Gewürze" className="flex flex-wrap gap-2">
+              {gewuerze.map((z) => (
+                <li
+                  key={z.id}
+                  className="rounded-full border bg-card px-3 py-1 text-sm"
+                >
+                  {zutatAlsText(z, faktor)}
+                  {z.zusatz && (
+                    <span className="text-muted-foreground">, {z.zusatz}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       {schritte.length > 0 && (
@@ -338,7 +367,9 @@ function AufDieListe({
         grund = `im Vorrat: ${formatiereMenge(a.bestand, a.standardeinheit)}`;
       }
     }
-    if (!grund && istGrundzutat(z.name)) {
+    if (!grund && z.gewuerz) {
+      grund = "Gewürz";
+    } else if (!grund && istGrundzutat(z.name)) {
       grund = "haben wir immer";
     }
     return {
@@ -405,8 +436,8 @@ function AufDieListe({
           <DrawerHeader>
             <DrawerTitle>Auf die Einkaufsliste</DrawerTitle>
             <DrawerDescription>
-              {portionen ? `Für ${portionen} Portionen. ` : ""}Was im Vorrat
-              reicht oder immer da ist, ist abgewählt.
+              {portionen ? `Für ${portionen} Portionen. ` : ""}Abgewählt:
+              Gewürze und was im Vorrat reicht oder immer da ist.
             </DrawerDescription>
           </DrawerHeader>
           <ul className="max-h-[50dvh] space-y-1 overflow-y-auto px-4">

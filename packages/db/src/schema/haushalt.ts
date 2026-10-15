@@ -295,6 +295,8 @@ export const rezeptZutaten = pgTable(
     name: text("name").notNull(),
     /** Z. B. „fein gehackt“ oder „(400 g)“ – wird angezeigt, aber nicht abgeglichen. */
     zusatz: text("zusatz"),
+    /** Steht im eigenen Absatz „Gewürze“ (Mengen dort optional). */
+    gewuerz: boolean("gewuerz").notNull().default(false),
   },
   (t) => [
     index().on(t.haushaltId),

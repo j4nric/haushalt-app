@@ -1,4 +1,10 @@
-import { formatiereZutatMenge } from "@haushalt/db/zutaten";
+import {
+  einheitAnzeige,
+  formatiereZutatMenge,
+  istGewuerz,
+  type Zutat,
+  zerlegeZutat,
+} from "@haushalt/db/zutaten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { ArrowLeft, Link2, LoaderCircle, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -31,6 +37,7 @@ const LEER: RezeptDaten = {
   bild_url: null,
   schritte: "",
   zutatenText: "",
+  gewuerzeText: "",
 };
 
 /** Neues Rezept (mit Link-Import) oder ein bestehendes bearbeiten. */
@@ -49,7 +56,9 @@ export function RezeptEditor({
   const [daten, setDaten] = useState<RezeptDaten>(LEER);
   const [geladen, setGeladen] = useState(rezeptId == null);
 
-  const { data: bestehend } = useQuery<Omit<RezeptDaten, "zutatenText">>(
+  const { data: bestehend } = useQuery<
+    Omit<RezeptDaten, "zutatenText" | "gewuerzeText">
+  >(
     "SELECT titel, portionen, quelle_url, bild_url, schritte FROM rezepte WHERE id = ?",
     [rezeptId ?? ""],
   );
@@ -63,7 +72,11 @@ export function RezeptEditor({
   const rezept = bestehend[0];
   useEffect(() => {
     if (!geladen && rezept && !zutatenLaden) {
-      setDaten({ ...rezept, zutatenText: zutatenAlsText(zutaten) });
+      setDaten({
+        ...rezept,
+        zutatenText: zutatenAlsText(zutaten.filter((z) => !z.gewuerz)),
+        gewuerzeText: zutatenAlsText(zutaten.filter((z) => z.gewuerz)),
+      });
       setGeladen(true);
     }
   }, [geladen, rezept, zutaten, zutatenLaden]);
@@ -71,6 +84,7 @@ export function RezeptEditor({
   const aendern = (teil: Partial<RezeptDaten>) =>
     setDaten((d) => ({ ...d, ...teil }));
   const erkannt = zutatenAusText(daten.zutatenText);
+  const erkannteGewuerze = zutatenAusText(daten.gewuerzeText);
 
   async function speichern(e: React.FormEvent) {
     e.preventDefault();
@@ -105,16 +119,19 @@ export function RezeptEditor({
 
       {!rezeptId && (
         <LinkImport
-          uebernehmen={(r) =>
+          uebernehmen={(r) => {
+            // Rezeptseiten kennen nur eine Zutatenliste – Gewürze dort heraussortieren.
+            const gewuerz = (zeile: string) => istGewuerz(zerlegeZutat(zeile));
             setDaten({
               titel: r.titel,
               portionen: r.portionen,
               quelle_url: r.quelle_url,
               bild_url: r.bild_url,
               schritte: r.schritte.join("\n"),
-              zutatenText: r.zutaten.join("\n"),
-            })
-          }
+              zutatenText: r.zutaten.filter((z) => !gewuerz(z)).join("\n"),
+              gewuerzeText: r.zutaten.filter(gewuerz).join("\n"),
+            });
+          }}
         />
       )}
 
@@ -184,32 +201,23 @@ export function RezeptEditor({
         <p className="text-xs text-muted-foreground">
           Eine Zutat pro Zeile – Menge und Einheit werden erkannt.
         </p>
-        {erkannt.length > 0 && (
-          <ul
-            aria-label="Erkannte Zutaten"
-            className="flex flex-wrap gap-1.5 pt-1"
-          >
-            {erkannt.map((z, i) => (
-              <li
-                // biome-ignore lint/suspicious/noArrayIndexKey: Vorschau ohne eigene IDs, Zeilen dürfen gleich sein.
-                key={i}
-                className="rounded-full border bg-card px-2.5 py-0.5 text-xs"
-              >
-                {z.menge != null && (
-                  <span className="font-semibold">
-                    {formatiereZutatMenge(z.menge)}{" "}
-                  </span>
-                )}
-                {z.einheit && (
-                  <span className="font-semibold text-primary">
-                    {z.einheit}{" "}
-                  </span>
-                )}
-                {z.name}
-              </li>
-            ))}
-          </ul>
-        )}
+        <Vorschau label="Erkannte Zutaten" zutaten={erkannt} />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="rezept-gewuerze">Gewürze</Label>
+        <Textarea
+          id="rezept-gewuerze"
+          rows={3}
+          value={daten.gewuerzeText}
+          onChange={(e) => aendern({ gewuerzeText: e.target.value })}
+          placeholder={"Salz\nPfeffer\n1 TL Paprikapulver"}
+          className="text-base"
+        />
+        <p className="text-xs text-muted-foreground">
+          Eins pro Zeile – Mengen sind hier optional.
+        </p>
+        <Vorschau label="Erkannte Gewürze" zutaten={erkannteGewuerze} />
       </div>
 
       <div className="space-y-1.5">
@@ -331,5 +339,35 @@ function LinkImport({ uebernehmen }: { uebernehmen: (r: Import) => void }) {
         </p>
       )}
     </section>
+  );
+}
+
+/** Zeigt, was aus den Zeilen erkannt wurde: Menge fett, Einheit farbig. */
+function Vorschau({ label, zutaten }: { label: string; zutaten: Zutat[] }) {
+  if (zutaten.length === 0) {
+    return null;
+  }
+  return (
+    <ul aria-label={label} className="flex flex-wrap gap-1.5 pt-1">
+      {zutaten.map((z, i) => (
+        <li
+          // biome-ignore lint/suspicious/noArrayIndexKey: Vorschau ohne eigene IDs, Zeilen dürfen gleich sein.
+          key={i}
+          className="rounded-full border bg-card px-2.5 py-0.5 text-xs"
+        >
+          {z.menge != null && (
+            <span className="font-semibold">
+              {formatiereZutatMenge(z.menge)}{" "}
+            </span>
+          )}
+          {z.einheit && (
+            <span className="font-semibold text-primary">
+              {einheitAnzeige(z.einheit, z.menge)}{" "}
+            </span>
+          )}
+          {z.name}
+        </li>
+      ))}
+    </ul>
   );
 }

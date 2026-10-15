@@ -1,0 +1,1 @@
+ALTER TABLE "rezept_zutaten" ADD COLUMN "gewuerz" boolean DEFAULT false NOT NULL;

@@ -50,6 +50,13 @@
       "when": 1792050580328,
       "tag": "0006_rezepte",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792052206311,
+      "tag": "0007_gewuerze",
+      "breakpoints": true
     }
   ]
 }

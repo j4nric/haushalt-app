@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatiereZutatMenge,
+  istGewuerz,
   istGrundzutat,
   mengeFuerListe,
   zerlegeZutat,
@@ -76,6 +77,43 @@ describe("zerlegeZutat", () => {
     expect(zerlegeZutat(zeile)).toEqual(erwartet);
   });
 
+  it.each([
+    [
+      "Spaghetti 400g",
+      { menge: 400, einheit: "g", name: "Spaghetti", zusatz: null },
+    ],
+    [
+      "Spaghetti 400 g",
+      { menge: 400, einheit: "g", name: "Spaghetti", zusatz: null },
+    ],
+    ["Milch 1,5 l", { menge: 1.5, einheit: "l", name: "Milch", zusatz: null }],
+    [
+      "Bio Eier 10",
+      { menge: 10, einheit: null, name: "Bio Eier", zusatz: null },
+    ],
+    [
+      "Tomaten: 2 Dosen",
+      { menge: 2, einheit: "Dose", name: "Tomaten", zusatz: null },
+    ],
+    [
+      "Mehl 500g (Type 405)",
+      { menge: 500, einheit: "g", name: "Mehl", zusatz: "(Type 405)" },
+    ],
+    [
+      "400g Spaghetti",
+      { menge: 400, einheit: "g", name: "Spaghetti", zusatz: null },
+    ],
+  ])("Menge hinten oder ohne Leerzeichen: %s", (zeile, erwartet) => {
+    expect(zerlegeZutat(zeile)).toEqual(erwartet);
+  });
+
+  it("nimmt Zahlen mit anderen Wörtern dahinter nicht als Menge", () => {
+    expect(zerlegeZutat("Gouda 45 Prozent")).toMatchObject({
+      menge: null,
+      name: "Gouda 45 Prozent",
+    });
+  });
+
   it("verwechselt kurze Wörter ohne Menge nicht mit Einheiten", () => {
     // „g“/„l“ allein vor einem Wort ohne Zahl ist keine Einheit.
     expect(zerlegeZutat("L Käse").name).toBe("L Käse");
@@ -89,6 +127,14 @@ describe("Anzeige und Umrechnen", () => {
     expect(formatiereZutatMenge(2)).toBe("2");
     expect(formatiereZutatMenge(1.4)).toBe("1,4");
     expect(formatiereZutatMenge(333.3)).toBe("333");
+  });
+
+  it("setzt Einheiten in die Mehrzahl", () => {
+    expect(zutatAlsText(zerlegeZutat("Kidneybohnen 2 Dosen"))).toBe(
+      "2 Dosen Kidneybohnen",
+    );
+    expect(zutatAlsText(zerlegeZutat("1 Dose Mais"), 2)).toBe("2 Dosen Mais");
+    expect(zutatAlsText(zerlegeZutat("2 Dosen Mais"), 0.5)).toBe("1 Dose Mais");
   });
 
   it("rechnet Portionen um", () => {
@@ -138,5 +184,26 @@ describe("Anzeige und Umrechnen", () => {
     for (const name of ["Mehl", "Butter", "Salzstangen", "Ölsardinen"]) {
       expect(istGrundzutat(name), name).toBe(false);
     }
+  });
+});
+
+describe("istGewuerz", () => {
+  it.each([
+    ["Salz", true],
+    ["Salz und Pfeffer", true],
+    ["1 TL Paprikapulver", true],
+    ["1 Prise Muskat", true],
+    ["2 Lorbeerblätter", false],
+    ["Lorbeerblätter", true],
+    ["1 TL Paprika, edelsüß", true],
+    ["2 Paprika", false],
+    ["Paprika", false],
+    ["1 Bund Petersilie", false],
+    ["1 EL Petersilie, frisch gehackt", false],
+    ["100 g Salz", false],
+    ["Salzstangen", false],
+    ["Zimtschnecken", false],
+  ])("%s → %s", (zeile, erwartet) => {
+    expect(istGewuerz(zerlegeZutat(zeile))).toBe(erwartet);
   });
 });

@@ -69,6 +69,10 @@ const EINZELMENGE = String.raw`(?:\d+\s+${BRUCH}|\d*\s*${UNICODE}|${BRUCH}|${ZAH
 const MENGE = new RegExp(
   String.raw`^(${EINZELMENGE})(?:\s*(?:-|–|bis)\s*(${EINZELMENGE}))?\s*`,
 );
+// Menge hinten: „Spaghetti 400g“, „Milch 1,5 l“, „Eier 3“.
+const MENGE_HINTEN = new RegExp(
+  String.raw`^(.*?\S)\s+(${EINZELMENGE})(?:\s*(?:-|–|bis)\s*(${EINZELMENGE}))?\s*(?:([A-Za-zÄÖÜäöüß]+)\.?)?$`,
+);
 
 function zahl(text: string): number | null {
   const t = text.trim();
@@ -123,7 +127,18 @@ export function zerlegeZutat(zeile: string): Zutat {
   }
 
   let einheit: string | null = null;
-  const wort = rest.match(/^([A-Za-zÄÖÜäöüß]+)\.?(?=\s|$)/);
+  const hinten = menge == null ? rest.match(MENGE_HINTEN) : null;
+  const einheitHinten = hinten?.[4]
+    ? EINHEITEN_TEXT[hinten[4].toLowerCase()]
+    : undefined;
+  // Nur, wenn hinter der Zahl nichts oder eine Einheit steht („Bio Eier 10“ ja,
+  // „Gouda 45 Prozent“ nein).
+  if (hinten?.[1] && hinten[2] && (!hinten[4] || einheitHinten)) {
+    menge = zahl(hinten[3] ?? hinten[2]);
+    einheit = einheitHinten ?? null;
+    rest = hinten[1].replace(/:$/, "");
+  }
+  const wort = einheit ? null : rest.match(/^([A-Za-zÄÖÜäöüß]+)\.?(?=\s|$)/);
   const erkannt = wort?.[1] && EINHEITEN_TEXT[wort[1].toLowerCase()];
   // Nur mit Menge davor oder bei eindeutigen Mengenwörtern („Prise Salz“).
   if (wort && erkannt && (menge != null || erkannt.length > 2)) {
@@ -168,11 +183,32 @@ export function formatiereZutatMenge(menge: number): string {
   });
 }
 
+const MEHRZAHL: Record<string, string> = {
+  Dose: "Dosen",
+  Zehe: "Zehen",
+  Scheibe: "Scheiben",
+  Tasse: "Tassen",
+  Stange: "Stangen",
+  Knolle: "Knollen",
+  Prise: "Prisen",
+  Zweig: "Zweige",
+  Kopf: "Köpfe",
+  Glas: "Gläser",
+  Blatt: "Blätter",
+};
+
+/** Einheit passend zur Menge: „1 Dose“, aber „2 Dosen“. */
+export function einheitAnzeige(einheit: string, menge: number | null): string {
+  return menge != null && menge > 1 ? (MEHRZAHL[einheit] ?? einheit) : einheit;
+}
+
 /** Zeile zum Anzeigen, z. B. „1½ EL Olivenöl“. */
 export function zutatAlsText(z: Zutat, faktor = 1): string {
   const teile = [
     z.menge != null ? formatiereZutatMenge(z.menge * faktor) : null,
-    z.einheit,
+    z.einheit
+      ? einheitAnzeige(z.einheit, z.menge != null ? z.menge * faktor : null)
+      : null,
     z.name,
   ].filter(Boolean);
   return teile.join(" ");
@@ -247,5 +283,93 @@ export function istGrundzutat(name: string): boolean {
     GRUNDZUTATEN.has(klein) ||
     GRUNDZUTATEN.has(erstes) ||
     /^salz (und|&) pfeffer/.test(klein)
+  );
+}
+
+/** Eindeutige Gewürze und getrocknete Kräuter (klein geschrieben, Wortanfang reicht). */
+const GEWUERZE = [
+  "salz",
+  "meersalz",
+  "pfeffer",
+  "cayennepfeffer",
+  "paprikapulver",
+  "currypulver",
+  "curry",
+  "kreuzkümmel",
+  "kümmel",
+  "zimt",
+  "muskat",
+  "oregano",
+  "majoran",
+  "thymian",
+  "rosmarin",
+  "kurkuma",
+  "chiliflocken",
+  "chilipulver",
+  "ingwerpulver",
+  "knoblauchpulver",
+  "zwiebelpulver",
+  "lorbeer",
+  "nelke",
+  "nelken",
+  "piment",
+  "kardamom",
+  "koriandersamen",
+  "senfkörner",
+  "garam masala",
+  "kräuter der provence",
+  "italienische kräuter",
+  "gewürz",
+];
+/** Mehrdeutig („2 Paprika“ ist Gemüse): nur mit Gewürz-Einheit ein Gewürz. */
+const GEWUERZE_MIT_EINHEIT = [
+  "paprika",
+  "chili",
+  "basilikum",
+  "petersilie",
+  "koriander",
+  "ingwer",
+  "dill",
+  "schnittlauch",
+  "minze",
+];
+const GEWUERZ_EINHEITEN = new Set(["TL", "Prise", "Msp.", "EL"]);
+const ENDUNGEN = new Set([
+  "blatt",
+  "blätter",
+  "pulver",
+  "samen",
+  "körner",
+  "flocken",
+  "nuss",
+  "zweig",
+  "zweige",
+]);
+
+/**
+ * Gehört die Zutat in den Absatz „Gewürze“? Für den Import, der nur eine Liste kennt.
+ * Mit großer Menge („100 g Salz“ fürs Salzteig) bleibt sie eine normale Zutat.
+ */
+export function istGewuerz(z: Zutat): boolean {
+  const name = z.name.toLowerCase().trim();
+  // „Lorbeerblätter“, „Muskatnuss“, „Salz und Pfeffer“ ja – „Salzstangen“ nein.
+  const passt = (liste: string[]) =>
+    liste.some((g) => {
+      if (!name.startsWith(g)) {
+        return false;
+      }
+      const rest = name.slice(g.length);
+      return rest === "" || rest.startsWith(" ") || ENDUNGEN.has(rest);
+    });
+  const gewuerzMenge =
+    z.menge == null || (z.einheit != null && GEWUERZ_EINHEITEN.has(z.einheit));
+  if (passt(GEWUERZE)) {
+    return gewuerzMenge;
+  }
+  return (
+    passt(GEWUERZE_MIT_EINHEIT) &&
+    z.einheit != null &&
+    GEWUERZ_EINHEITEN.has(z.einheit) &&
+    !/frisch/.test(`${name} ${z.zusatz ?? ""}`)
   );
 }

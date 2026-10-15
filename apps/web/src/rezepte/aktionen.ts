@@ -17,9 +17,16 @@ export type RezeptDaten = {
   schritte: string;
   /** Eine Zutat je Zeile, wie eingegeben. */
   zutatenText: string;
+  /** Eigener Absatz für Gewürze, Mengen optional. */
+  gewuerzeText: string;
 };
 
-export type GespeicherteZutat = Zutat & { id: string; position: number };
+export type GespeicherteZutat = Zutat & {
+  id: string;
+  position: number;
+  /** 1 = steht unter „Gewürze“ (lokal ggf. noch NULL = nein). */
+  gewuerz: number | null;
+};
 
 /** Zutaten-Textfeld → einzelne Zutaten (leere Zeilen fallen weg). */
 export function zutatenAusText(text: string): Zutat[] {
@@ -90,12 +97,10 @@ export async function rezeptSpeichern(
         ],
       );
     }
-    await zutatenEinfuegen(
-      tx,
-      haushaltId,
-      rezeptId,
-      zutatenAusText(daten.zutatenText),
-    );
+    await zutatenEinfuegen(tx, haushaltId, rezeptId, [
+      ...zutatenAusText(daten.zutatenText).map((z) => ({ ...z, gewuerz: 0 })),
+      ...zutatenAusText(daten.gewuerzeText).map((z) => ({ ...z, gewuerz: 1 })),
+    ]);
   });
   return rezeptId;
 }
@@ -104,13 +109,22 @@ async function zutatenEinfuegen(
   tx: Transaction,
   haushaltId: string,
   rezeptId: string,
-  zutaten: Zutat[],
+  zutaten: (Zutat & { gewuerz: number | null })[],
 ) {
   for (const [position, z] of zutaten.entries()) {
     await tx.execute(
-      `INSERT INTO rezept_zutaten (id, haushalt_id, rezept_id, position, menge, einheit, name, zusatz)
-       VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?)`,
-      [haushaltId, rezeptId, position, z.menge, z.einheit, z.name, z.zusatz],
+      `INSERT INTO rezept_zutaten (id, haushalt_id, rezept_id, position, menge, einheit, name, zusatz, gewuerz)
+       VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        haushaltId,
+        rezeptId,
+        position,
+        z.menge,
+        z.einheit,
+        z.name,
+        z.zusatz,
+        z.gewuerz ? 1 : 0,
+      ],
     );
   }
 }

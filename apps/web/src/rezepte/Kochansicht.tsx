@@ -36,6 +36,16 @@ export function Kochansicht({
   const wachBleiben = useWachBleiben();
   const [erledigt, setErledigt] = useState<Set<string>>(new Set());
   const { timer, starten, entfernen } = useTimer();
+  const umschalten = (id: string) =>
+    setErledigt((alt) => {
+      const neu = new Set(alt);
+      if (neu.has(id)) {
+        neu.delete(id);
+      } else {
+        neu.add(id);
+      }
+      return neu;
+    });
   const schritte = rezept.schritte.split("\n").filter(Boolean);
 
   return (
@@ -78,51 +88,22 @@ export function Kochansicht({
           )}
         </header>
 
-        <section aria-labelledby="koch-zutaten" className="space-y-2 pt-2">
-          <h3 id="koch-zutaten" className="text-lg font-semibold">
-            Zutaten
-          </h3>
-          <ul className="space-y-1">
-            {zutaten.map((z) => {
-              const an = erledigt.has(z.id);
-              return (
-                <li key={z.id}>
-                  <label className="flex items-center gap-3 rounded-xl px-2 py-2 text-lg active:bg-muted">
-                    <input
-                      type="checkbox"
-                      checked={an}
-                      onChange={() =>
-                        setErledigt((alt) => {
-                          const neu = new Set(alt);
-                          if (neu.has(z.id)) {
-                            neu.delete(z.id);
-                          } else {
-                            neu.add(z.id);
-                          }
-                          return neu;
-                        })
-                      }
-                      className="size-6 shrink-0 accent-[var(--primary)]"
-                    />
-                    <span
-                      className={cn(
-                        "transition-opacity",
-                        an && "text-muted-foreground line-through opacity-60",
-                      )}
-                    >
-                      {zutatAlsText(z, faktor)}
-                      {z.zusatz && (
-                        <span className="text-base text-muted-foreground">
-                          , {z.zusatz}
-                        </span>
-                      )}
-                    </span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        <ZutatenAbhaken
+          id="koch-zutaten"
+          titel="Zutaten"
+          zutaten={zutaten.filter((z) => !z.gewuerz)}
+          faktor={faktor}
+          erledigt={erledigt}
+          umschalten={umschalten}
+        />
+        <ZutatenAbhaken
+          id="koch-gewuerze"
+          titel="Gewürze"
+          zutaten={zutaten.filter((z) => z.gewuerz)}
+          faktor={faktor}
+          erledigt={erledigt}
+          umschalten={umschalten}
+        />
 
         {schritte.length > 0 && (
           <section aria-labelledby="koch-schritte" className="space-y-4 pt-6">
@@ -151,6 +132,63 @@ export function Kochansicht({
         )}
       </div>
     </div>
+  );
+}
+
+function ZutatenAbhaken({
+  id,
+  titel,
+  zutaten,
+  faktor,
+  erledigt,
+  umschalten,
+}: {
+  id: string;
+  titel: string;
+  zutaten: GespeicherteZutat[];
+  faktor: number;
+  erledigt: Set<string>;
+  umschalten: (id: string) => void;
+}) {
+  if (zutaten.length === 0) {
+    return null;
+  }
+  return (
+    <section aria-labelledby={id} className="space-y-2 pt-2">
+      <h3 id={id} className="text-lg font-semibold">
+        {titel}
+      </h3>
+      <ul className="space-y-1">
+        {zutaten.map((z) => {
+          const an = erledigt.has(z.id);
+          return (
+            <li key={z.id}>
+              <label className="flex items-center gap-3 rounded-xl px-2 py-2 text-lg active:bg-muted">
+                <input
+                  type="checkbox"
+                  checked={an}
+                  onChange={() => umschalten(z.id)}
+                  className="size-6 shrink-0 accent-[var(--primary)]"
+                />
+                <span
+                  className={cn(
+                    "transition-opacity",
+                    an && "text-muted-foreground line-through opacity-60",
+                  )}
+                >
+                  {zutatAlsText(z, faktor)}
+                  {z.zusatz && (
+                    <span className="text-base text-muted-foreground">
+                      , {z.zusatz}
+                    </span>
+                  )}
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

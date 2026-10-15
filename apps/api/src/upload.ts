@@ -186,6 +186,7 @@ const ERLAUBT = {
     einheit: { umwandeln: optionalerText("einheit", 30) },
     name: { umwandeln: text("name") },
     zusatz: { umwandeln: optionalerText("zusatz") },
+    gewuerz: { umwandeln: bool },
   },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },

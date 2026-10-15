@@ -19,13 +19,17 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
     await page.getByLabel("Portionen").fill("2");
     await page
       .getByRole("textbox", { name: "Zutaten", exact: true })
-      .fill("200 g Spaghetti\n1 Dose Tomaten\n2 EL Olivenöl\nSalz");
+      .fill("Spaghetti 200g\n1 Dose Tomaten\n2 EL Olivenöl");
+    await page.getByRole("textbox", { name: "Gewürze" }).fill("Salz\nPfeffer");
     // Vorschau zeigt, was erkannt wurde.
     await expect(
       page
         .getByRole("list", { name: "Erkannte Zutaten" })
         .getByRole("listitem"),
-    ).toHaveCount(4);
+    ).toHaveCount(3);
+    await expect(
+      page.getByRole("list", { name: "Erkannte Zutaten" }),
+    ).toContainText("200 g Spaghetti");
     await page
       .getByLabel("Zubereitung")
       .fill("Nudeln 10 Minuten kochen.\nMit Tomaten mischen.");
@@ -41,13 +45,16 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
       page.getByRole("listitem").filter({ hasText: "Spaghetti" }).first(),
     ).toContainText("300 g");
 
-    // Auf die Liste: Olivenöl und Salz sind abgewählt („haben wir immer“).
+    // Auf die Liste: Olivenöl („haben wir immer“) und die Gewürze sind abgewählt.
     await page.getByRole("button", { name: "Auf die Liste" }).click();
     await expect(
       page.getByRole("checkbox", { name: /Olivenöl/ }),
     ).not.toBeChecked();
     await expect(
       page.getByRole("checkbox", { name: /Salz/ }),
+    ).not.toBeChecked();
+    await expect(
+      page.getByRole("checkbox", { name: /Pfeffer/ }),
     ).not.toBeChecked();
     await page.getByRole("button", { name: "2 Zutaten auf die Liste" }).click();
     await expect(page.getByText("2 Zutaten auf der Liste")).toBeVisible();
@@ -87,7 +94,10 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
     await page.getByRole("menuitem", { name: "Bearbeiten" }).click();
     await expect(
       page.getByRole("textbox", { name: "Zutaten", exact: true }),
-    ).toHaveValue(/200 g Spaghetti\n1 Dose Tomaten\n2 EL Olivenöl\nSalz/);
+    ).toHaveValue("200 g Spaghetti\n1 Dose Tomaten\n2 EL Olivenöl");
+    await expect(page.getByRole("textbox", { name: "Gewürze" })).toHaveValue(
+      "Salz\nPfeffer",
+    );
     await page.getByLabel("Titel").fill("Spaghetti al Pomodoro");
     await page.getByRole("button", { name: "Speichern" }).click();
     await expect(
@@ -100,7 +110,7 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
     await page.getByRole("button", { name: "Rückgängig" }).click();
     await expect(
       page.getByRole("button", { name: /Spaghetti al Pomodoro/ }),
-    ).toContainText("4 Zutaten");
+    ).toContainText("5 Zutaten");
 
     // Nach dem Neuladen (Server-Stand) ist alles noch da.
     await page.reload();
@@ -128,6 +138,8 @@ test.describe("Import per Link", () => {
           "250 g Linsen",
           "1 Bund Suppengrün",
           "1 l Gemüsebrühe",
+          "1 Prise Muskat",
+          "Salz und Pfeffer",
         ],
         recipeInstructions: [
           { "@type": "HowToStep", text: "Gemüse würfeln." },
@@ -157,6 +169,10 @@ test.describe("Import per Link", () => {
       await expect(
         page.getByRole("textbox", { name: "Zutaten", exact: true }),
       ).toHaveValue("250 g Linsen\n1 Bund Suppengrün\n1 l Gemüsebrühe");
+      // Gewürze sortiert der Import in den eigenen Absatz.
+      await expect(page.getByRole("textbox", { name: "Gewürze" })).toHaveValue(
+        "1 Prise Muskat\nSalz und Pfeffer",
+      );
       await page.getByRole("button", { name: "Speichern" }).click();
       await expect(
         page.getByRole("heading", { name: "Linsensuppe" }),
