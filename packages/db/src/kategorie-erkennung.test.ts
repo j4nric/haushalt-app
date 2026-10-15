@@ -70,3 +70,21 @@ describe("erkenneKategorie", () => {
     expect(erkenneKategorie("")).toEqual([]);
   });
 });
+
+describe("Konserven", () => {
+  it.each([
+    "Dose Tomaten",
+    "gehackte Tomaten",
+    "passierte Tomaten",
+    "Tomaten stückig",
+    "Mais aus der Dose",
+    "Kidneybohnen Dose",
+    "Gurken im Glas",
+  ])("%s → Vorrat", (name) => {
+    expect(erkenneKategorie(name)).toEqual(["vorrat"]);
+  });
+
+  it("frische Tomaten bleiben mehrdeutig mit Obst & Gemüse vorn", () => {
+    expect(erkenneKategorie("Tomaten")[0]).toBe("obst_gemuese");
+  });
+});

@@ -1,0 +1,129 @@
+# Prüft alle 30 Minuten, ob der Server gesund ist. Bei einem Problem öffnet der
+# Workflow ein Issue mit dem Label „ausfall“ (→ Benachrichtigung über GitHub); ist
+# alles wieder gut, schließt er es. Nichts zu tun, solange DEPLOY_HOST nicht gesetzt ist.
+#
+# Hinweis: GitHub pausiert geplante Workflows nach 60 Tagen ohne Aktivität im Repo.
+name: Überwachung
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: ueberwachung
+  cancel-in-progress: false
+
+jobs:
+  pruefen:
+    name: Server prüfen
+    if: vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: SSH einrichten
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: App, Sync, Zertifikat, Backups, Speicher und Container prüfen
+        id: pruefung
+        env:
+          DOMAIN: ${{ vars.DEPLOY_DOMAIN }}
+          ZIEL: ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}
+        run: |
+          set -u
+          probleme=()
+
+          # Kurze Aussetzer (z. B. während eines Deploys) nicht gleich melden.
+          erreichbar() {
+            for versuch in 1 2 3; do
+              curl -fsS -m 15 -o /dev/null "$1" && return 0
+              sleep 20
+            done
+            return 1
+          }
+          erreichbar "https://$DOMAIN/api/health" ||
+            probleme+=("App oder Datenbank antwortet nicht (https://$DOMAIN/api/health)")
+          erreichbar "https://$DOMAIN/powersync/probes/liveness" ||
+            probleme+=("Sync-Dienst (PowerSync) antwortet nicht")
+
+          ablauf=$(echo | openssl s_client -servername "$DOMAIN" -connect "$DOMAIN:443" 2>/dev/null |
+            openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+          if [ -z "$ablauf" ]; then
+            probleme+=("HTTPS-Zertifikat nicht lesbar")
+          else
+            tage=$(( ($(date -d "$ablauf" +%s) - $(date +%s)) / 86400 ))
+            [ "$tage" -ge 14 ] || probleme+=("HTTPS-Zertifikat läuft in $tage Tagen ab")
+          fi
+
+          # Auf dem Server: neuestes Backup, Speicherplatz, Container.
+          if bericht=$(ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o ConnectTimeout=20 "$ZIEL" 'bash -s' <<'SKRIPT'
+          neuestes=$(ls -t ~/backups/haushalt-*.dump 2>/dev/null | head -1)
+          if [ -z "$neuestes" ]; then
+            echo "Es gibt kein Backup"
+          else
+            stunden=$(( ($(date +%s) - $(stat -c %Y "$neuestes")) / 3600 ))
+            [ "$stunden" -le 26 ] || echo "Neuestes Backup ist $stunden Stunden alt"
+          fi
+          belegt=$(df --output=pcent / | tail -1 | tr -dc 0-9)
+          [ "$belegt" -lt 85 ] || echo "Festplatte zu $belegt % voll"
+          cd ~/haushalt-app/infra/production
+          for dienst in app postgres powersync caddy; do
+            docker compose ps --status running --services 2>/dev/null | grep -qx "$dienst" ||
+              echo "Container $dienst läuft nicht"
+          done
+          SKRIPT
+          ); then
+            while IFS= read -r zeile; do
+              [ -n "$zeile" ] && probleme+=("$zeile")
+            done <<< "$bericht"
+          else
+            probleme+=("Server per SSH nicht erreichbar")
+          fi
+
+          {
+            echo "anzahl=${#probleme[@]}"
+            echo "liste<<ENDE"
+            for p in "${probleme[@]}"; do echo "- $p"; done
+            echo "ENDE"
+          } >> "$GITHUB_OUTPUT"
+          if [ ${#probleme[@]} -gt 0 ]; then
+            printf '%s\n' "${probleme[@]}"
+          else
+            echo "Alles in Ordnung."
+          fi
+
+      - name: Issue öffnen, ergänzen oder schließen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ANZAHL: ${{ steps.pruefung.outputs.anzahl }}
+          LISTE: ${{ steps.pruefung.outputs.liste }}
+          LAUF: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create ausfall --color B60205 --description "Automatisch von der Überwachung" 2>/dev/null || true
+          offen=$(gh issue list --label ausfall --state open --json number --jq '.[0].number // empty')
+          jetzt=$(TZ=Europe/Berlin date '+%d.%m. %H:%M')
+          if [ "$ANZAHL" -gt 0 ]; then
+            text=$(printf 'Die Überwachung hat um %s Probleme gefunden:\n\n%s\n\n[Prüflauf](%s) · Wird automatisch geschlossen, sobald alles wieder läuft.' "$jetzt" "$LISTE" "$LAUF")
+            if [ -z "$offen" ]; then
+              gh issue create --title "🚨 Server-Problem: $(echo "$LISTE" | head -1 | sed 's/^- //')" --label ausfall --body "$text"
+            else
+              # Nur ergänzen, wenn sich die Probleme geändert haben – sonst kein Spam.
+              letzte=$(gh issue view "$offen" --json comments,body --jq '(.comments | last | .body) // .body')
+              if [ "$(echo "$letzte" | grep '^- ')" != "$LISTE" ]; then
+                gh issue comment "$offen" --body "$text"
+              fi
+            fi
+          elif [ -n "$offen" ]; then
+            gh issue close "$offen" --comment "✅ Um $jetzt wieder alles in Ordnung."
+          fi

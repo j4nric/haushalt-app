@@ -1,4 +1,5 @@
 import { formatiereMenge } from "@haushalt/db/einheiten";
+import { findeNachName } from "@haushalt/db/namen";
 import { useQuery } from "@powersync/react";
 import { ChefHat } from "lucide-react";
 import { useState } from "react";
@@ -38,7 +39,7 @@ export function useAbbuchbar(
   const { data: artikel } = useQuery<ArtikelStand>(ARTIKEL_STAND, [haushaltId]);
   const nachName = new Map(artikel.map((a) => [a.name, a]));
   return zutaten.flatMap((z) => {
-    const a = nachName.get(z.name.toLowerCase());
+    const a = findeNachName(nachName, z.name);
     if (!a?.im_vorrat || a.bestand <= 0) {
       return [];
     }

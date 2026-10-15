@@ -33,3 +33,14 @@ Die Einkaufsliste und der Vorrat zählen nur noch Stück, mit − / + in jeder Z
 Die Spalten `einheit` und `standardeinheit` bleiben in der Datenbank. Rezepte
 (Ausbaustufe 3) werden Gramm und Milliliter wieder brauchen; sie sind dann aber
 Sache der Rezepte, nicht der Einkaufsliste.
+
+## Nachtrag: Plural und Konserven (2026-10-15)
+
+- **Gleicher Artikel, andere Form:** „Zwiebel“/„Zwiebeln“, „Ei“/„Eier“, „Apfel“/„Äpfel“
+  gelten beim Abgleich als derselbe Artikel (`packages/db/src/namen.ts`; nur das
+  letzte Wort wird abgewandelt, die genaue Schreibweise hat Vorrang). Gilt fürs
+  Eintragen, für Rezepte → Liste, „Was kann ich kochen?“ und das Abbuchen. Seltsame
+  Formen („rei“ aus „reis“) stören nicht, weil nur vorhandene Artikel gefunden werden.
+- **Konserven:** „Dose“, „passiert“, „gehackt“, „stückig“, „geschält“, „eingelegt“,
+  „aus der Dose“, „im Glas“ → Vorrat & Konserven. Bei Rezept-Zutaten zählt auch die
+  Einheit („1 Dose Tomaten“).

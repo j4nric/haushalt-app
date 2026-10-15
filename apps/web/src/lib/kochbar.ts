@@ -1,4 +1,5 @@
 import { formatiereMenge } from "@haushalt/db/einheiten";
+import { findeNachName } from "@haushalt/db/namen";
 import {
   istGrundzutat,
   mengeFuerListe,
@@ -62,7 +63,7 @@ export function verfuegbarkeit(
 ): Verfuegbarkeit {
   const zaehlend = zutaten.filter(zaehltFuerKochbar);
   const fehlt = zaehlend
-    .filter((z) => !imVorrat(z, artikel.get(z.name.toLowerCase())))
+    .filter((z) => !imVorrat(z, findeNachName(artikel, z.name)))
     .map((z) => z.name);
   const prozent =
     zaehlend.length === 0
