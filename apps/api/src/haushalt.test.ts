@@ -150,3 +150,11 @@ describe("Admin", () => {
     expect(zahlen.haushalte).toBeGreaterThan(0);
   });
 });
+
+describe("Gesundheit", () => {
+  it("meldet ok, wenn App und Datenbank laufen – auch ohne Anmeldung", async () => {
+    const antwort = await t.app.request("http://localhost:5173/api/health");
+    expect(antwort.status).toBe(200);
+    expect(await antwort.json()).toEqual({ ok: true });
+  });
+});

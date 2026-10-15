@@ -21,6 +21,10 @@ export function erkenneKategorie(name: string): Kategorie[] {
   if (TIEFKUEHL_MARKER.test(normal)) {
     return ["tiefkuehl"];
   }
+  // „Dose Tomaten“, „passierte Tomaten“, „Mais aus der Dose“: Konserven sind Vorrat.
+  if (KONSERVEN_MARKER.test(normal)) {
+    return ["vorrat"];
+  }
   const ohneMarker = normal.replace(/^(bio|frische?r?|tk)[\s-]+/, "");
 
   // 1. Ganzer Name, 2. letztes Wort, 3. längstes bekanntes Wortende des letzten Worts.
@@ -44,6 +48,8 @@ export function erkenneKategorie(name: string): Kategorie[] {
 const MIN_WORTENDE = 4;
 
 const TIEFKUEHL_MARKER = /(^tk[\s-])|tiefkühl|tiefgekühlt|gefroren/;
+const KONSERVEN_MARKER =
+  /(^|[\s-])(dosen?|konserven?|passiert\w*|gehackt\w*|stückig\w*|geschält\w*|eingelegt\w*)([\s-]|$)|aus der dose|im glas/;
 
 function normalisieren(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ");

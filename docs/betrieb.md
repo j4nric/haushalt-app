@@ -98,6 +98,24 @@ Unter **Settings → Secrets and variables → Actions** auf Repository-Ebene:
 Danach rollt jeder Merge auf `main` automatisch aus. Den ersten Lauf kann man unter
 Actions → CI → „Re-run all jobs“ auf dem letzten `main`-Commit anstoßen.
 
+## Überwachung
+
+Der Workflow `.github/workflows/ueberwachung.yml` prüft alle 30 Minuten:
+
+- App und Datenbank (`/api/health`), Sync-Dienst (`/powersync/probes/liveness`) –
+  mit drei Versuchen, damit ein Deploy keinen Fehlalarm auslöst
+- HTTPS-Zertifikat (mindestens 14 Tage gültig)
+- per SSH: neuestes Backup höchstens 26 h alt, Festplatte unter 85 %, alle vier
+  Container laufen
+
+Bei einem Problem öffnet er ein Issue mit dem Label `ausfall` – GitHub benachrichtigt
+darüber (App bzw. E-Mail, je nach Einstellung „Watching“). Ändern sich die Probleme,
+kommt ein Kommentar dazu; ist alles wieder gut, schließt er das Issue selbst.
+Von Hand starten: Actions → Überwachung → „Run workflow“.
+
+GitHub pausiert geplante Workflows, wenn 60 Tage nichts im Repository passiert –
+dann in Actions wieder aktivieren.
+
 ## Admin-Panel
 
 Wer in der App unter „Haushalt“ alle Nutzer und Haushalte sehen darf, steht in

@@ -66,6 +66,8 @@ export type Posten = {
   gewuerz: boolean;
   /** Optional im Rezept – kommt nicht von selbst auf die Liste. */
   optional: boolean;
+  /** Im Rezept als Dose/Glas angegeben – für die Kategorie (Vorrat statt frisch). */
+  konserve: boolean;
   /** Für welche Tage („Mo, Mi“), nur beim Wochen-Einkauf. */
   fuer: string | null;
 };
@@ -95,6 +97,7 @@ export function alsPosten(
     listenEinheit: einheit,
     gewuerz: Boolean(z.gewuerz),
     optional: Boolean(z.optional),
+    konserve: z.einheit === "Dose" || z.einheit === "Glas",
     fuer,
   };
 }
@@ -124,6 +127,7 @@ export function zutatenSammeln(
       bisher.gewuerz &&= p.gewuerz;
       // Braucht es ein Gericht fest, ist es nicht mehr optional.
       bisher.optional &&= p.optional;
+      bisher.konserve ||= p.konserve;
       if (p.zutat.menge != null) {
         bisher.zutat = {
           ...bisher.zutat,

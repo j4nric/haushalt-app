@@ -60,7 +60,15 @@ export function erstelleApp({
 }) {
   const app = new Hono<{ Variables: { nutzer: Nutzer } }>().basePath("/api");
 
-  app.get("/health", (c) => c.json({ ok: true }));
+  // Für Docker, Überwachung und Tests: App läuft und erreicht die Datenbank.
+  app.get("/health", async (c) => {
+    try {
+      await sql`select 1`;
+      return c.json({ ok: true });
+    } catch {
+      return c.json({ ok: false, fehler: "Datenbank nicht erreichbar" }, 503);
+    }
+  });
 
   // Login, Registrierung, Sitzungen, JWT für PowerSync, JWKS – alles Better Auth.
   app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));

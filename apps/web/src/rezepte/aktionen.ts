@@ -217,6 +217,8 @@ export type ListenZutat = {
   name: string;
   menge: number | null;
   einheit: "stueck" | "g" | "ml" | null;
+  /** Text für die Kategorie-Erkennung neuer Artikel („Dose Tomaten“). */
+  erkennenAls?: string;
 };
 
 /**
@@ -239,6 +241,7 @@ export async function zutatenAufListe(
         haushaltId,
         name: z.name,
         standardeinheit: z.einheit,
+        ...(z.erkennenAls ? { erkennenAls: z.erkennenAls } : {}),
       });
       if (
         await aufListeSetzen(tx, {

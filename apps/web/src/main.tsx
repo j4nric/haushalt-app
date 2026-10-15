@@ -23,7 +23,14 @@ createRoot(root).render(
   <StrictMode>
     <PowerSyncContext.Provider value={db}>
       <App />
-      <Toaster position="top-center" />
+      {/* Unten über Eingabeleiste und Navigation – oben verdeckten Meldungen Suche
+          und Knöpfe. Höchstens zwei auf einmal. */}
+      <Toaster
+        position="bottom-center"
+        offset={{ bottom: "calc(9rem + env(safe-area-inset-bottom))" }}
+        mobileOffset={{ bottom: "calc(9rem + env(safe-area-inset-bottom))" }}
+        visibleToasts={2}
+      />
     </PowerSyncContext.Provider>
   </StrictMode>,
 );

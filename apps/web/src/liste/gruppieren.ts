@@ -1,12 +1,17 @@
 import { kategorieName, kategorieRang } from "@haushalt/db/kategorien";
+import { findeNachName } from "@haushalt/db/namen";
 import type { VerlaufArtikel } from "../Verlauf";
 import type { Zeile } from "./zeile";
 
+/** Bekannter Artikel zum eingetippten Namen – auch in anderer Form („Zwiebeln“). */
 export function finde(artikel: VerlaufArtikel[], name: string) {
-  const gesucht = name.trim().toLowerCase();
-  return gesucht
-    ? artikel.find((a) => a.name.toLowerCase() === gesucht)
-    : undefined;
+  if (!name.trim()) {
+    return undefined;
+  }
+  return findeNachName(
+    new Map(artikel.map((a) => [a.name.toLowerCase(), a])),
+    name,
+  );
 }
 
 /** Gruppiert offene Einträge nach Kategorie, in Supermarkt-Reihenfolge. */
