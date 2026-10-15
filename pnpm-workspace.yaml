@@ -5,3 +5,9 @@ packages:
 # Pakete, deren Installationsskripte laufen dürfen (pnpm blockiert sie sonst).
 allowBuilds:
   esbuild: true
+
+# vaul 1.1.2 (aktuellste Version): Per `open` gesteuerte Drawer schalten die
+# iOS-Scroll-Sperre nie ein – mit Tastatur scrollt die Seite dahinter weg.
+# Bei einem vaul-Update prüfen, ob der Patch noch nötig ist.
+patchedDependencies:
+  vaul@1.1.2: patches/vaul@1.1.2.patch

@@ -1,7 +1,7 @@
 import type { Einheit } from "@haushalt/db/einheiten";
 import { usePowerSync, useQuery } from "@powersync/react";
 import { LoaderCircle, ScanBarcode } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -141,10 +141,12 @@ function Unbekannt({
   const [name, setName] = useState("");
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   const [geladenFuer, setGeladenFuer] = useState<string | null>(null);
+  const selbstGetippt = useRef(false);
 
   // Beim Öffnen einmal die Produktdaten holen.
   if (barcode && geladenFuer !== barcode) {
     setGeladenFuer(barcode);
+    selbstGetippt.current = false;
     setProdukt(null);
     setName("");
     setGewaehlt(null);
@@ -158,8 +160,11 @@ function Unbekannt({
         const p = (await a.json()) as Produkt;
         setProdukt(p);
         if (p.name) {
-          setName(kurzname(p.name, p.marke));
-          setGewaehlt(passendeArtikel(p.name, artikel)[0]?.id ?? null);
+          // Wer schon etwas eingetippt hat, behält es – nur ein leeres Feld wird befüllt.
+          if (!selbstGetippt.current) {
+            setName(kurzname(p.name, p.marke));
+            setGewaehlt(passendeArtikel(p.name, artikel)[0]?.id ?? null);
+          }
         }
       })
       .catch(() => setOffline(true))
@@ -269,6 +274,7 @@ function Unbekannt({
                   value={name}
                   onFocus={() => setGewaehlt(null)}
                   onChange={(e) => {
+                    selbstGetippt.current = true;
                     setName(e.target.value);
                     setGewaehlt(null);
                   }}
