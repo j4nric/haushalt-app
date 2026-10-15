@@ -18,10 +18,17 @@ test("Entdecken: Vorschläge zum Vorrat, übernehmen, filtern", async ({
     ).toHaveText("1");
 
     await zuBereich(page, "Rezepte");
-    await page.getByRole("button", { name: "✨ Rezepte entdecken" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Entdecken" }),
-    ).toBeVisible();
+    // Direkt nach dem Bereichswechsel kann ein Klick in der Übergangs-Animation
+    // untergehen (unter Last in der CI) – dann noch einmal.
+    await expect(async () => {
+      const knopf = page.getByRole("button", { name: "✨ Rezepte entdecken" });
+      if (await knopf.isVisible()) {
+        await knopf.click();
+      }
+      await expect(
+        page.getByRole("heading", { name: "Entdecken", exact: true }),
+      ).toBeVisible({ timeout: 3000 });
+    }).toPass();
     await expect(
       page.getByRole("region", { name: "Heute vorgeschlagen" }),
     ).toBeVisible();
