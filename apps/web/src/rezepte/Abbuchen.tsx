@@ -25,6 +25,8 @@ type Zeile = {
   artikel: ArtikelStand;
   name: string;
   vorschlag: number | null;
+  /** Optional im Rezept – vielleicht gar nicht verwendet, daher abgewählt. */
+  optional: boolean;
 };
 
 /** Welche Zutaten im Vorrat geführt werden – mit vorgeschlagener Verbrauchsmenge. */
@@ -46,7 +48,9 @@ export function useAbbuchbar(
       p.listenEinheit === a.standardeinheit && p.zutat.menge != null
         ? Math.min(p.zutat.menge, a.bestand)
         : null;
-    return [{ artikel: a, name: z.name, vorschlag }];
+    return [
+      { artikel: a, name: z.name, vorschlag, optional: Boolean(z.optional) },
+    ];
   });
 }
 
@@ -74,7 +78,11 @@ export function Abbuchen({
     );
   const abgewaehlt =
     aus ??
-    new Set(zeilen.filter((z) => z.vorschlag == null).map((z) => z.artikel.id));
+    new Set(
+      zeilen
+        .filter((z) => z.vorschlag == null || z.optional)
+        .map((z) => z.artikel.id),
+    );
 
   function fertig() {
     bestaetigen(

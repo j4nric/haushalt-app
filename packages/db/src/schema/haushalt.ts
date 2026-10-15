@@ -314,6 +314,8 @@ export const rezeptZutaten = pgTable(
     zusatz: text("zusatz"),
     /** Steht im eigenen Absatz „Gewürze“ (Mengen dort optional). */
     gewuerz: boolean("gewuerz").notNull().default(false),
+    /** Optional („(100 g Salami)“): steht am Ende, kommt nicht von selbst auf die Liste. */
+    optional: boolean("optional").notNull().default(false),
   },
   (t) => [
     index().on(t.haushaltId),

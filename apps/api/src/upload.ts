@@ -212,6 +212,7 @@ const ERLAUBT = {
     name: { umwandeln: text("name") },
     zusatz: { umwandeln: optionalerText("zusatz") },
     gewuerz: { umwandeln: bool },
+    optional: { umwandeln: bool },
   },
   // Kochhistorie: unveränderlich, nur PUT und DELETE.
   gekocht: {

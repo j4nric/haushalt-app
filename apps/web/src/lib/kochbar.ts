@@ -21,7 +21,10 @@ export type ArtikelStand = {
   auf_liste: number;
 };
 
-export type RezeptZutat = Zutat & { gewuerz: number | null };
+export type RezeptZutat = Zutat & {
+  gewuerz: number | null;
+  optional?: number | null;
+};
 
 /** Reicht der Vorrat für diese Zutat? Gibt die Beschreibung zurück, sonst `null`. */
 export function imVorrat(
@@ -42,9 +45,9 @@ export function imVorrat(
     : null;
 }
 
-/** Zählt nur Zutaten, die man wirklich einkaufen müsste. */
+/** Zählt nur Zutaten, die man wirklich einkaufen müsste (ohne Optionales). */
 export function zaehltFuerKochbar(z: RezeptZutat): boolean {
-  return !z.gewuerz && !istGrundzutat(z.name);
+  return !z.gewuerz && !z.optional && !istGrundzutat(z.name);
 }
 
 export type Verfuegbarkeit = {

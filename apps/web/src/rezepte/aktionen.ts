@@ -1,6 +1,11 @@
 import { erkenneKategorie } from "@haushalt/db/kategorie-erkennung";
 import { standardmaessigImVorrat } from "@haushalt/db/vorrat";
-import { type Zutat, zerlegeZutat, zutatAlsText } from "@haushalt/db/zutaten";
+import {
+  type Zutat,
+  type ZutatZeile,
+  zeileAlsText,
+  zerlegeZeile,
+} from "@haushalt/db/zutaten";
 import type { AbstractPowerSyncDatabase, Transaction } from "@powersync/web";
 import { ersterBuchstabeGross } from "@/lib/farben";
 import { heute } from "@/lib/plan";
@@ -43,21 +48,34 @@ export type GespeicherteZutat = Zutat & {
   position: number;
   /** 1 = steht unter „Gewürze“ (lokal ggf. noch NULL = nein). */
   gewuerz: number | null;
+  /** 1 = optional, steht am Ende (lokal ggf. noch NULL = nein). */
+  optional: number | null;
 };
 
-/** Zutaten-Textfeld → einzelne Zutaten (leere Zeilen fallen weg). */
-export function zutatenAusText(text: string): Zutat[] {
+/** Optionale ans Ende, sonst die eingegebene Reihenfolge. */
+export function optionaleZuletzt<
+  T extends { optional: number | boolean | null },
+>(zutaten: T[]): T[] {
+  return [...zutaten].sort(
+    (a, b) => Number(a.optional ?? 0) - Number(b.optional ?? 0),
+  );
+}
+
+/** Zutaten-Textfeld → einzelne Zutaten (leere Zeilen fallen weg; „(…)“ = optional). */
+export function zutatenAusText(text: string): ZutatZeile[] {
   return text
     .split("\n")
     .map((z) => z.trim())
     .filter(Boolean)
-    .map(zerlegeZutat);
+    .map(zerlegeZeile);
 }
 
-/** Gespeicherte Zutaten → Textfeld zum Bearbeiten. */
-export function zutatenAlsText(zutaten: Zutat[]): string {
+/** Gespeicherte Zutaten → Textfeld zum Bearbeiten (optionale wieder in Klammern). */
+export function zutatenAlsText(
+  zutaten: (Zutat & { optional: number | boolean | null })[],
+): string {
   return zutaten
-    .map((z) => zutatAlsText(z) + (z.zusatz ? `, ${z.zusatz}` : ""))
+    .map((z) => zeileAlsText({ ...z, optional: Boolean(z.optional) }))
     .join("\n");
 }
 
@@ -128,12 +146,15 @@ async function zutatenEinfuegen(
   tx: Transaction,
   haushaltId: string,
   rezeptId: string,
-  zutaten: (Zutat & { gewuerz: number | null })[],
+  zutaten: (Zutat & {
+    gewuerz: number | null;
+    optional: number | boolean | null;
+  })[],
 ) {
   for (const [position, z] of zutaten.entries()) {
     await tx.execute(
-      `INSERT INTO rezept_zutaten (id, haushalt_id, rezept_id, position, menge, einheit, name, zusatz, gewuerz)
-       VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO rezept_zutaten (id, haushalt_id, rezept_id, position, menge, einheit, name, zusatz, gewuerz, optional)
+       VALUES (uuid(), ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         haushaltId,
         rezeptId,
@@ -143,6 +164,7 @@ async function zutatenEinfuegen(
         z.name,
         z.zusatz,
         z.gewuerz ? 1 : 0,
+        z.optional ? 1 : 0,
       ],
     );
   }

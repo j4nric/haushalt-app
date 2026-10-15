@@ -66,3 +66,15 @@ Kochansicht. Später: Schlagwörter, Favoriten/„zuletzt gekocht“, eigene Fot
   Haushalts aus (`/api/bilder/<id>`, dauerhaft cachebar). So landen Fotos ohne
   Zusatzaufwand in den Datenbank-Backups. Ersetzte oder zu gelöschten Rezepten
   gehörende Fotos bleiben vorerst liegen (Aufräumen später).
+
+## Optionale Zutaten
+
+- Eine Zeile ganz in Klammern („(100 g Salami)“) ist optional – im Zutaten- wie im
+  Gewürzfeld. Sie wird genauso zerlegt und umgerechnet, gespeichert in
+  `rezept_zutaten.optional` (Migration 0010).
+- Anzeige: ausgegraut, in Klammern, am Ende der jeweiligen Liste (Detail,
+  Kochansicht, Editor-Vorschau).
+- „Auf die Liste“ (auch „Woche einkaufen“): abgewählt mit „optional“; braucht ein
+  anderes Gericht der Woche dieselbe Zutat fest, gilt sie nicht mehr als optional.
+- „Was kann ich kochen?“ zählt Optionales nicht als fehlend; beim Abbuchen ist es
+  abgewählt.

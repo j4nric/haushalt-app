@@ -84,6 +84,7 @@ export const schema = new Schema({
       name: column.text,
       zusatz: column.text,
       gewuerz: column.integer,
+      optional: column.integer,
     },
     { indexes: { rezept: ["rezept_id"] } },
   ),
