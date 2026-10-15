@@ -1,6 +1,6 @@
 import { findeImVorrat } from "@haushalt/db/namen";
 import { istGrundzutat, zerlegeZeile } from "@haushalt/db/zutaten";
-import { type ArtikelStand, verfuegbarkeit } from "@/lib/kochbar";
+import { type ArtikelStand, verfuegbarkeit } from "../lib/kochbar";
 import type { SammlungsRezept } from "./sammlung/typ";
 
 /**
