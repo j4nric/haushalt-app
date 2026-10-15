@@ -1,0 +1,61 @@
+# Automatische Updates: einmal pro Woche Pull Requests, die die CI prüft (Lint,
+# Typcheck, Tests, E2E). Kleine Updates gesammelt, große Versionssprünge einzeln.
+# Sicherheitslücken kommen unabhängig davon sofort (Dependabot security updates).
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    labels: [abhaengigkeiten]
+    commit-message:
+      prefix: "Abhängigkeiten"
+    groups:
+      kleine-updates:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    labels: [abhaengigkeiten]
+    commit-message:
+      prefix: "Actions"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    labels: [abhaengigkeiten]
+    commit-message:
+      prefix: "Docker"
+
+  - package-ecosystem: docker-compose
+    directories: ["/", "/infra/production"]
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    labels: [abhaengigkeiten]
+    commit-message:
+      prefix: "Docker"
+    ignore:
+      # Neue Postgres-Hauptversion braucht ein Umziehen der Daten (dump/restore) –
+      # das geht nicht per automatischem Update.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]

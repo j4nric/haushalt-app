@@ -116,6 +116,21 @@ Von Hand starten: Actions → Überwachung → „Run workflow“.
 GitHub pausiert geplante Workflows, wenn 60 Tage nichts im Repository passiert –
 dann in Actions wieder aktivieren.
 
+## Updates der Abhängigkeiten
+
+Dependabot (`.github/dependabot.yml`) öffnet jeden Montag um 6 Uhr Pull Requests:
+
+- **npm-Pakete:** kleine Updates (Minor/Patch) gesammelt in einem PR, große
+  Versionssprünge einzeln – die lesen sich am besten mit den Release Notes.
+- **GitHub Actions** gesammelt, **Docker-Images** (Node, PowerSync, Caddy) einzeln.
+- **Postgres** nur innerhalb der Hauptversion: Von 18 auf 19 müssen die Daten
+  umziehen (Dump einspielen) – das bleibt Handarbeit.
+- **Sicherheitslücken** meldet GitHub sofort und Dependabot öffnet dafür einen
+  eigenen PR, unabhängig vom Montag.
+
+Jeder PR läuft durch die CI (Lint, Typcheck, Tests, E2E). Grün → mergen; nach dem
+Merge rollt die CI wie gewohnt aus. Schlägt die CI fehl, braucht das Update Anpassungen.
+
 ## Admin-Panel
 
 Wer in der App unter „Haushalt“ alle Nutzer und Haushalte sehen darf, steht in
