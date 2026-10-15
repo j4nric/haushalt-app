@@ -1,19 +1,39 @@
 import { useStatus } from "@powersync/react";
 import { ChevronsUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Anmeldung } from "./Anmeldung";
 import { Navigation, useAnsicht } from "./Ansicht";
 import { Einkaufsliste } from "./Einkaufsliste";
-import { Haushalt } from "./Haushalt";
 import { HaushaltEinrichten } from "./HaushaltEinrichten";
 import { HaushaltWechseln } from "./HaushaltWechseln";
 import { useHaushalte } from "./haushaltwahl";
 import { useNutzer } from "./nutzer";
-import { Plan } from "./plan/Plan";
 import { verbinden } from "./powersync";
-import { Rezepte } from "./rezepte/Rezepte";
 import { SyncStatus } from "./SyncStatus";
-import { Vorrat } from "./Vorrat";
+
+// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
+// vorhanden – der Service Worker speichert alle Teile vorab).
+const Haushalt = lazy(() =>
+  import("./Haushalt").then((m) => ({ default: m.Haushalt })),
+);
+
+// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
+// vorhanden – der Service Worker speichert alle Teile vorab).
+const Plan = lazy(() =>
+  import("./plan/Plan").then((m) => ({ default: m.Plan })),
+);
+
+// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
+// vorhanden – der Service Worker speichert alle Teile vorab).
+const Rezepte = lazy(() =>
+  import("./rezepte/Rezepte").then((m) => ({ default: m.Rezepte })),
+);
+
+// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
+// vorhanden – der Service Worker speichert alle Teile vorab).
+const Vorrat = lazy(() =>
+  import("./Vorrat").then((m) => ({ default: m.Vorrat })),
+);
 
 export function App() {
   const { nutzer, laedt } = useNutzer();
@@ -70,22 +90,24 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
           {/* Platz unten für Eingabeleiste und Navigation. */}
           {/* Beim Wechsel des Haushalts alles frisch aufbauen (Filter, offene Dialoge …). */}
           <main key={haushalt.id} className="mx-auto max-w-lg px-4 pt-2 pb-48">
-            {ansicht === "vorrat" ? (
-              <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
-            ) : ansicht === "plan" ? (
-              <Plan haushaltId={haushalt.id} nutzerId={nutzerId} />
-            ) : ansicht === "rezepte" ? (
-              <Rezepte haushaltId={haushalt.id} nutzerId={nutzerId} />
-            ) : ansicht === "haushalt" ? (
-              <Haushalt
-                haushaltId={haushalt.id}
-                name={name}
-                haushalte={haushalte}
-                wechseln={() => setWechselnOffen(true)}
-              />
-            ) : (
-              <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
-            )}
+            <Suspense fallback={null}>
+              {ansicht === "vorrat" ? (
+                <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
+              ) : ansicht === "plan" ? (
+                <Plan haushaltId={haushalt.id} nutzerId={nutzerId} />
+              ) : ansicht === "rezepte" ? (
+                <Rezepte haushaltId={haushalt.id} nutzerId={nutzerId} />
+              ) : ansicht === "haushalt" ? (
+                <Haushalt
+                  haushaltId={haushalt.id}
+                  name={name}
+                  haushalte={haushalte}
+                  wechseln={() => setWechselnOffen(true)}
+                />
+              ) : (
+                <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
+              )}
+            </Suspense>
           </main>
           <Navigation ansicht={ansicht} wechseln={wechseln} />
           <HaushaltWechseln
