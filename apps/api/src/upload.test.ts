@@ -513,3 +513,44 @@ describe("Rezepte", () => {
     expect(antwort.status).toBe(400);
   });
 });
+
+describe("Kassenbons", () => {
+  it("speichert gelernte Bon-Zuordnungen und übernommene Bons", async () => {
+    const anna = await t.nutzer("Anna");
+    const haushalt = await anna.haushaltAnlegen();
+    const pizza = neueId();
+    const res = await anna.hochladen([
+      artikelPut(pizza, haushalt, "Pizza"),
+      {
+        op: "PUT",
+        table: "bon_artikel",
+        id: neueId(),
+        opData: {
+          haushalt_id: haushalt,
+          artikel_id: pizza,
+          text: "STEINOFEN PIZZA",
+          erstellt_am: jetzt(),
+        },
+      },
+      {
+        op: "PUT",
+        table: "kassenbons",
+        id: neueId(),
+        opData: {
+          haushalt_id: haushalt,
+          schluessel: "REWE|5377|2026-10-14|5938|1",
+          positionen: 3,
+          erstellt_von: "jemand-anderes",
+          erstellt_am: jetzt(),
+        },
+      },
+    ]);
+    expect(res.status, await res.text()).toBe(200);
+    const [bon] =
+      await t.sql`select positionen, erstellt_von from kassenbons where haushalt_id = ${haushalt}`;
+    expect(bon).toEqual({ positionen: 3, erstellt_von: anna.id });
+    expect(
+      await t.sql`select text from bon_artikel where artikel_id = ${pizza}`,
+    ).toEqual([{ text: "STEINOFEN PIZZA" }]);
+  });
+});

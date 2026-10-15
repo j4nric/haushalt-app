@@ -111,6 +111,22 @@ export const schema = new Schema({
     },
     { indexes: { barcode: ["barcode"] } },
   ),
+  bon_artikel: new Table(
+    {
+      haushalt_id: column.text,
+      artikel_id: column.text,
+      text: column.text,
+      erstellt_am: column.text,
+    },
+    { indexes: { text: ["text"] } },
+  ),
+  kassenbons: new Table({
+    haushalt_id: column.text,
+    schluessel: column.text,
+    positionen: column.integer,
+    erstellt_von: column.text,
+    erstellt_am: column.text,
+  }),
   plan_eintraege: new Table(
     {
       haushalt_id: column.text,

@@ -35,3 +35,7 @@ streams:
         WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
       - SELECT * FROM artikel_barcodes
         WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
+      - SELECT * FROM bon_artikel
+        WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())
+      - SELECT * FROM kassenbons
+        WHERE haushalt_id IN (SELECT haushalt_id FROM haushalt_mitglieder WHERE nutzer_id = auth.user_id())

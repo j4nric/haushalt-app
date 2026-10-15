@@ -230,6 +230,7 @@ export async function artikelLoeschen(tx: Transaction, artikelId: string) {
     "vorratsbuchungen",
     "kaeufe",
     "artikel_barcodes",
+    "bon_artikel",
     "listeneintraege",
   ]) {
     await tx.execute(`DELETE FROM ${tabelle} WHERE artikel_id = ?`, [

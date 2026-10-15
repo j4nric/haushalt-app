@@ -507,3 +507,48 @@ export const pushGesendet = pgTable("push_gesendet", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Gelernte Zuordnung „Text auf dem Kassenbon“ → Artikel („ROSENBROE. HELL“ →
+ * Rosenbrötchen). Synchronisiert und ohne Unique-Regel wie die Barcodes; die App
+ * nimmt den neuesten Eintrag.
+ */
+export const bonArtikel = pgTable(
+  "bon_artikel",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    artikelId: uuid("artikel_id").notNull(),
+    /** So wie auf dem Bon, ohne Leerzeichen-Varianten (Großbuchstaben). */
+    text: text("text").notNull(),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [
+    index().on(t.haushaltId, t.text),
+    foreignKey({
+      columns: [t.artikelId, t.haushaltId],
+      foreignColumns: [artikel.id, artikel.haushaltId],
+    }).onDelete("cascade"),
+  ],
+);
+
+/** Schon übernommene Kassenbons – damit derselbe Bon nicht zweimal gebucht wird. */
+export const kassenbons = pgTable(
+  "kassenbons",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    /** Markt, Datum, Bon-Nr. bzw. TSE-Transaktion – eindeutig je Einkauf. */
+    schluessel: text("schluessel").notNull(),
+    positionen: integer("positionen").notNull(),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [index().on(t.haushaltId, t.schluessel)],
+);

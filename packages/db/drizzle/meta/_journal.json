@@ -99,6 +99,13 @@
       "when": 1792086282562,
       "tag": "0013_vorrat_packungen",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792103227372,
+      "tag": "0014_kassenbons",
+      "breakpoints": true
     }
   ]
 }
