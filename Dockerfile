@@ -2,7 +2,7 @@
 # Bauen: docker build -t haushalt-app .
 
 # --- Bauen -------------------------------------------------------------------
-FROM node:24-slim AS bauen
+FROM node:25-slim AS bauen
 WORKDIR /app
 # Die mit Node 24 gelieferte Corepack-Version kann pnpm 12 nicht starten.
 RUN npm install -g corepack@latest && corepack enable
@@ -18,7 +18,7 @@ COPY . .
 RUN pnpm --filter @haushalt/web build && pnpm --filter @haushalt/api build
 
 # --- Laufzeit ----------------------------------------------------------------
-FROM node:24-slim
+FROM node:25-slim
 ENV NODE_ENV=production \
     API_PORT=3000 \
     FRONTEND_DIR=/app/web \
