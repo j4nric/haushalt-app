@@ -27,6 +27,7 @@ import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { Button } from "@/components/ui/button";
 import { Wischzeile } from "@/components/Wischzeile";
 import { cn } from "@/lib/utils";
+import { BonImport } from "./kassenbon/BonImport";
 import { artikelFindenOderAnlegen, aufListeSetzen } from "./listenaktionen";
 import { BarcodeScan, type GescannterArtikel } from "./scanner/BarcodeScan";
 import { Details } from "./vorrat/Details";
@@ -151,8 +152,21 @@ export function Vorrat({
 
   return (
     <>
-      {zeilen.length > 0 && (
-        <div className="flex items-center gap-2 pt-2">
+      <div className="space-y-2 pt-2">
+        <div className="flex justify-end gap-2">
+          <BonImport haushaltId={haushaltId} nutzerId={nutzerId} />
+          {zeilen.length > 0 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-full"
+              onClick={() => setInventur(true)}
+            >
+              <ClipboardCheck /> Inventur
+            </Button>
+          )}
+        </div>
+        {zeilen.length > 0 && (
           <fieldset
             aria-label="Filter"
             className="m-0 flex min-w-0 flex-1 gap-1.5 overflow-x-auto border-0 p-0"
@@ -184,16 +198,8 @@ export function Vorrat({
               </button>
             ))}
           </fieldset>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="rounded-full"
-            onClick={() => setInventur(true)}
-          >
-            <ClipboardCheck /> Inventur
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {gruppen.map(([gruppe, kategorie, artikel]) => (
         <Gruppe key={gruppe} titel={gruppe} kategorie={kategorie}>

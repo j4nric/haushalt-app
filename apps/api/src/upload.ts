@@ -253,6 +253,22 @@ const ERLAUBT = {
     packung_einheit: { umwandeln: einheit(false), fest: true },
     erstellt_am: { umwandeln: zeitpunkt, fest: true },
   },
+  bon_artikel: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
+    text: { umwandeln: optionalerText("text", 120), fest: true },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
+  },
+  kassenbons: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    schluessel: { umwandeln: optionalerText("schluessel", 200), fest: true },
+    positionen: {
+      umwandeln: ganzzahl("positionen", { min: 0, optional: false }),
+      fest: true,
+    },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
+  },
   listeneintraege: {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
     artikel_id: { umwandeln: uuid("artikel_id"), fest: true },
@@ -391,7 +407,8 @@ export async function wendeAn(
         o.table === "kaeufe" ||
         o.table === "rezepte" ||
         o.table === "gekocht" ||
-        o.table === "plan_eintraege"
+        o.table === "plan_eintraege" ||
+        o.table === "kassenbons"
       ) {
         data.erstellt_von = nutzerId;
       }
