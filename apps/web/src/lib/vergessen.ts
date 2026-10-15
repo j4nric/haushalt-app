@@ -1,3 +1,5 @@
+import { zeitWert } from "./zeit";
+
 /**
  * „Du hast wahrscheinlich vergessen …“: Aus der Kaufhistorie eines Artikels wird
  * geschätzt, wie oft er gekauft wird (Median der Abstände). Liegt der letzte Kauf
@@ -31,7 +33,7 @@ export function kaufrhythmus(
   kaeufe: string[],
 ): { abstandTage: number; letzterKauf: string } | null {
   const zeiten = kaeufe
-    .map((k) => ({ k, t: Date.parse(k) }))
+    .map((k) => ({ k, t: zeitWert(k) }))
     .filter(({ t }) => Number.isFinite(t))
     .sort((a, b) => a.t - b.t);
   // Mehrere Käufe am selben Tag zählen einmal.
@@ -74,7 +76,7 @@ export function ueberfaellige(
     }
     const { abstandTage } = rhythmus;
     const seitTage = Math.floor(
-      (jetzt - Date.parse(rhythmus.letzterKauf)) / TAG_MS,
+      (jetzt - zeitWert(rhythmus.letzterKauf)) / TAG_MS,
     );
     const ab = Math.max(Math.ceil(abstandTage * 1.5), abstandTage + 1);
     const bis = abstandTage * 4 + 7;

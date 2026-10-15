@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   customType,
+  date,
   doublePrecision,
   foreignKey,
   index,
@@ -32,11 +33,22 @@ const erstelltAm = () =>
     .notNull()
     .defaultNow();
 
-export const haushalte = pgTable("haushalte", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  erstelltAm: erstelltAm(),
-});
+export const haushalte = pgTable(
+  "haushalte",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    /** Für so viele Personen wird im Wochenplan standardmäßig gekocht. */
+    standardPortionen: integer("standard_portionen").notNull().default(2),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [
+    check(
+      "haushalte_standard_portionen_gueltig",
+      sql`${t.standardPortionen} between 1 and 50`,
+    ),
+  ],
+);
 
 export const haushaltMitglieder = pgTable(
   "haushalt_mitglieder",
@@ -369,4 +381,39 @@ export const bilder = pgTable(
     erstelltAm: erstelltAm(),
   },
   (t) => [index().on(t.haushaltId)],
+);
+
+/**
+ * Wochenplan: ein Eintrag je geplantem Abendessen. Entweder ein Rezept (der Titel
+ * wird mitgeschrieben, falls das Rezept später gelöscht wird) oder freier Text
+ * („Reste“, „Pizza bestellen“). Bewusst ohne Fremdschlüssel aufs Rezept und ohne
+ * „ein Eintrag pro Tag“-Regel: Offline geplante Einträge dürfen beim Hochladen nicht
+ * scheitern; zwei am selben Tag zeigt die App einfach beide.
+ */
+export const planEintraege = pgTable(
+  "plan_eintraege",
+  {
+    id: uuid("id").primaryKey(),
+    haushaltId: uuid("haushalt_id")
+      .notNull()
+      .references(() => haushalte.id, { onDelete: "cascade" }),
+    datum: date("datum", { mode: "string" }).notNull(),
+    rezeptId: uuid("rezept_id"),
+    titel: text("titel").notNull(),
+    portionen: integer("portionen"),
+    erledigt: boolean("erledigt").notNull().default(false),
+    /** Der Kochvorgang, mit dem der Eintrag abgehakt wurde (zum Zurücknehmen). */
+    gekochtId: uuid("gekocht_id"),
+    erstelltVon: text("erstellt_von").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    erstelltAm: erstelltAm(),
+  },
+  (t) => [
+    index().on(t.haushaltId, t.datum),
+    check(
+      "plan_eintraege_portionen_positiv",
+      sql`${t.portionen} is null or ${t.portionen} > 0`,
+    ),
+  ],
 );

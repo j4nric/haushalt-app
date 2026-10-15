@@ -64,6 +64,13 @@
       "when": 1792053576216,
       "tag": "0008_rezepte_12b",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792055854204,
+      "tag": "0009_wochenplan",
+      "breakpoints": true
     }
   ]
 }

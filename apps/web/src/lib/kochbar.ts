@@ -12,6 +12,7 @@ import {
  */
 
 export type ArtikelStand = {
+  id: string;
   /** Kleingeschrieben, zum Abgleich mit Zutatennamen. */
   name: string;
   im_vorrat: number;

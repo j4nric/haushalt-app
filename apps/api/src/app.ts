@@ -166,6 +166,25 @@ export function erstelleApp({
     }
   });
 
+  /** Haushalts-Einstellungen ändern (vorerst: Standard-Portionen im Wochenplan). */
+  app.patch("/haushalte/:id", async (c) => {
+    const haushaltId = c.req.param("id");
+    await pruefeMitglied(sql, haushaltId, c.get("nutzer").id);
+    const { standard_portionen } = await c.req.json<{
+      standard_portionen?: unknown;
+    }>();
+    if (
+      typeof standard_portionen !== "number" ||
+      !Number.isInteger(standard_portionen) ||
+      standard_portionen < 1 ||
+      standard_portionen > 50
+    ) {
+      return c.json({ fehler: "Portionen: ganze Zahl von 1 bis 50" }, 400);
+    }
+    await sql`update haushalte set standard_portionen = ${standard_portionen} where id = ${haushaltId}`;
+    return c.json({ ok: true });
+  });
+
   /**
    * Lädt ein Foto hoch (Rohdaten im Body, Typ im Content-Type). Die App verkleinert
    * vorher; hier wird nur das Format an den ersten Bytes geprüft und begrenzt.

@@ -40,6 +40,7 @@ import { ersterBuchstabeGross } from "@/lib/farben";
 import { cn } from "@/lib/utils";
 import { type Kaufverlauf, ueberfaellige } from "@/lib/vergessen";
 import { ABHAK_KLASSE, KritzelStrich, useVerzoegertesAbhaken } from "./Abhaken";
+import { HeuteKarte } from "./plan/HeuteKarte";
 import { Vergessen } from "./Vergessen";
 import {
   knalligeFlaeche,
@@ -339,6 +340,7 @@ export function Einkaufsliste({
   return (
     <>
       <FlugEbene />
+      <HeuteKarte haushaltId={haushaltId} />
       <Vergessen
         artikel={vergessen}
         hinzufuegen={(id) => ausVerlaufHinzufuegen({ id })}

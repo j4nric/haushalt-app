@@ -1,20 +1,17 @@
 import { useQuery } from "@powersync/react";
 import { Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useUnterseite } from "@/Ansicht";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  type ArtikelStand,
-  type RezeptZutat,
-  verfuegbarkeit,
-} from "@/lib/kochbar";
 import { produktEmoji } from "@/lib/persoenlichkeit";
 import { cn } from "@/lib/utils";
+import { zeitWert } from "@/lib/zeit";
 import { schlagwoerterAusText } from "./aktionen";
 import { Gluecksrad } from "./Gluecksrad";
 import { RezeptDetail, vorWann } from "./RezeptDetail";
 import { RezeptEditor } from "./RezeptEditor";
+import { useKochbar } from "./useKochbar";
 
 type Karte = {
   id: string;
@@ -112,11 +109,7 @@ function Uebersicht({
       ORDER BY lower(r.titel)`,
     [monatsanfang(), haushaltId],
   );
-  const { data: alleZutaten } = useQuery<RezeptZutat & { rezept_id: string }>(
-    "SELECT rezept_id, name, menge, einheit, zusatz, gewuerz FROM rezept_zutaten WHERE haushalt_id = ?",
-    [haushaltId],
-  );
-  const { data: artikel } = useQuery<ArtikelStand>(ARTIKEL_STAND, [haushaltId]);
+  const kochbar = useKochbar(haushaltId);
 
   const [auswahl, setAuswahlRoh] = useState(letzteAuswahl);
   const setAuswahl = (teil: Partial<Auswahl>) =>
@@ -124,21 +117,6 @@ function Uebersicht({
       letzteAuswahl = { ...a, ...teil };
       return letzteAuswahl;
     });
-
-  // „Was kann ich jetzt kochen?“ je Rezept.
-  const kochbar = useMemo(() => {
-    const nachName = new Map(artikel.map((a) => [a.name, a]));
-    const nachRezept = new Map<string, RezeptZutat[]>();
-    for (const z of alleZutaten) {
-      nachRezept.set(z.rezept_id, [...(nachRezept.get(z.rezept_id) ?? []), z]);
-    }
-    return new Map(
-      rezepte.map((r) => [
-        r.id,
-        verfuegbarkeit(nachRezept.get(r.id) ?? [], nachName),
-      ]),
-    );
-  }, [rezepte, alleZutaten, artikel]);
 
   const alleSchlagwoerter = [
     ...new Set(rezepte.flatMap((r) => schlagwoerterAusText(r.schlagwoerter))),
@@ -183,7 +161,7 @@ function Uebersicht({
   // Fürs Glücksrad: Favoriten, gut Vorrätiges und lange nicht Gekochtes zuerst.
   const rad = treffer.map((r) => {
     const tage = r.zuletzt_gekocht
-      ? (Date.now() - Date.parse(r.zuletzt_gekocht)) / 86_400_000
+      ? (Date.now() - zeitWert(r.zuletzt_gekocht)) / 86_400_000
       : 999;
     return {
       id: r.id,
@@ -419,7 +397,7 @@ function monatsanfang() {
 }
 
 /** Vorratsstand aller Artikel des Haushalts (für „kochbar“ und „Auf die Liste“). */
-export const ARTIKEL_STAND = `SELECT lower(a.name) AS name, COALESCE(a.im_vorrat, 0) AS im_vorrat, a.standardeinheit,
+export const ARTIKEL_STAND = `SELECT a.id, lower(a.name) AS name, COALESCE(a.im_vorrat, 0) AS im_vorrat, a.standardeinheit,
        COALESCE((SELECT SUM(b.menge) FROM vorratsbuchungen b WHERE b.artikel_id = a.id), 0) AS bestand,
        EXISTS (SELECT 1 FROM listeneintraege l WHERE l.artikel_id = a.id AND l.erledigt = 0) AS auf_liste
   FROM artikel a WHERE a.haushalt_id = ?`;
@@ -478,14 +456,17 @@ export function RezeptBild({
         loading="lazy"
         referrerPolicy="no-referrer"
         onError={() => setKaputt(true)}
-        className={`w-full bg-muted object-cover ${className ?? ""}`}
+        className={cn("w-full bg-muted object-cover", className)}
       />
     );
   }
   return (
     <span
       aria-hidden
-      className={`flex w-full items-center justify-center text-5xl ${className ?? ""}`}
+      className={cn(
+        "flex w-full items-center justify-center text-5xl",
+        className,
+      )}
       style={{
         background:
           "linear-gradient(135deg, color-mix(in oklab, var(--primary) 18%, var(--card)), color-mix(in oklab, #f59e0b 22%, var(--card)))",

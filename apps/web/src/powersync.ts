@@ -16,6 +16,7 @@ import { authClient } from "./auth";
 export const schema = new Schema({
   haushalte: new Table({
     name: column.text,
+    standard_portionen: column.integer,
     erstellt_am: column.text,
   }),
   haushalt_mitglieder: new Table({
@@ -94,6 +95,20 @@ export const schema = new Schema({
       erstellt_von: column.text,
     },
     { indexes: { rezept: ["rezept_id"] } },
+  ),
+  plan_eintraege: new Table(
+    {
+      haushalt_id: column.text,
+      datum: column.text,
+      rezept_id: column.text,
+      titel: column.text,
+      portionen: column.integer,
+      erledigt: column.integer,
+      gekocht_id: column.text,
+      erstellt_von: column.text,
+      erstellt_am: column.text,
+    },
+    { indexes: { datum: ["datum"] } },
   ),
   listeneintraege: new Table({
     haushalt_id: column.text,

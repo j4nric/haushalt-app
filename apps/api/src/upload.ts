@@ -124,6 +124,17 @@ const optionaleUuid = (spalte: string) => (wert: unknown) =>
   wert == null ? null : uuid(spalte)(wert);
 // SQLite kennt keine Booleans: PowerSync liefert 0/1.
 const bool = (wert: unknown) => wert === 1 || wert === true;
+/** Kalendertag „2026-10-15“. */
+const datum = (wert: unknown) => {
+  if (
+    typeof wert !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(wert) ||
+    Number.isNaN(Date.parse(wert))
+  ) {
+    throw new UngueltigeOperation("Datum muss die Form JJJJ-MM-TT haben");
+  }
+  return wert;
+};
 const zeitpunkt = (wert: unknown) => {
   if (typeof wert !== "string" || Number.isNaN(Date.parse(wert))) {
     throw new UngueltigeOperation("Zeitpunkt muss ein ISO-Datum sein");
@@ -207,6 +218,19 @@ const ERLAUBT = {
     haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
     rezept_id: { umwandeln: uuid("rezept_id"), fest: true },
     gekocht_am: { umwandeln: zeitpunkt, fest: true },
+    erstellt_von: { umwandeln: () => null, vomServer: true },
+  },
+  plan_eintraege: {
+    haushalt_id: { umwandeln: uuid("haushalt_id"), fest: true },
+    datum: { umwandeln: datum },
+    rezept_id: { umwandeln: optionaleUuid("rezept_id") },
+    titel: { umwandeln: text("titel") },
+    portionen: {
+      umwandeln: ganzzahl("portionen", { min: 1, optional: true }),
+    },
+    erledigt: { umwandeln: bool },
+    gekocht_id: { umwandeln: optionaleUuid("gekocht_id") },
+    erstellt_am: { umwandeln: zeitpunkt, fest: true },
     erstellt_von: { umwandeln: () => null, vomServer: true },
   },
   listeneintraege: {
@@ -326,7 +350,8 @@ export async function wendeAn(
         o.table === "vorratsbuchungen" ||
         o.table === "kaeufe" ||
         o.table === "rezepte" ||
-        o.table === "gekocht"
+        o.table === "gekocht" ||
+        o.table === "plan_eintraege"
       ) {
         data.erstellt_von = nutzerId;
       }

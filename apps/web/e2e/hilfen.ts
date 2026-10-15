@@ -108,7 +108,7 @@ export async function einladen(
 
 export async function zuBereich(
   page: Page,
-  bereich: "Einkaufsliste" | "Vorrat" | "Rezepte" | "Haushalt",
+  bereich: "Einkaufsliste" | "Vorrat" | "Plan" | "Rezepte" | "Haushalt",
 ) {
   await page
     .getByRole("navigation", { name: "Bereiche" })
