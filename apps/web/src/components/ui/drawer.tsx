@@ -2,10 +2,22 @@ import type * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "@/lib/utils";
 
+/**
+ * Wegwischen nur am Griff oben: Im Inhalt wird immer gescrollt. Auf dem iPhone hielt
+ * vaul Scrollen im Inhalt sonst mitunter für „nach unten wegwischen“ – der Drawer
+ * schloss sich mitten im Lesen.
+ */
 function Drawer({
+  handleOnly = true,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+  return (
+    <DrawerPrimitive.Root
+      data-slot="drawer"
+      handleOnly={handleOnly}
+      {...props}
+    />
+  );
 }
 
 function DrawerTrigger({
@@ -62,7 +74,11 @@ function DrawerContent({
         )}
         {...props}
       >
-        <div className="mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+        <DrawerPrimitive.Handle
+          preventCycle
+          aria-label="Zum Schließen nach unten ziehen"
+          className="mx-auto mt-4 hidden !h-2 !w-[100px] shrink-0 !rounded-full !bg-muted !opacity-100 group-data-[vaul-drawer-direction=bottom]/drawer-content:block"
+        />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
