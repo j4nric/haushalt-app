@@ -45,6 +45,22 @@ test("Entdecken: Vorschläge zum Vorrat, übernehmen, filtern", async ({
     await karte.click();
     const vorschau = page.getByRole("dialog", { name: "Spaghetti Bolognese" });
     await expect(vorschau).toContainText("2 Portionen");
+    // Im Inhalt ziehen (wie Scrollen) schließt die Vorschau nicht – nur der Griff.
+    // Erst, wenn der Drawer fertig hochgefahren ist.
+    await expect
+      .poll(async () => (await vorschau.boundingBox())?.y ?? 9999)
+      .toBeLessThan(200);
+    const box = await vorschau.boundingBox();
+    if (box) {
+      const x = box.x + box.width / 2;
+      const y = box.y + 140;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x, y + 250, { steps: 10 });
+      await page.mouse.up();
+    }
+    await page.waitForTimeout(500);
+    await expect(vorschau).toBeVisible();
     await expect(vorschau.getByLabel("im Vorrat")).toHaveCount(1);
     await vorschau.getByRole("button", { name: "In unsere Rezepte" }).click();
     await page.getByRole("button", { name: "Öffnen" }).click();

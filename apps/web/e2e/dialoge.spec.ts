@@ -142,19 +142,24 @@ test("Eingabeleiste rückt über die Bildschirmtastatur, Navigation weicht", asy
         (el) => window.innerHeight - el.getBoundingClientRect().bottom,
       );
 
+    // Schon beim Antippen ist die Navigation weg – bevor die Tastatur gemeldet wird.
     await page.getByLabel("Vorratsartikel").tap();
+    await expect(navigation).toBeHidden();
+    await expect.poll(abstandUnten).toBe(0);
+
+    // Tastatur ist da: Leiste direkt darüber.
     await page.evaluate(() =>
       (window as unknown as { tastatur: (px: number) => void }).tastatur(300),
     );
     await expect.poll(abstandUnten).toBe(300);
     await expect(navigation).toBeHidden();
 
-    // Tastatur zu: wieder über der Navigation.
-    await page.evaluate(() =>
-      (window as unknown as { tastatur: (px: number) => void }).tastatur(0),
-    );
+    // Feld verlassen, Tastatur weg: wieder über der Navigation.
+    await page.evaluate(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      (window as unknown as { tastatur: (px: number) => void }).tastatur(0);
+    });
     await expect(navigation).toBeVisible();
-    // Unterkante der Leiste = Oberkante der Navigation (4rem).
     const navOben = await navigation.evaluate(
       (el) => window.innerHeight - el.getBoundingClientRect().top,
     );
