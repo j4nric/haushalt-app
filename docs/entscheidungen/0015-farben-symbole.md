@@ -30,3 +30,13 @@ einzeln importiert, nur Benutztes landet im Bundle.
 Zuordnung `lib/produktsymbole.ts`: deutsche Wörter → Symbol, wie die
 Kategorie-Erkennung über Wortende („Bergkäse“ → Käse, „Käsekuchen“ → Kuchen).
 Unbekanntes zeigt das Kategorie-Symbol. Abschaltbar unter Darstellung.
+
+## Nachtrag: Palettenwahl, Wegwischen
+
+- Fünf Paletten passten als Knopfreihe nicht aufs iPhone; jetzt Kacheln (3 Spalten)
+  mit Farbpunkten, wie bei den Farbschemata.
+- Fenster (Drawer) schließen wieder mit Wischen nach unten an jeder Stelle. Nicht
+  über vaul (das schloss beim Scrollen, siehe 0014), sondern mit eigener Geste in
+  `components/ui/drawer.tsx`: Sie greift nur, wenn der Inhalt ganz oben steht und der
+  Finger zuerst klar nach unten geht; seitlich (Wischzeilen) oder nach oben gehört
+  die Geste dem Scrollen. Ab 120 px oder mit Schwung zu, sonst federt es zurück.

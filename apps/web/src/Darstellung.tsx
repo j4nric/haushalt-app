@@ -4,8 +4,10 @@ import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { Button } from "@/components/ui/button";
 import {
   type AppThema,
+  type Einstellungen,
   einstellungenAendern,
   einstellungenZuruecksetzen,
+  type KategoriePalette,
   type KategorieSchluessel,
   kategorieFarbe,
   PALETTEN,
@@ -99,10 +101,8 @@ export function Darstellung() {
 
       <div className="space-y-3 rounded-xl border bg-card p-4">
         <h3 className="font-medium">Farben der Kategorien</h3>
-        <Umschalter
-          label="Farben der Kategorien"
-          optionen={PALETTEN}
-          wert={e.palette}
+        <PaletteWahl
+          e={e}
           waehlen={(palette) =>
             einstellungenAendern(
               palette === "eigen" && e.palette !== "eigen"
@@ -275,6 +275,54 @@ function ThemaVorschau({
         style={{ background: farben.akzent }}
       />
     </span>
+  );
+}
+
+const VORSCHAU_KATEGORIEN = [
+  "obst_gemuese",
+  "milch_kaese",
+  "fleisch_fisch",
+  "suesses_snacks",
+  "getraenke",
+] as const;
+
+/** Paletten als Kacheln mit ein paar Kategoriefarben – passt auch aufs schmale Handy. */
+function PaletteWahl({
+  e,
+  waehlen,
+}: {
+  e: Einstellungen;
+  waehlen: (id: KategoriePalette) => void;
+}) {
+  return (
+    <fieldset className="grid grid-cols-3 gap-2">
+      <legend className="sr-only">Farben der Kategorien</legend>
+      {PALETTEN.map((p) => (
+        <button
+          key={p.id}
+          type="button"
+          aria-pressed={e.palette === p.id}
+          onClick={() => waehlen(p.id)}
+          className={cn(
+            "flex flex-col items-center gap-1.5 rounded-xl border-2 border-transparent bg-muted px-1 py-2 text-xs font-medium text-muted-foreground",
+            e.palette === p.id && "border-primary bg-card text-foreground",
+          )}
+        >
+          <span aria-hidden className="flex gap-1">
+            {VORSCHAU_KATEGORIEN.map((k) => (
+              <span
+                key={k}
+                className="size-2.5 rounded-full"
+                style={{
+                  background: kategorieFarbe({ ...e, palette: p.id }, k),
+                }}
+              />
+            ))}
+          </span>
+          {p.name}
+        </button>
+      ))}
+    </fieldset>
   );
 }
 
