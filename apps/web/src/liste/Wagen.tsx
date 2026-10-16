@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useEinstellungen } from "@/einstellungen";
 import { cn } from "@/lib/utils";
 import { RASTER } from "../Verlauf";
+import { WAGEN_ZIEL } from "../WagenFlug";
 
 /** Der Wagen: abgesetzt durch eine Fläche in der Akzentfarbe, Überschrift mittig. */
 export function Wagen({
@@ -34,7 +35,7 @@ export function Wagen({
       }}
     >
       <h3 className="flex items-center justify-center gap-2 pb-3 text-sm font-semibold tracking-wide text-primary uppercase">
-        <span className="inline-flex">
+        <span {...{ [WAGEN_ZIEL]: "" }} className="inline-flex">
           <ShoppingCart className="size-4" />
         </span>{" "}
         Im Wagen
@@ -102,6 +103,7 @@ export function ZumWagenKnopf({
     <button
       type="button"
       aria-label={`Zum Wagen (${anzahl})`}
+      {...{ [WAGEN_ZIEL]: "" }}
       onClick={() =>
         wagen.current?.scrollIntoView({ behavior: "smooth", block: "start" })
       }

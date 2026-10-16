@@ -17,7 +17,6 @@ das Ergebnis sichtbar ist (wie INP), Mittel aus 3 Runden. Skript:
 
 | Aktion | vorher | nachher |
 |---|---|---|
-| Abhaken bis im Wagen | 1587 ms | 84 ms |
 | Tab → Liste | 334 ms | 51 ms |
 | Tab → Rezepte | 348 ms | 43 ms |
 | Tab → Plan | 242 ms | 43 ms |
@@ -27,11 +26,10 @@ das Ergebnis sichtbar ist (wie INP), Mittel aus 3 Runden. Skript:
 
 ## Entscheidungen
 
-- **Keine Animationen, die warten lassen:** Abhaken geschieht sofort (kein Kritzeln, kein
-  Flug in den Wagen), keine Seitenübergänge (View Transitions), kein versetztes
+- **Weniger Bewegung:** keine Seitenübergänge (View Transitions), kein versetztes
   Einblenden, kein Hüpfen der Symbole, Knöpfe ohne Schrumpf-Animation. Drawer öffnen in
-  0,22 s ohne Nachfedern. Bewegung bleibt nur, wo sie etwas erklärt (Wischen, Scanlinie,
-  Glücksrad).
+  0,22 s ohne Nachfedern. **Bleiben** als Features: Abhaken mit Kritzeln (mit Abbrechen
+  per zweitem Tipp) und der Flug in den Wagen, dazu Wischen, Scanlinie und Glücksrad.
 - **Bereiche bleiben bestehen** (React `<Activity>`): Einmal gebaute Tabs behalten Zustand
   und Daten; ausgeblendet ruhen ihre Abfragen und Effekte. Nach dem Start werden alle im
   Leerlauf vorgebaut und ihr Code vorgeladen – auch das erste Öffnen ist schnell. Jeder
