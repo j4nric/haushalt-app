@@ -152,7 +152,13 @@ test("Neue Produkte stehen sofort im Verlauf, auch offline und im Wagen", async 
     ).toBeVisible();
 
     // Vorschläge beim Tippen enthalten beide.
-    await expect(page.locator("#eingabe-vorschlaege option")).toHaveCount(2);
+    await expect
+      .poll(() =>
+        page
+          .getByLabel("Neuer Eintrag")
+          .evaluate((i) => (i as HTMLInputElement).list?.options.length ?? 0),
+      )
+      .toBe(2);
   } finally {
     await handy.schliessen();
   }

@@ -107,7 +107,7 @@ export function VerlaufBlock({
       // Innenpolster (pt-3) und Außenabstand ergeben zusammen genau den Abstand des
       // geschlossenen Rasters – Überschrift und Symbol springen beim Öffnen nicht.
       className={cn(
-        "-mx-4 px-4 pt-3 pb-4 shadow-md animate-in fade-in first:-mt-1",
+        "-mx-4 px-4 pt-3 pb-4 shadow-md first:-mt-1",
         ueberschriften ? "mt-2" : "mt-0",
       )}
       style={knalligeFlaeche(farbe)}

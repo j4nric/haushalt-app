@@ -1,6 +1,14 @@
 import { useStatus } from "@powersync/react";
 import { ChevronsUpDown } from "lucide-react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  Activity,
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Anmeldung } from "./Anmeldung";
 import { Navigation, useAnsicht } from "./Ansicht";
 import { Einkaufsliste } from "./Einkaufsliste";
@@ -11,29 +19,36 @@ import { useNutzer } from "./nutzer";
 import { verbinden } from "./powersync";
 import { SyncStatus } from "./SyncStatus";
 
-// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
-// vorhanden – der Service Worker speichert alle Teile vorab).
-const Haushalt = lazy(() =>
-  import("./Haushalt").then((m) => ({ default: m.Haushalt })),
-);
+// Nicht gebraucht beim Start: separat geladen (offline trotzdem vorhanden – der
+// Service Worker speichert alle Teile vorab). Nach dem Start lädt die App sie im
+// Leerlauf vor, damit der erste Wechsel nicht warten muss.
+const laden = {
+  haushalt: () => import("./Haushalt").then((m) => ({ default: m.Haushalt })),
+  plan: () => import("./plan/Plan").then((m) => ({ default: m.Plan })),
+  rezepte: () =>
+    import("./rezepte/Rezepte").then((m) => ({ default: m.Rezepte })),
+  vorrat: () => import("./Vorrat").then((m) => ({ default: m.Vorrat })),
+  // Unterseite der Rezepte mit der Sammlung – nur vorladen, nicht anzeigen.
+  entdecken: () =>
+    import("./entdecken/Entdecken").then((m) => ({ default: m.Entdecken })),
+};
+const Haushalt = lazy(laden.haushalt);
+const Plan = lazy(laden.plan);
+const Rezepte = lazy(laden.rezepte);
+const Vorrat = lazy(laden.vorrat);
 
-// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
-// vorhanden – der Service Worker speichert alle Teile vorab).
-const Plan = lazy(() =>
-  import("./plan/Plan").then((m) => ({ default: m.Plan })),
-);
-
-// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
-// vorhanden – der Service Worker speichert alle Teile vorab).
-const Rezepte = lazy(() =>
-  import("./rezepte/Rezepte").then((m) => ({ default: m.Rezepte })),
-);
-
-// Nicht gebraucht beim Start: erst beim ersten Öffnen laden (offline trotzdem
-// vorhanden – der Service Worker speichert alle Teile vorab).
-const Vorrat = lazy(() =>
-  import("./Vorrat").then((m) => ({ default: m.Vorrat })),
-);
+function vorladen() {
+  const los = () => {
+    for (const f of Object.values(laden)) {
+      f().catch(() => {});
+    }
+  };
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(los, { timeout: 3000 });
+  } else {
+    setTimeout(los, 1500);
+  }
+}
 
 export function App() {
   const { nutzer, laedt } = useNutzer();
@@ -54,6 +69,42 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
   const [ansicht, wechseln] = useAnsicht();
   const { haushalte, aktiv: haushalt } = useHaushalte();
   const [wechselnOffen, setWechselnOffen] = useState(false);
+  // Welche Bereiche schon einmal offen waren – die bleiben aufgebaut.
+  const [besucht, setBesucht] = useState<Set<string>>(() => new Set([ansicht]));
+  if (!besucht.has(ansicht)) {
+    setBesucht(new Set([...besucht, ansicht]));
+  }
+  // Nach dem Start im Leerlauf: Code aller Bereiche laden und sie ruhend vorbauen
+  // (React Activity „hidden“ – ohne Abfragen). Das erste Öffnen ist dann so schnell
+  // wie jedes weitere.
+  useEffect(() => {
+    vorladen();
+    const vorbauen = () =>
+      setBesucht(new Set(["liste", "vorrat", "plan", "rezepte", "haushalt"]));
+    if ("requestIdleCallback" in window) {
+      const id = requestIdleCallback(vorbauen, { timeout: 4000 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = setTimeout(vorbauen, 2500);
+    return () => clearTimeout(t);
+  }, []);
+  // Jeder Bereich behält seine Scrollposition (sie teilen sich das Fenster). Laufend
+  // mitschreiben: Beim Ausblenden schrumpft die Seite, der Browser kürzt sonst vorher.
+  const scrollPositionen = useRef(new Map<string, number>());
+  const aktuell = useRef(ansicht);
+  useEffect(() => {
+    const merken = () =>
+      scrollPositionen.current.set(aktuell.current, window.scrollY);
+    window.addEventListener("scroll", merken, { passive: true });
+    return () => window.removeEventListener("scroll", merken);
+  }, []);
+  useLayoutEffect(() => {
+    if (aktuell.current === ansicht) {
+      return;
+    }
+    aktuell.current = ansicht;
+    window.scrollTo(0, scrollPositionen.current.get(ansicht) ?? 0);
+  }, [ansicht]);
 
   useEffect(() => {
     verbinden();
@@ -90,24 +141,65 @@ function Angemeldet({ nutzerId, name }: { nutzerId: string; name: string }) {
           {/* Platz unten für Eingabeleiste und Navigation. */}
           {/* Beim Wechsel des Haushalts alles frisch aufbauen (Filter, offene Dialoge …). */}
           <main key={haushalt.id} className="mx-auto max-w-lg px-4 pt-2 pb-48">
-            <Suspense fallback={null}>
-              {ansicht === "vorrat" ? (
-                <Vorrat haushaltId={haushalt.id} nutzerId={nutzerId} />
-              ) : ansicht === "plan" ? (
-                <Plan haushaltId={haushalt.id} nutzerId={nutzerId} />
-              ) : ansicht === "rezepte" ? (
-                <Rezepte haushaltId={haushalt.id} nutzerId={nutzerId} />
-              ) : ansicht === "haushalt" ? (
-                <Haushalt
-                  haushaltId={haushalt.id}
-                  name={name}
-                  haushalte={haushalte}
-                  wechseln={() => setWechselnOffen(true)}
-                />
-              ) : (
-                <Einkaufsliste haushaltId={haushalt.id} nutzerId={nutzerId} />
-              )}
-            </Suspense>
+            {/* Einmal geöffnete Bereiche bleiben bestehen (React Activity): Zustand
+                und zuletzt geladene Daten bleiben, aber im Hintergrund ruhen Abfragen
+                und Effekte – Änderungen kosten dort nichts, der Wechsel ist sofort da. */}
+            {(
+              [
+                [
+                  "liste",
+                  <Einkaufsliste
+                    key="liste"
+                    haushaltId={haushalt.id}
+                    nutzerId={nutzerId}
+                  />,
+                ],
+                [
+                  "vorrat",
+                  <Vorrat
+                    key="vorrat"
+                    haushaltId={haushalt.id}
+                    nutzerId={nutzerId}
+                  />,
+                ],
+                [
+                  "plan",
+                  <Plan
+                    key="plan"
+                    haushaltId={haushalt.id}
+                    nutzerId={nutzerId}
+                  />,
+                ],
+                [
+                  "rezepte",
+                  <Rezepte
+                    key="rezepte"
+                    haushaltId={haushalt.id}
+                    nutzerId={nutzerId}
+                  />,
+                ],
+                [
+                  "haushalt",
+                  <Haushalt
+                    key="haushalt"
+                    haushaltId={haushalt.id}
+                    name={name}
+                    haushalte={haushalte}
+                    wechseln={() => setWechselnOffen(true)}
+                  />,
+                ],
+              ] as const
+            ).map(
+              ([id, inhalt]) =>
+                besucht.has(id) && (
+                  <Activity
+                    key={id}
+                    mode={ansicht === id ? "visible" : "hidden"}
+                  >
+                    <Suspense fallback={null}>{inhalt}</Suspense>
+                  </Activity>
+                ),
+            )}
           </main>
           <Navigation ansicht={ansicht} wechseln={wechseln} />
           <HaushaltWechseln

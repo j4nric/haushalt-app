@@ -4,10 +4,11 @@ import {
   OHNE_KATEGORIE,
 } from "@haushalt/db/kategorien";
 import { Plus } from "lucide-react";
-import type { FormEvent, ReactNode } from "react";
+import { type FormEvent, type ReactNode, useId } from "react";
 import { NativeAuswahl } from "@/components/NativeAuswahl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 /**
  * Schlanke Eingabe unten am Bildschirm (Daumenbereich): Name tippen und Enter.
@@ -28,6 +29,7 @@ export function Eingabeleiste({
   auswahl,
   vorschlaege,
   zusatz,
+  oben = false,
 }: {
   wert: string;
   aendern: (wert: string) => void;
@@ -44,8 +46,62 @@ export function Eingabeleiste({
   /** Mehrere passende Kategorien: als Knöpfe anbieten statt der Auswahl. */
   auswahl: string[];
   vorschlaege?: string[];
+  /**
+   * Oben unter der Kopfzeile statt unten über der Navigation – die Tastatur kann sie
+   * dort nicht verdecken (Vorrat).
+   */
+  oben?: boolean;
 }) {
   const getippt = wert.trim() !== "";
+  // Liste und Vorrat bestehen gleichzeitig – die Vorschlagsliste braucht eine eigene id.
+  const listenId = useId();
+
+  const kategorieWahl =
+    getippt &&
+    (auswahl.length > 1 ? (
+      <fieldset
+        className={cn(
+          "flex flex-wrap items-center gap-2",
+          oben ? "mt-2" : "mb-2",
+        )}
+      >
+        <legend className="sr-only">Sorte wählen</legend>
+        <span className="text-sm text-muted-foreground">Welche Sorte?</span>
+        {auswahl.map((k) => (
+          <Button
+            key={k}
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => absenden(k)}
+          >
+            {kategorieName(k)}
+          </Button>
+        ))}
+      </fieldset>
+    ) : (
+      <div
+        className={cn(
+          "flex items-center gap-2 text-sm text-muted-foreground",
+          oben ? "mt-2" : "mb-2",
+        )}
+      >
+        <span>Kategorie</span>
+        <NativeAuswahl
+          value={kategorie}
+          onChange={(e) => kategorieAendern(e.target.value)}
+          aria-label="Kategorie"
+          className="h-8 px-2 text-sm"
+        >
+          <option value="">{OHNE_KATEGORIE}</option>
+          {KATEGORIEN.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.name}
+            </option>
+          ))}
+        </NativeAuswahl>
+      </div>
+    ));
 
   async function senden(event: FormEvent) {
     event.preventDefault();
@@ -57,48 +113,15 @@ export function Eingabeleiste({
   return (
     <form
       onSubmit={senden}
-      className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t in-data-[tastatur=offen]:bottom-(--tastatur) bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-      // Bleibt beim Seitenwechsel stehen statt mitzugleiten (siehe index.css).
-      style={{ viewTransitionName: "eingabe" }}
+      className={cn(
+        "z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+        oben
+          ? "sticky top-14 -mx-4 border-b px-4 py-2"
+          : "fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] border-t px-4 py-3 in-data-[tastatur=offen]:bottom-(--tastatur)",
+      )}
     >
       <div className="mx-auto max-w-lg">
-        {getippt &&
-          (auswahl.length > 1 ? (
-            <fieldset className="mb-2 flex flex-wrap items-center gap-2">
-              <legend className="sr-only">Sorte wählen</legend>
-              <span className="text-sm text-muted-foreground">
-                Welche Sorte?
-              </span>
-              {auswahl.map((k) => (
-                <Button
-                  key={k}
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => absenden(k)}
-                >
-                  {kategorieName(k)}
-                </Button>
-              ))}
-            </fieldset>
-          ) : (
-            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Kategorie</span>
-              <NativeAuswahl
-                value={kategorie}
-                onChange={(e) => kategorieAendern(e.target.value)}
-                aria-label="Kategorie"
-                className="h-8 px-2 text-sm"
-              >
-                <option value="">{OHNE_KATEGORIE}</option>
-                {KATEGORIEN.map((k) => (
-                  <option key={k.id} value={k.id}>
-                    {k.name}
-                  </option>
-                ))}
-              </NativeAuswahl>
-            </div>
-          ))}
+        {!oben && kategorieWahl}
         <div className="flex gap-2">
           <Input
             value={wert}
@@ -107,11 +130,11 @@ export function Eingabeleiste({
             aria-label={label}
             autoComplete="off"
             enterKeyHint="done"
-            list={vorschlaege ? "eingabe-vorschlaege" : undefined}
+            list={vorschlaege ? listenId : undefined}
             className="h-11 rounded-full px-4 text-base"
           />
           {vorschlaege && (
-            <datalist id="eingabe-vorschlaege">
+            <datalist id={listenId}>
               {vorschlaege.map((v) => (
                 <option key={v} value={v} />
               ))}
@@ -127,6 +150,7 @@ export function Eingabeleiste({
             <Plus />
           </Button>
         </div>
+        {oben && kategorieWahl}
       </div>
     </form>
   );

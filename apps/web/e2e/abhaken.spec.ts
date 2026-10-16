@@ -1,13 +1,7 @@
 import { expect, test } from "@playwright/test";
-import {
-  eintrag,
-  geraet,
-  haushaltAnlegen,
-  hinzufuegen,
-  zuBereich,
-} from "./hilfen";
+import { eintrag, geraet, haushaltAnlegen, hinzufuegen } from "./hilfen";
 
-test("Abhaken ist verzögert und lässt sich mit einem zweiten Tipp abbrechen", async ({
+test("Abhaken und Zurücknehmen geschehen sofort", async ({
   browserName,
   playwright,
 }) => {
@@ -18,31 +12,12 @@ test("Abhaken ist verzögert und lässt sich mit einem zweiten Tipp abbrechen", 
     await hinzufuegen(page, "Milch");
     const kachel = eintrag(page, "Milch").getByRole("checkbox");
 
-    // Versehentlich angetippt: Animation läuft, ein zweiter Tipp bricht ab.
+    // Antippen: gleich im Wagen – keine Animation, keine Wartezeit.
     await kachel.click();
-    await expect(kachel).toHaveAttribute("aria-busy", "true");
-    await kachel.click();
-    await expect(kachel).toHaveAttribute("aria-busy", "false");
-    await page.waitForTimeout(2000);
-    await expect(kachel).not.toBeChecked();
-    await expect(page.getByRole("heading", { name: "Im Wagen" })).toBeHidden();
+    await expect(kachel).toBeChecked({ timeout: 500 });
+    await expect(page.getByRole("heading", { name: "Im Wagen" })).toBeVisible();
 
-    // Absichtlich angetippt: erst nach der Animation im Wagen.
-    await kachel.click();
-    await expect(kachel).not.toBeChecked();
-    await expect(page.getByRole("heading", { name: "Im Wagen" })).toBeVisible({
-      timeout: 5000,
-    });
-    await expect(kachel).toBeChecked();
-
-    // Wechsel in einen anderen Bereich während der Animation: wird trotzdem abgehakt.
-    await hinzufuegen(page, "Brot");
-    await eintrag(page, "Brot").getByRole("checkbox").click();
-    await zuBereich(page, "Vorrat");
-    await zuBereich(page, "Einkaufsliste");
-    await expect(eintrag(page, "Brot").getByRole("checkbox")).toBeChecked();
-
-    // Zurücknehmen aus dem Wagen geschieht sofort.
+    // Zurücknehmen aus dem Wagen geschieht ebenso sofort.
     await kachel.click();
     await expect(kachel).not.toBeChecked({ timeout: 500 });
   } finally {

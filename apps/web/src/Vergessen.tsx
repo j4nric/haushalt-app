@@ -52,7 +52,7 @@ export function Vergessen({
   return (
     <section
       aria-label="Vielleicht vergessen"
-      className="mt-2 rounded-2xl border p-3 animate-in fade-in slide-in-from-top-1"
+      className="mt-2 rounded-2xl border p-3"
       style={{
         background: "color-mix(in oklab, var(--card), #f59e0b 12%)",
         borderColor: "color-mix(in oklab, var(--border), #f59e0b 35%)",

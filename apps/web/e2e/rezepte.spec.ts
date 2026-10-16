@@ -16,7 +16,7 @@ test("Rezept von Hand: anlegen, umrechnen, auf die Liste, kochen, bearbeiten, l�
     await page.getByRole("button", { name: "Eigenes Rezept" }).click();
 
     await page.getByLabel("Titel").fill("Spaghetti Pomodoro");
-    await page.getByLabel("Portionen").fill("2");
+    await page.getByRole("spinbutton", { name: "Portionen" }).fill("2");
     await page
       .getByRole("textbox", { name: "Zutaten", exact: true })
       .fill("(100g Salami)\nSpaghetti 200g\n1 Dose Tomaten\n2 EL Olivenöl");
@@ -181,7 +181,9 @@ test.describe("Import per Link", () => {
       await page.getByLabel("Link zum Rezept").fill(`${basis}/linsensuppe`);
       await page.getByRole("button", { name: "Holen" }).click();
       await expect(page.getByLabel("Titel")).toHaveValue("Linsensuppe");
-      await expect(page.getByLabel("Portionen")).toHaveValue("4");
+      await expect(
+        page.getByRole("spinbutton", { name: "Portionen" }),
+      ).toHaveValue("4");
       await expect(
         page.getByRole("textbox", { name: "Zutaten", exact: true }),
       ).toHaveValue("250 g Linsen\n1 Bund Suppengrün\n1 l Gemüsebrühe");

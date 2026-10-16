@@ -71,22 +71,3 @@ test("Überfällige Produkte melden sich, lange vergessene vermissen dich", asyn
     await handy.schliessen();
   }
 });
-
-test("Abgehakte Produkte fliegen als Emoji in den Wagen", async ({
-  browserName,
-  playwright,
-}) => {
-  const handy = await geraet(playwright[browserName], "Flug");
-  const { page } = handy;
-  try {
-    await haushaltAnlegen(page, "Flug-Haushalt");
-    await hinzufuegen(page, "Bananen");
-    await eintrag(page, "Bananen").getByRole("checkbox").click();
-    const flieger = page.locator("div[aria-hidden].fixed", { hasText: "🍌" });
-    await expect(flieger).toBeVisible();
-    await expect(flieger).toHaveCount(0);
-    await expect(eintrag(page, "Bananen").getByRole("checkbox")).toBeChecked();
-  } finally {
-    await handy.schliessen();
-  }
-});

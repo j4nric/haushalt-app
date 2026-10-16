@@ -21,6 +21,15 @@ export type Vorschlag = {
 
 /** Zutaten und Gewürze als Rezept-Zutaten – für „Was ist im Vorrat?“. */
 export function rezeptZutaten(r: SammlungsRezept) {
+  let z = zutatenCache.get(r);
+  if (!z) {
+    z = rezeptZutatenRoh(r);
+    zutatenCache.set(r, z);
+  }
+  return z;
+}
+
+function rezeptZutatenRoh(r: SammlungsRezept) {
   const zeilen = (text: string, gewuerz: number) =>
     text
       .split("\n")
@@ -33,8 +42,24 @@ export function rezeptZutaten(r: SammlungsRezept) {
   return [...zeilen(r.zutaten, 0), ...zeilen(r.gewuerze, 1)];
 }
 
+// Die Sammlung ändert sich nie – Zutaten nur einmal zerlegen.
+const hauptCache = new WeakMap<SammlungsRezept, string[]>();
+const zutatenCache = new WeakMap<
+  SammlungsRezept,
+  ReturnType<typeof rezeptZutatenRoh>
+>();
+
 /** Zutatennamen eines Rezepts (ohne Gewürze, Optionales und Salz/Öl & Co.). */
 export function hauptzutaten(r: SammlungsRezept): string[] {
+  let namen = hauptCache.get(r);
+  if (!namen) {
+    namen = hauptzutatenRoh(r);
+    hauptCache.set(r, namen);
+  }
+  return namen;
+}
+
+function hauptzutatenRoh(r: SammlungsRezept): string[] {
   return r.zutaten
     .split("\n")
     .map((z) => z.trim())

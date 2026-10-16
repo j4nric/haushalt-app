@@ -66,7 +66,7 @@ export function Plan({
   haushaltId: string;
   nutzerId: string;
 }) {
-  const [pfad, gehe] = useUnterseite();
+  const [pfad, gehe] = useUnterseite("plan");
   const [id, unterseite] = pfad;
   if (id && unterseite === "kochen") {
     return (
@@ -241,16 +241,11 @@ function Wochenplan({
       </div>
 
       <ol className="space-y-3">
-        {tage.map((tag, i) => {
+        {tage.map((tag) => {
           const eintraege = kommend.filter((e) => e.datum === tag);
           const istHeute = tag === start;
           return (
-            <li
-              key={tag}
-              aria-label={tagName(tag)}
-              className="einblenden"
-              style={{ "--i": i } as React.CSSProperties}
-            >
+            <li key={tag} aria-label={tagName(tag)}>
               <div className="flex items-center justify-between px-1 pb-1.5">
                 <h3
                   className={cn(

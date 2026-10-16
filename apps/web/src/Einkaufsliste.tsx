@@ -18,7 +18,6 @@ import { BarcodeScan } from "./scanner/BarcodeScan";
 import { Vergessen } from "./Vergessen";
 import { type VerlaufArtikel, VerlaufBlock } from "./Verlauf";
 import { einkaufBuchen, einkaufZuruecknehmen } from "./vorratsaktionen";
-import { FlugEbene } from "./WagenFlug";
 
 export function Einkaufsliste({
   haushaltId,
@@ -265,7 +264,6 @@ export function Einkaufsliste({
 
   return (
     <>
-      <FlugEbene />
       <HeuteKarte haushaltId={haushaltId} />
       <Vergessen
         artikel={vergessen}
