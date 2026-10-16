@@ -9,7 +9,7 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Uebereinstimmung } from "@/components/Uebereinstimmung";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,9 @@ import { ARTIKEL_STAND } from "@/rezepte/daten";
 import { SAMMLUNG } from "./sammlung";
 import type { SammlungsRezept } from "./sammlung/typ";
 import { tagesZufall, type Vorschlag, vorschlagen } from "./vorschlagen";
+
+/** So viele Karten kommen je Schritt dazu. */
+const SEITE = 24;
 
 type Filter = "vegetarisch" | "schnell" | "kinder" | "fisch" | "suppe";
 
@@ -87,6 +90,25 @@ export function Entdecken({
   const [suche, setSuche] = useState("");
   const [offen, setOffen] = useState<Vorschlag | null>(null);
   const [wurf, setWurf] = useState(0);
+  // Nicht alle 200 Karten auf einmal zeichnen: erst ein paar, beim Scrollen mehr.
+  const [anzahl, setAnzahl] = useState(SEITE);
+  const ende = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const ziel = ende.current;
+    if (!ziel) {
+      return;
+    }
+    const beobachter = new IntersectionObserver(
+      ([e]) => {
+        if (e?.isIntersecting) {
+          setAnzahl((n) => n + SEITE);
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    beobachter.observe(ziel);
+    return () => beobachter.disconnect();
+  }, []);
 
   const tag = heute();
   const vorschlaege = useMemo(
@@ -243,9 +265,10 @@ export function Entdecken({
             Mehr Ideen
           </h3>
         )}
-        {rest.map((v) => (
+        {rest.slice(0, anzahl).map((v) => (
           <Karte key={v.rezept.id} v={v} oeffnen={() => setOffen(v)} />
         ))}
+        <div ref={ende} aria-hidden />
         {treffer.length === 0 && (
           <p className="py-10 text-center text-sm text-muted-foreground">
             {vorschlaege.length === 0
@@ -332,7 +355,13 @@ function Vorschau({
       .map((z) => z.trim())
       .filter(Boolean);
   return (
-    <Drawer open={v != null} onOpenChange={(o) => !o && schliessen()}>
+    <Drawer
+      open={v != null}
+      onOpenChange={(o) => !o && schliessen()}
+      // Nur Lesen, keine Eingabe: ohne die iOS-Scroll-Sperre von vaul – die
+      // unterbindet sonst am oberen/unteren Rand das natürliche Nachfedern.
+      disablePreventScroll={false}
+    >
       <DrawerContent>
         {v && r && (
           <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
@@ -342,7 +371,7 @@ function Vorschau({
                 2 Portionen · {r.dauer} Min. · {r.schlagwoerter.join(", ")}
               </DrawerDescription>
             </DrawerHeader>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-2 text-sm">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-2 text-sm">
               <section aria-label="Zutaten">
                 <h3 className="pb-1 font-semibold">Zutaten</h3>
                 <ul className="space-y-0.5">

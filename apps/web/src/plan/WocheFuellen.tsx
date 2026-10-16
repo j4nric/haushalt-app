@@ -173,7 +173,7 @@ export function WocheFuellen({
                     className={
                       rollt.has(tag)
                         ? "min-w-0 flex-1 truncate text-muted-foreground blur-[0.5px]"
-                        : "min-w-0 flex-1 truncate font-medium animate-in zoom-in-95"
+                        : "min-w-0 flex-1 truncate font-medium"
                     }
                     aria-live="polite"
                   >

@@ -45,7 +45,7 @@ export function Rezepte({
   haushaltId: string;
   nutzerId: string;
 }) {
-  const [pfad, gehe] = useUnterseite();
+  const [pfad, gehe] = useUnterseite("rezepte");
   const [id, unterseite] = pfad;
 
   if (id === "entdecken") {
@@ -364,14 +364,10 @@ function Uebersicht({
             </p>
           ) : (
             <ul className="grid grid-cols-2 gap-3">
-              {treffer.map((r, i) => {
+              {treffer.map((r) => {
                 const v = kochbar.get(r.id);
                 return (
-                  <li
-                    key={r.id}
-                    className="einblenden"
-                    style={{ "--i": i } as React.CSSProperties}
-                  >
+                  <li key={r.id}>
                     <button
                       type="button"
                       onClick={() => gehe([r.id])}

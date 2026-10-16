@@ -19,8 +19,6 @@ const ANSICHTEN: { id: Ansicht; name: string; symbol: typeof ShoppingCart }[] =
     { id: "haushalt", name: "Haushalt", symbol: House },
   ];
 
-const REIHENFOLGE: Ansicht[] = ANSICHTEN.map((a) => a.id);
-
 function lesen(): Ansicht {
   // Unterseiten hängen mit „/“ an: #rezepte/<id>/kochen
   const bereich = location.hash.slice(1).split("/")[0];
@@ -32,35 +30,44 @@ function lesen(): Ansicht {
     : "liste";
 }
 
+const lesenBereich = () => location.hash.slice(1).split("/")[0] ?? "";
 const lesenPfad = () => location.hash.slice(1).split("/").slice(1);
 
 /**
  * Unterseite eines Bereichs aus der Adresse, z. B. #rezepte/abc/kochen → ["abc", "kochen"].
  * Zurück im Browser bzw. Wischgeste führt so eine Ebene hoch.
+ * Bereiche bleiben im Hintergrund aufgebaut: Jeder liest nur Adressen seines eigenen
+ * Bereichs – solange ein anderer offen ist, bleibt die Unterseite, wie sie war.
  */
-export function useUnterseite(): [string[], (pfad: string[]) => void] {
-  const [pfad, setPfad] = useState(lesenPfad);
+export function useUnterseite(
+  bereich: Ansicht,
+): [string[], (pfad: string[]) => void] {
+  // Nur die eigene Unterseite – der Bereich kann auch im Hintergrund vorgebaut werden.
+  const [pfad, setPfad] = useState(() =>
+    lesenBereich() === bereich ? lesenPfad() : [],
+  );
   useEffect(() => {
     const aktualisieren = () => {
+      if (lesenBereich() !== bereich) {
+        return;
+      }
       setPfad(lesenPfad());
       window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", aktualisieren);
+    // Wieder eingeblendet (React Activity): verpasste Adressänderungen nachholen.
+    if (lesenBereich() === bereich) {
+      setPfad((alt) => {
+        const neu = lesenPfad();
+        return alt.join("/") === neu.join("/") ? alt : neu;
+      });
+    }
     return () => window.removeEventListener("hashchange", aktualisieren);
-  }, []);
+  }, [bereich]);
   return [
     pfad,
     (neu) => {
-      const bereich = location.hash.slice(1).split("/")[0];
-      const richtung =
-        neu.at(-1) === "kochen"
-          ? "hoch"
-          : neu.length >= lesenPfad().length
-            ? "vor"
-            : "zurueck";
-      mitUebergang(richtung, () => {
-        location.hash = [bereich, ...neu].join("/");
-      });
+      location.hash = [bereich, ...neu].join("/");
     },
   ];
 }
@@ -102,64 +109,17 @@ export function Navigation({
             key={id}
             type="button"
             aria-current={ansicht === id ? "page" : undefined}
-            onClick={() =>
-              mitUebergang(
-                REIHENFOLGE.indexOf(id) >= REIHENFOLGE.indexOf(ansicht)
-                  ? "vor"
-                  : "zurueck",
-                () => wechseln(id),
-              )
-            }
+            onClick={() => wechseln(id)}
             className={cn(
-              "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors",
+              "flex flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground",
               ansicht === id && "text-primary",
             )}
           >
-            <Icon
-              // Neu gemountet beim Wechsel, damit es jedes Mal hüpft.
-              key={ansicht === id ? "an" : "aus"}
-              className={cn("size-6", ansicht === id && "huepfen")}
-              strokeWidth={ansicht === id ? 2.4 : 1.8}
-            />
+            <Icon className="size-6" strokeWidth={ansicht === id ? 2.4 : 1.8} />
             {name}
           </button>
         ))}
       </div>
     </nav>
   );
-}
-
-type Richtung = "vor" | "zurueck" | "hoch";
-
-/**
- * Seitenwechsel mit sanftem Gleiten (View Transitions): Der Browser animiert ein
- * Standbild, das Layout bleibt unberührt – fest positionierte Leisten verrutschen
- * nicht. Ohne Unterstützung oder bei „Bewegung reduzieren“ einfach sofort.
- */
-export function mitUebergang(richtung: Richtung, aendern: () => void) {
-  const doc = document as Document & {
-    startViewTransition?: (aktualisieren: () => Promise<void>) => unknown;
-  };
-  if (
-    !doc.startViewTransition ||
-    matchMedia("(prefers-reduced-motion: reduce)").matches
-  ) {
-    aendern();
-    return;
-  }
-  document.documentElement.dataset.uebergang = richtung;
-  doc.startViewTransition(async () => {
-    // Die Adresse ändert sich, React zeichnet nach dem hashchange neu – darauf warten.
-    const neu = new Promise<void>((fertig) => {
-      window.addEventListener(
-        "hashchange",
-        () =>
-          requestAnimationFrame(() => requestAnimationFrame(() => fertig())),
-        { once: true },
-      );
-      setTimeout(fertig, 300);
-    });
-    aendern();
-    await neu;
-  });
 }

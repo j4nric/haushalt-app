@@ -164,40 +164,17 @@
   }
 }
 
-/* --- Bewegung: flüssig und ein bisschen verspielt -------------------------------- */
+/* --- Bewegung: nur, wo sie etwas erklärt ------------------------------------------ */
 
-/* Dialoge von unten federn beim Öffnen leicht nach (vaul animiert per Keyframes). */
-[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="open"] {
-  animation-duration: 0.55s;
-  animation-timing-function: cubic-bezier(0.34, 1.25, 0.64, 1);
+/* Dialoge von unten: kurz und ohne Nachfedern (vaul animiert per Keyframes). */
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="open"],
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="closed"] {
+  animation-duration: 0.22s;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
-[data-vaul-overlay][data-state="open"] {
-  animation-duration: 0.4s;
-}
-
-/* Kacheln, Karten, Tage: leicht versetzt einblenden (--i = Position, gedeckelt). */
-.einblenden {
-  animation: einblenden 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(min(var(--i, 0), 12) * 35ms);
-}
-@keyframes einblenden {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.97);
-  }
-}
-
-/* Gewählter Tab: Symbol hüpft kurz. */
-.huepfen {
-  animation: huepfen 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes huepfen {
-  40% {
-    transform: translateY(-3px) scale(1.18);
-  }
-  70% {
-    transform: scale(0.95);
-  }
+[data-vaul-overlay][data-state="open"],
+[data-vaul-overlay][data-state="closed"] {
+  animation-duration: 0.18s;
 }
 
 /* Wer weniger Bewegung möchte, bekommt keine. */
@@ -211,74 +188,6 @@
     animation-delay: 0ms !important;
     /* biome-ignore lint/complexity/noImportantStyles: muss jeden Übergang überstimmen. */
     transition-duration: 0.01ms !important;
-  }
-}
-
-/* Seitenwechsel (View Transitions, siehe mitUebergang): Inhalt gleitet, Kopf,
-   Navigation und Eingabeleiste bleiben stehen. */
-header {
-  view-transition-name: kopf;
-}
-nav[aria-label="Bereiche"] {
-  view-transition-name: navigation;
-}
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 0.34s;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-html[data-uebergang="vor"]::view-transition-old(root) {
-  animation-name: raus-nach-links;
-}
-html[data-uebergang="vor"]::view-transition-new(root) {
-  animation-name: rein-von-rechts;
-}
-html[data-uebergang="zurueck"]::view-transition-old(root) {
-  animation-name: raus-nach-rechts;
-}
-html[data-uebergang="zurueck"]::view-transition-new(root) {
-  animation-name: rein-von-links;
-}
-html[data-uebergang="hoch"]::view-transition-new(root) {
-  animation-name: rein-von-unten;
-  animation-timing-function: cubic-bezier(0.34, 1.2, 0.64, 1);
-}
-html[data-uebergang="hoch"]::view-transition-old(root) {
-  animation-name: verblassen;
-}
-@keyframes rein-von-rechts {
-  from {
-    opacity: 0;
-    transform: translateX(32px) scale(0.99);
-  }
-}
-@keyframes raus-nach-links {
-  to {
-    opacity: 0;
-    transform: translateX(-32px) scale(0.99);
-  }
-}
-@keyframes rein-von-links {
-  from {
-    opacity: 0;
-    transform: translateX(-32px) scale(0.99);
-  }
-}
-@keyframes raus-nach-rechts {
-  to {
-    opacity: 0;
-    transform: translateX(32px) scale(0.99);
-  }
-}
-@keyframes rein-von-unten {
-  from {
-    opacity: 0;
-    transform: translateY(48px);
-  }
-}
-@keyframes verblassen {
-  to {
-    opacity: 0;
   }
 }
 

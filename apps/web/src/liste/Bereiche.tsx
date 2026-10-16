@@ -98,9 +98,7 @@ export function AusDemVerlauf({
         </button>
       </h3>
       {offen && (
-        <ul className="flex flex-wrap justify-center gap-2 pb-5 animate-in fade-in">
-          {children}
-        </ul>
+        <ul className="flex flex-wrap justify-center gap-2 pb-5">{children}</ul>
       )}
     </section>
   );

@@ -21,7 +21,7 @@ import {
   ShoppingCart,
   Snowflake,
 } from "lucide-react";
-import { useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Eingabeleiste, kategorieVorschlag } from "@/components/Eingabeleiste";
 import { Gruppe } from "@/components/Gruppe";
@@ -158,6 +158,21 @@ export function Vorrat({
     );
   }
 
+  // Stabile Aktionen für die Zeilen: So zeichnet React nur Zeilen neu, deren Daten
+  // sich geändert haben (VorratsZeileStill vergleicht Feld für Feld).
+  const neueste = useRef({ plus, minus, aufgebraucht, aufDieListe });
+  neueste.current = { plus, minus, aufgebraucht, aufDieListe };
+  const aktionen = useMemo<ZeilenAktionen>(
+    () => ({
+      plus: (z) => neueste.current.plus(z),
+      minus: (z) => neueste.current.minus(z),
+      aufgebraucht: (z) => neueste.current.aufgebraucht(z),
+      aufDieListe: (z) => neueste.current.aufDieListe(z),
+      oeffnen: (z) => setDetails(z.id),
+    }),
+    [],
+  );
+
   function imVorratFuehren(artikelId: string, an: boolean) {
     return db.execute("UPDATE artikel SET im_vorrat = ? WHERE id = ?", [
       an ? 1 : 0,
@@ -167,6 +182,14 @@ export function Vorrat({
 
   return (
     <>
+      <NeuerVorratsartikel
+        haushaltId={haushaltId}
+        nutzerId={nutzerId}
+        name={eingabe}
+        setName={setEingabe}
+        oeffnen={setDetails}
+      />
+
       <div className="space-y-2 pt-2">
         <div className="flex justify-end gap-2">
           <BonImport haushaltId={haushaltId} nutzerId={nutzerId} />
@@ -224,14 +247,10 @@ export function Vorrat({
           (liste as VorratsZeile[]).length > 0 && (
             <Gruppe key={titel as string} titel={titel as string}>
               {(liste as VorratsZeile[]).map((zeile) => (
-                <VorratsEintrag
+                <VorratsZeileStill
                   key={zeile.id}
                   zeile={zeile}
-                  plus={() => plus(zeile)}
-                  minus={() => minus(zeile)}
-                  aufgebraucht={() => aufgebraucht(zeile)}
-                  aufDieListe={() => aufDieListe(zeile)}
-                  oeffnen={() => setDetails(zeile.id)}
+                  aktionen={aktionen}
                 />
               ))}
             </Gruppe>
@@ -241,14 +260,10 @@ export function Vorrat({
       {gruppen.map(([gruppe, kategorie, artikel]) => (
         <Gruppe key={gruppe} titel={gruppe} kategorie={kategorie}>
           {artikel.map((zeile) => (
-            <VorratsEintrag
+            <VorratsZeileStill
               key={zeile.id}
               zeile={zeile}
-              plus={() => plus(zeile)}
-              minus={() => minus(zeile)}
-              aufgebraucht={() => aufgebraucht(zeile)}
-              aufDieListe={() => aufDieListe(zeile)}
-              oeffnen={() => setDetails(zeile.id)}
+              aktionen={aktionen}
             />
           ))}
         </Gruppe>
@@ -327,17 +342,40 @@ export function Vorrat({
         haushaltId={haushaltId}
         nutzerId={nutzerId}
       />
-
-      <NeuerVorratsartikel
-        haushaltId={haushaltId}
-        nutzerId={nutzerId}
-        name={eingabe}
-        setName={setEingabe}
-        oeffnen={setDetails}
-      />
     </>
   );
 }
+
+type ZeilenAktionen = Record<
+  "plus" | "minus" | "aufgebraucht" | "aufDieListe" | "oeffnen",
+  (z: VorratsZeile) => unknown
+>;
+
+const gleicheZeile = (a: VorratsZeile, b: VorratsZeile) =>
+  (Object.keys(a) as (keyof VorratsZeile)[]).every((k) => a[k] === b[k]);
+
+/** Zeichnet nur neu, wenn sich die Daten der Zeile wirklich geändert haben. */
+const VorratsZeileStill = memo(
+  function VorratsZeileStill({
+    zeile,
+    aktionen,
+  }: {
+    zeile: VorratsZeile;
+    aktionen: ZeilenAktionen;
+  }) {
+    return (
+      <VorratsEintrag
+        zeile={zeile}
+        plus={() => aktionen.plus(zeile)}
+        minus={() => aktionen.minus(zeile)}
+        aufgebraucht={() => aktionen.aufgebraucht(zeile)}
+        aufDieListe={() => aktionen.aufDieListe(zeile)}
+        oeffnen={() => aktionen.oeffnen(zeile)}
+      />
+    );
+  },
+  (a, b) => a.aktionen === b.aktionen && gleicheZeile(a.zeile, b.zeile),
+);
 
 /**
  * Zeile: Name (antippen für Details), −, Bestand, +. Wischen nach links =
@@ -578,6 +616,7 @@ function NeuerVorratsartikel({
 
   return (
     <Eingabeleiste
+      oben
       wert={name}
       aendern={(wert) => {
         setName(wert);

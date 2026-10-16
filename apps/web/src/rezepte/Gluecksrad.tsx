@@ -171,7 +171,7 @@ export function Gluecksrad({
               {gewinner ? (
                 <>
                   <p className="text-sm text-muted-foreground">Heute gibt's:</p>
-                  <p className="text-2xl font-bold animate-in zoom-in-50">
+                  <p className="text-2xl font-bold">
                     {rezeptEmoji(gewinner.titel)} {gewinner.titel}
                   </p>
                   <div className="grid grid-cols-2 gap-3 pt-2">

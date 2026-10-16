@@ -107,7 +107,7 @@ export function ZumWagenKnopf({
       onClick={() =>
         wagen.current?.scrollIntoView({ behavior: "smooth", block: "start" })
       }
-      className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg animate-in fade-in slide-in-from-bottom-2"
+      className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg"
     >
       <ShoppingCart className="size-5" />
       {anzahl}

@@ -117,7 +117,7 @@ export function ResteVerwerten({
                   type="button"
                   onClick={() => aendern(reste.filter((x) => x !== r))}
                   aria-label={`${r} entfernen`}
-                  className="flex items-center gap-1 rounded-full bg-primary py-1 pr-2 pl-3 text-sm text-primary-foreground animate-in zoom-in-90"
+                  className="flex items-center gap-1 rounded-full bg-primary py-1 pr-2 pl-3 text-sm text-primary-foreground"
                 >
                   {r} <X className="size-3.5" />
                 </button>
@@ -155,12 +155,8 @@ export function ResteVerwerten({
         </p>
       ) : (
         <ul aria-label="Passende Rezepte" className="space-y-2">
-          {treffer.map(({ rezept, nutzt, daheim, kaufen }, i) => (
-            <li
-              key={rezept.id}
-              className="einblenden"
-              style={{ "--i": i } as React.CSSProperties}
-            >
+          {treffer.map(({ rezept, nutzt, daheim, kaufen }) => (
+            <li key={rezept.id}>
               <button
                 type="button"
                 onClick={() => oeffnen(rezept.id)}

@@ -232,7 +232,7 @@ export function Scanner({
       role="dialog"
       aria-modal="true"
       aria-label={titel}
-      className="fixed inset-0 z-50 flex flex-col bg-black text-white animate-in fade-in"
+      className="fixed inset-0 z-50 flex flex-col bg-black text-white"
     >
       <video
         ref={video}
@@ -291,9 +291,7 @@ export function Scanner({
           aria-live="polite"
           className={cn(
             "mx-auto w-fit rounded-full px-4 py-2 text-center text-sm font-medium transition-all",
-            meldung
-              ? "bg-emerald-500 text-white animate-in zoom-in-95"
-              : "bg-black/50",
+            meldung ? "bg-emerald-500 text-white" : "bg-black/50",
           )}
         >
           {meldung ??

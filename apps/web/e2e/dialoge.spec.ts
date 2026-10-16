@@ -131,10 +131,21 @@ test("Eingabeleiste rückt über die Bildschirmtastatur, Navigation weicht", asy
     await page.getByLabel("Passwort").fill("ein-sicheres-passwort");
     await page.getByRole("button", { name: "Konto anlegen" }).tap();
     await haushaltAnlegen(page, "Tastatur-Haushalt");
+    // Das fokussierte Namensfeld ist weg (ohne „focusout“) – Navigation wieder da.
+    await expect(
+      page.getByRole("navigation", { name: "Bereiche" }),
+    ).toBeVisible();
+    // Im Vorrat sitzt die Eingabe oben unter der Kopfzeile – keine Tastatur-Probleme.
     await zuBereich(page, "Vorrat");
-
-    const leiste = page
+    const vorratOben = await page
       .getByLabel("Vorratsartikel")
+      .evaluate((el) => el.getBoundingClientRect().top);
+    expect(vorratOben).toBeLessThan(160);
+    await zuBereich(page, "Einkaufsliste");
+
+    // Auf der Liste bleibt sie unten – und rückt über die Tastatur.
+    const leiste = page
+      .getByLabel("Neuer Eintrag")
       .locator("xpath=ancestor::form[1]");
     const navigation = page.getByRole("navigation", { name: "Bereiche" });
     const abstandUnten = () =>
@@ -143,7 +154,7 @@ test("Eingabeleiste rückt über die Bildschirmtastatur, Navigation weicht", asy
       );
 
     // Schon beim Antippen ist die Navigation weg – bevor die Tastatur gemeldet wird.
-    await page.getByLabel("Vorratsartikel").tap();
+    await page.getByLabel("Neuer Eintrag").tap();
     await expect(navigation).toBeHidden();
     await expect.poll(abstandUnten).toBe(0);
 

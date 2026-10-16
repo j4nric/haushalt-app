@@ -59,7 +59,19 @@ export function tastaturBeobachten() {
   let messenBis = 0;
   let bild = 0;
 
+  let wache: ReturnType<typeof setInterval> | undefined;
   const anwenden = () => {
+    // Wird das fokussierte Feld entfernt (z. B. nach dem Absenden), meldet der Browser
+    // kein „focusout“ – deshalb den Fokus selbst nachsehen.
+    if (fokus && !istTextfeld(document.activeElement)) {
+      fokus = false;
+    }
+    if (fokus && !wache) {
+      wache = setInterval(anwenden, 400);
+    } else if (!fokus && wache) {
+      clearInterval(wache);
+      wache = undefined;
+    }
     const abstand = vv ? tastaturAbstand(window.innerHeight, vv) : 0;
     const sichtbar = abstand > SCHWELLE;
     html.style.setProperty("--tastatur", `${sichtbar ? abstand : 0}px`);

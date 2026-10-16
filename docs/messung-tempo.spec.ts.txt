@@ -1,0 +1,279 @@
+import { randomUUID } from "node:crypto";
+import { devices, expect, test } from "@playwright/test";
+import { haushaltAnlegen } from "./hilfen";
+
+test.setTimeout(300_000);
+
+const KAT = [
+  "obst_gemuese",
+  "milch_kaese",
+  "fleisch_fisch",
+  "brot_backwaren",
+  "suesses_snacks",
+  "vorrat",
+  "getraenke",
+  "tiefkuehl",
+  "drogerie",
+  "haushalt",
+];
+
+test("messung", async ({ playwright }) => {
+  const browser = await playwright.chromium.launch();
+  const ctx = await browser.newContext({
+    ...devices["Pixel 7"],
+    baseURL: "http://localhost:4173",
+  });
+  const page = await ctx.newPage();
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Noch kein Konto? Registrieren" })
+    .tap();
+  await page.getByLabel("Dein Name").fill("Mia");
+  await page.getByLabel("E-Mail").fill(`mia-${Date.now()}@test.local`);
+  await page.getByLabel("Passwort").fill("ein-sicheres-passwort");
+  await page.getByRole("button", { name: "Konto anlegen" }).tap();
+  await haushaltAnlegen(page, "Messhaushalt");
+  const haushalt = await page.evaluate(() =>
+    localStorage.getItem("haushalt-aktiv"),
+  );
+
+  // Daten direkt über den Upload anlegen.
+  const jetzt = () => new Date().toISOString();
+  const ops: unknown[] = [];
+  const artikel: string[] = [];
+  for (let i = 0; i < 80; i++) {
+    const id = randomUUID();
+    artikel.push(id);
+    ops.push({
+      op: "PUT",
+      table: "artikel",
+      id,
+      opData: {
+        haushalt_id: haushalt,
+        name: `Produkt ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(97 + Math.floor(i / 26))}x`,
+        kategorie: KAT[i % 10],
+        standardeinheit: "stueck",
+        im_vorrat: i < 40 ? 1 : 0,
+        archiviert: 0,
+        erstellt_am: jetzt(),
+      },
+    });
+    if (i < 40)
+      for (let b = 0; b < 3; b++)
+        ops.push({
+          op: "PUT",
+          table: "vorratsbuchungen",
+          id: randomUUID(),
+          opData: {
+            haushalt_id: haushalt,
+            artikel_id: id,
+            menge: b === 2 ? -1 : 2,
+            grund: b === 2 ? "verbrauch" : "einkauf",
+            erstellt_am: jetzt(),
+          },
+        });
+    for (let k = 0; k < 3; k++)
+      ops.push({
+        op: "PUT",
+        table: "kaeufe",
+        id: randomUUID(),
+        opData: {
+          haushalt_id: haushalt,
+          artikel_id: id,
+          gekauft_am: new Date(
+            Date.now() - (k + 1) * 6 * 86400000,
+          ).toISOString(),
+        },
+      });
+  }
+  for (let i = 40; i < 65; i++)
+    ops.push({
+      op: "PUT",
+      table: "listeneintraege",
+      id: randomUUID(),
+      opData: {
+        haushalt_id: haushalt,
+        artikel_id: artikel[i],
+        erledigt: 0,
+        erstellt_am: jetzt(),
+      },
+    });
+  for (let r = 0; r < 20; r++) {
+    const rid = randomUUID();
+    ops.push({
+      op: "PUT",
+      table: "rezepte",
+      id: rid,
+      opData: {
+        haushalt_id: haushalt,
+        titel: `Rezept ${r}`,
+        portionen: 2,
+        schritte: "a\nb",
+        erstellt_am: jetzt(),
+      },
+    });
+    for (let z = 0; z < 10; z++)
+      ops.push({
+        op: "PUT",
+        table: "rezept_zutaten",
+        id: randomUUID(),
+        opData: {
+          haushalt_id: haushalt,
+          rezept_id: rid,
+          position: z,
+          menge: 100,
+          einheit: "g",
+          name: `Produkt ${String.fromCharCode(65 + ((r + z) % 26))}ax`,
+          gewuerz: 0,
+          optional: 0,
+        },
+      });
+  }
+  for (let s = 0; s < ops.length; s += 200) {
+    const res = await page.request.post("/api/powersync/upload", {
+      data: { operationen: ops.slice(s, s + 200) },
+    });
+    expect(res.status()).toBe(200);
+  }
+  await page.reload();
+  await expect(
+    page.getByRole("main").getByRole("listitem").nth(20),
+  ).toBeVisible({ timeout: 30000 });
+  await page.waitForTimeout(3000);
+
+  const cdp = await ctx.newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await page.evaluate(() => {
+    (window as any).__lang = 0;
+    new PerformanceObserver((l) => {
+      for (const e of l.getEntries()) (window as any).__lang += e.duration;
+    }).observe({ type: "longtask", buffered: false });
+  });
+  const ergebnisse: Record<string, number[]> = {};
+  await page.evaluate(() => {
+    document.addEventListener(
+      "pointerdown",
+      () => {
+        (window as any).__klick = performance.now();
+      },
+      true,
+    );
+    document.addEventListener(
+      "keydown",
+      () => {
+        (window as any).__klick = performance.now();
+      },
+      true,
+    );
+    (window as any).__sichtbar = (text: string) =>
+      [
+        ...document.querySelectorAll(
+          "button, input, h2, h3, [role=checkbox], [role=dialog]",
+        ),
+      ].some(
+        (el) =>
+          ((el as HTMLElement).innerText?.includes(text) ||
+            (el as HTMLInputElement).placeholder?.includes(text) ||
+            el.getAttribute("aria-label") === text) &&
+          (el as HTMLElement).offsetParent !== null,
+      );
+  });
+  async function messe(
+    name: string,
+    aktion: () => Promise<unknown>,
+    bedingung: string,
+  ) {
+    console.log("SCHRITT", name);
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      (window as any).__lang = 0;
+      (window as any).__klick = undefined;
+    });
+    await aktion();
+    const dauer = await (
+      await page.waitForFunction(
+        `(() => window.__klick !== undefined && (${bedingung}) && Math.round(performance.now() - window.__klick))()`,
+        undefined,
+        { polling: "raf", timeout: 15000 },
+      )
+    ).jsonValue();
+    await page.waitForTimeout(200);
+    const lang = await page.evaluate(() => Math.round((window as any).__lang));
+    (ergebnisse[name] ??= []).push(dauer as number);
+    (ergebnisse[`${name} (Long Tasks)`] ??= []).push(lang);
+  }
+  const s = (t: string) => `window.__sichtbar(${JSON.stringify(t)})`;
+  const nav = (b: string) =>
+    page
+      .getByRole("navigation", { name: "Bereiche" })
+      .getByRole("button", { name: b });
+  for (let runde = 0; runde < 3; runde++) {
+    await messe("Tab → Vorrat", () => nav("Vorrat").tap(), s("Inventur"));
+    await messe(
+      "Vorrat Details öffnen",
+      () =>
+        page
+          .getByRole("button", { name: /^Bestand / })
+          .first()
+          .tap(),
+      `!!document.querySelector('[role=dialog]')`,
+    );
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await messe(
+      "Tab → Rezepte",
+      () => nav("Rezepte").tap(),
+      s("Rezepte durchsuchen"),
+    );
+    await messe(
+      "Entdecken öffnen",
+      () =>
+        page.getByRole("button", { name: "Rezepte entdecken" }).first().tap(),
+      s("Heute für euch"),
+    );
+    await messe(
+      "Vorschau öffnen",
+      () =>
+        page
+          .getByRole("region", { name: "Alle Vorschläge" })
+          .getByRole("button")
+          .first()
+          .tap(),
+      `!!document.querySelector('[role=dialog]')`,
+    );
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page.getByRole("button", { name: "Zurück" }).first().tap();
+    await messe("Tab → Plan", () => nav("Plan").tap(), s("Woche füllen"));
+    await messe(
+      "Tab → Liste",
+      () => nav("Einkaufsliste").tap(),
+      s("Was fehlt?"),
+    );
+    const name = `Neu${runde}abc`;
+    await page.getByLabel("Neuer Eintrag").fill(name);
+    await messe(
+      "Liste eintragen",
+      () => page.getByLabel("Neuer Eintrag").press("Enter"),
+      `[...document.querySelectorAll('[role=checkbox]')].some(e => e.getAttribute('aria-label') === ${JSON.stringify(name)})`,
+    );
+    // Tastatur schließen (wie vor einem Tabwechsel) – sonst ist die Navigation weg.
+    await page.evaluate(() =>
+      (document.activeElement as HTMLElement | null)?.blur(),
+    );
+    await messe(
+      "Abhaken bis im Wagen",
+      () => page.getByRole("checkbox", { name, exact: true }).tap(),
+      `document.querySelector('[role=checkbox][aria-label=${JSON.stringify(name)}]')?.getAttribute('aria-checked') === 'true'`,
+    );
+  }
+  console.log("EINZELN", JSON.stringify(ergebnisse));
+  const zusammen = Object.fromEntries(
+    Object.entries(ergebnisse).map(([k, v]) => [
+      k,
+      Math.round(v.reduce((a, b) => a + b, 0) / v.length),
+    ]),
+  );
+  console.log("MESSUNG", JSON.stringify(zusammen, null, 1));
+  await browser.close();
+});

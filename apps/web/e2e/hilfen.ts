@@ -120,10 +120,13 @@ export async function zuBereich(
   page: Page,
   bereich: "Einkaufsliste" | "Vorrat" | "Plan" | "Rezepte" | "Haushalt",
 ) {
-  await page
+  const knopf = page
     .getByRole("navigation", { name: "Bereiche" })
-    .getByRole("button", { name: bereich })
-    .click();
+    .getByRole("button", { name: bereich });
+  await knopf.click();
+  // Erst weiter, wenn der Bereich wirklich gewechselt hat – sonst greifen Tests noch
+  // Elemente des alten Bereichs (die bleiben ausgeblendet bestehen).
+  await expect(knopf).toHaveAttribute("aria-current", "page");
 }
 
 export const zumVorrat = (page: Page) => zuBereich(page, "Vorrat");
