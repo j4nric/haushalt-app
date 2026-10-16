@@ -1,11 +1,13 @@
 import type * as React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "@/lib/utils";
 
 /**
- * Wegwischen nur am Griff oben: Im Inhalt wird immer gescrollt. Auf dem iPhone hielt
- * vaul Scrollen im Inhalt sonst mitunter für „nach unten wegwischen“ – der Drawer
- * schloss sich mitten im Lesen.
+ * vaul zieht nur am Griff (`handleOnly`): Auf dem iPhone hielt es Scrollen im Inhalt
+ * sonst mitunter für „nach unten wegwischen“ – der Drawer schloss sich mitten im
+ * Lesen. Im übrigen Fenster schließt eine eigene, strengere Geste (siehe
+ * `useWegwischen`): nur nach unten, nur wenn der Inhalt ganz oben steht.
  */
 function Drawer({
   handleOnly = true,
@@ -54,16 +56,156 @@ function DrawerOverlay({
   );
 }
 
+/** Ab dieser Strecke (px) oder mit Schwung schließt das Fenster beim Loslassen. */
+const SCHLIESSEN_AB = 120;
+const SCHWUNG = 0.6; // px/ms
+const ENTSCHEIDEN_AB = 8;
+
+/** Liegt alles zwischen Finger und Fenster ganz oben (nichts nach oben zu scrollen)? */
+function ganzOben(ziel: EventTarget | null, fenster: HTMLElement): boolean {
+  for (
+    let el = ziel instanceof Element ? ziel : null;
+    el && fenster.contains(el);
+    el = el.parentElement
+  ) {
+    if (el.scrollTop > 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Nach unten wischen schließt das Fenster – an jeder Stelle, nicht nur am Griff.
+ * Die Geste gehört dem Scrollen, sobald der Inhalt nicht ganz oben steht, der Finger
+ * zuerst nach oben oder seitwärts geht (Wischzeilen, Chips) oder ein Schieberegler
+ * berührt wird. Erst wenn klar nach unten gezogen wird, folgt das Fenster dem Finger.
+ */
+function useWegwischen(
+  el: HTMLElement | null,
+  schliessen: React.RefObject<HTMLButtonElement | null>,
+) {
+  useEffect(() => {
+    if (!el) {
+      return;
+    }
+    let start: { x: number; y: number; zeit: number; oben: boolean } | null =
+      null;
+    let zustand: "offen" | "ziehen" | "aus" = "aus";
+    let strecke = 0;
+
+    const zuruecksetzen = () => {
+      el.style.transition = "transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)";
+      el.style.transform = "translate3d(0, 0, 0)";
+      setTimeout(() => {
+        el.style.transition = "";
+        el.style.transform = "";
+      }, 220);
+    };
+
+    const beginn = (e: TouchEvent) => {
+      const finger = e.touches[0];
+      const ziel = e.target as Element | null;
+      if (
+        e.touches.length !== 1 ||
+        !finger ||
+        ziel?.closest(
+          '[data-vaul-handle], input[type="range"], [data-kein-wegwischen]',
+        )
+      ) {
+        zustand = "aus";
+        return;
+      }
+      start = {
+        x: finger.clientX,
+        y: finger.clientY,
+        zeit: performance.now(),
+        oben: ganzOben(ziel, el),
+      };
+      zustand = "offen";
+      strecke = 0;
+    };
+
+    const bewegen = (e: TouchEvent) => {
+      const finger = e.touches[0];
+      if (!start || !finger || zustand === "aus") {
+        return;
+      }
+      const dx = finger.clientX - start.x;
+      const dy = finger.clientY - start.y;
+      if (zustand === "offen") {
+        if (Math.abs(dx) > ENTSCHEIDEN_AB && Math.abs(dx) > Math.abs(dy)) {
+          zustand = "aus";
+        } else if (dy < -ENTSCHEIDEN_AB / 2 || (dy > 0 && !start.oben)) {
+          zustand = "aus";
+        } else if (dy > ENTSCHEIDEN_AB) {
+          zustand = "ziehen";
+          start = { ...start, y: finger.clientY };
+        }
+        return;
+      }
+      e.preventDefault();
+      strecke = Math.max(0, dy);
+      el.style.transition = "none";
+      el.style.transform = `translate3d(0, ${strecke}px, 0)`;
+    };
+
+    const ende = () => {
+      if (zustand === "ziehen" && start) {
+        const schwung = strecke / Math.max(1, performance.now() - start.zeit);
+        if (strecke > SCHLIESSEN_AB || (schwung > SCHWUNG && strecke > 40)) {
+          // vaul fährt das Fenster von hier aus weiter nach unten.
+          el.style.transition = "";
+          schliessen.current?.click();
+        } else {
+          zuruecksetzen();
+        }
+      }
+      zustand = "aus";
+      start = null;
+    };
+
+    el.addEventListener("touchstart", beginn, { passive: true });
+    el.addEventListener("touchmove", bewegen, { passive: false });
+    el.addEventListener("touchend", ende);
+    el.addEventListener("touchcancel", ende);
+    return () => {
+      el.removeEventListener("touchstart", beginn);
+      el.removeEventListener("touchmove", bewegen);
+      el.removeEventListener("touchend", ende);
+      el.removeEventListener("touchcancel", ende);
+    };
+  }, [el, schliessen]);
+}
+
 function DrawerContent({
   className,
   children,
+  ref,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  // Der Inhalt wird erst beim Öffnen eingehängt – deshalb als State, nicht als Ref.
+  const [fenster, setFenster] = useState<HTMLDivElement | null>(null);
+  const schliessen = useRef<HTMLButtonElement | null>(null);
+  useWegwischen(fenster, schliessen);
+  // Stabil halten: Eine neue Ref-Funktion je Render hängte das Element jedes Mal neu ein.
+  const refSetzen = useCallback(
+    (knoten: HTMLDivElement | null) => {
+      setFenster(knoten);
+      if (typeof ref === "function") {
+        ref(knoten);
+      } else if (ref) {
+        ref.current = knoten;
+      }
+    },
+    [ref],
+  );
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
+        ref={refSetzen}
         className={cn(
           "group/drawer-content fixed z-50 flex h-auto flex-col bg-background",
           "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b",
@@ -78,6 +220,12 @@ function DrawerContent({
           preventCycle
           aria-label="Zum Schließen nach unten ziehen"
           className="mx-auto mt-4 hidden !h-2 !w-[100px] shrink-0 !rounded-full !bg-muted !opacity-100 group-data-[vaul-drawer-direction=bottom]/drawer-content:block"
+        />
+        <DrawerPrimitive.Close
+          ref={schliessen}
+          tabIndex={-1}
+          aria-hidden
+          className="hidden"
         />
         {children}
       </DrawerPrimitive.Content>
