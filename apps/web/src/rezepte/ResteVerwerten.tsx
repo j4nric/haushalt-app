@@ -171,7 +171,7 @@ export function ResteVerwerten({
                   <span className="block truncate font-semibold">
                     {rezept.titel}
                   </span>
-                  <span className="block text-xs text-emerald-700 dark:text-emerald-400">
+                  <span className="block text-xs text-erfolg">
                     ✓ {nutzt.join(", ")}
                     {reste.length > 1 &&
                       ` (${nutzt.length} von ${reste.length})`}

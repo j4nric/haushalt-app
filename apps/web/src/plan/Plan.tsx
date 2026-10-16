@@ -394,7 +394,7 @@ function Eintrag({
               : "ohne Rezept"}
             {erledigt && <span>✓ erledigt</span>}
             {schonAm && !erledigt && (
-              <span className="rounded-full bg-amber-500/15 px-1.5 text-amber-700 dark:text-amber-300">
+              <span className="rounded-full bg-warning/15 px-1.5 text-warning-foreground">
                 🔁 schon am {wochentag(schonAm)}
               </span>
             )}

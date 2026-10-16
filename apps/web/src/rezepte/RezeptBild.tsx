@@ -69,7 +69,7 @@ export function RezeptBild({
       )}
       style={{
         background:
-          "linear-gradient(135deg, color-mix(in oklab, var(--primary) 18%, var(--card)), color-mix(in oklab, #f59e0b 22%, var(--card)))",
+          "linear-gradient(135deg, color-mix(in oklab, var(--primary) 18%, var(--card)), color-mix(in oklab, var(--favorit) 22%, var(--card)))",
       }}
     >
       {rezeptEmoji(titel)}

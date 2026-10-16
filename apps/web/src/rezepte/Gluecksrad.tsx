@@ -8,6 +8,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { kategorieFarbe, useEinstellungen } from "@/einstellungen";
 import { ziehenOhneZuruecklegen } from "@/lib/zufall";
 import { rezeptEmoji } from "@/rezepte/RezeptBild";
 
@@ -19,16 +20,17 @@ export type RadRezept = {
 };
 
 const FELDER = 8;
-const FARBEN = [
-  "#16a34a",
-  "#db2777",
-  "#0284c7",
-  "#c2410c",
-  "#9333ea",
-  "#0891b2",
-  "#a16207",
-  "#dc2626",
-];
+/** Kategorien, deren Farben (aus der gewählten Palette) die Felder füllen. */
+const FELD_KATEGORIEN = [
+  "obst_gemuese",
+  "suesses_snacks",
+  "milch_kaese",
+  "brot_backwaren",
+  "drogerie",
+  "getraenke",
+  "vorrat",
+  "fleisch_fisch",
+] as const;
 
 /** Titel passt aufs Feld: höchstens 13 Zeichen. */
 function kurz(titel: string) {
@@ -51,6 +53,8 @@ export function Gluecksrad({
   const [drehung, setDrehung] = useState(0);
   const [dreht, setDreht] = useState(false);
   const [gewinner, setGewinner] = useState<RadRezept | null>(null);
+  const einstellungen = useEinstellungen();
+  const farben = FELD_KATEGORIEN.map((k) => kategorieFarbe(einstellungen, k));
 
   function starten() {
     setFelder(ziehenOhneZuruecklegen(rezepte, FELDER));
@@ -134,8 +138,8 @@ export function Gluecksrad({
                     <g key={f.id}>
                       <path
                         d={`M0 0 L${98 * Math.cos(von)} ${98 * Math.sin(von)} A98 98 0 ${gross} 1 ${98 * Math.cos(bis)} ${98 * Math.sin(bis)} Z`}
-                        fill={FARBEN[i % FARBEN.length]}
-                        stroke="white"
+                        fill={farben[i % farben.length]}
+                        stroke="var(--card)"
                         strokeWidth="1.5"
                       />
                       {/* Emoji außen, Titel entlang des Radius nach innen. */}
@@ -164,7 +168,12 @@ export function Gluecksrad({
                     </g>
                   );
                 })}
-                <circle r="14" fill="white" stroke="#e5e7eb" strokeWidth="2" />
+                <circle
+                  r="14"
+                  fill="var(--card)"
+                  stroke="var(--border)"
+                  strokeWidth="2"
+                />
               </svg>
             </div>
             <div className="space-y-3 px-4 pt-5 text-center" aria-live="polite">

@@ -331,7 +331,8 @@ function Uebersicht({
               onClick={() => gehe([liebling.id])}
               className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left"
               style={{
-                background: "color-mix(in oklab, var(--card), #f59e0b 14%)",
+                background:
+                  "color-mix(in oklab, var(--card), var(--favorit) 14%)",
               }}
             >
               <span aria-hidden className="text-3xl">
