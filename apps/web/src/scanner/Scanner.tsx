@@ -252,7 +252,7 @@ export function Scanner({
               variant="secondary"
               className={cn(
                 "size-11 rounded-full",
-                licht.an && "bg-amber-300 text-black",
+                licht.an && "bg-favorit text-black",
               )}
               aria-label={licht.an ? "Licht aus" : "Licht an"}
               aria-pressed={licht.an}
@@ -277,11 +277,11 @@ export function Scanner({
         <div
           className={cn(
             "relative h-[150px] w-[min(78vw,340px)] overflow-hidden rounded-2xl border-2 transition-colors duration-200",
-            treffer ? "border-emerald-400" : "border-white/80",
+            treffer ? "border-erfolg-leuchtend" : "border-white/80",
           )}
         >
           {zustand === "bereit" && (
-            <span className="absolute inset-x-3 h-0.5 rounded bg-emerald-400/90 shadow-[0_0_12px_2px] shadow-emerald-400/60 [animation:scanlinie_1.8s_ease-in-out_infinite_alternate]" />
+            <span className="absolute inset-x-3 h-0.5 rounded bg-erfolg-leuchtend/90 shadow-[0_0_12px_2px] shadow-erfolg-leuchtend/60 [animation:scanlinie_1.8s_ease-in-out_infinite_alternate]" />
           )}
         </div>
       </div>
@@ -291,7 +291,7 @@ export function Scanner({
           aria-live="polite"
           className={cn(
             "mx-auto w-fit rounded-full px-4 py-2 text-center text-sm font-medium transition-all",
-            meldung ? "bg-emerald-500 text-white" : "bg-black/50",
+            meldung ? "bg-erfolg text-white" : "bg-black/50",
           )}
         >
           {meldung ??

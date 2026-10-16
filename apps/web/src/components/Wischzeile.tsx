@@ -58,7 +58,7 @@ export function Wischzeile({
         <div
           aria-hidden
           className={cn(
-            "absolute inset-0 flex items-center gap-2 px-5 text-sm font-medium text-white transition-opacity",
+            "absolute inset-0 flex items-center gap-2 px-5 text-sm font-medium transition-opacity",
             aktiv.farbe,
             versatz < 0 ? "justify-end" : "justify-start",
             erreicht ? "opacity-100" : "opacity-70",

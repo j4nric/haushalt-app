@@ -3,12 +3,14 @@ import { RotateCcw } from "lucide-react";
 import { KategorieSymbol } from "@/components/KategorieSymbol";
 import { Button } from "@/components/ui/button";
 import {
+  type AppThema,
   einstellungenAendern,
   einstellungenZuruecksetzen,
   type KategorieSchluessel,
   kategorieFarbe,
   PALETTEN,
   paletteAlsEigene,
+  passendeVorschau,
   SPALTEN,
   THEMEN,
   useEinstellungen,
@@ -64,9 +66,7 @@ export function Darstellung() {
 
       <div className="space-y-3 rounded-xl border bg-card p-4">
         <h3 className="font-medium">Farbschema der App</h3>
-        <Umschalter
-          label="Farbschema der App"
-          optionen={THEMEN}
+        <ThemaWahl
           wert={e.thema}
           waehlen={(thema) => einstellungenAendern({ thema })}
         />
@@ -111,6 +111,17 @@ export function Darstellung() {
             )
           }
         />
+        <p className="text-xs text-muted-foreground">
+          {e.palette === "passend"
+            ? "Kräftige Farben, abgestimmt auf das Farbschema der App."
+            : e.palette === "schlicht"
+              ? "Alle Kategorien in der Akzentfarbe."
+              : e.palette === "gedeckt"
+                ? "Zurückhaltende Töne, unabhängig vom Farbschema."
+                : e.palette === "kraeftig"
+                  ? "Klare, kräftige Farben, unabhängig vom Farbschema."
+                  : "Jede Kategorie in einer selbst gewählten Farbe."}
+        </p>
         <ul className="grid grid-cols-2 gap-x-3 gap-y-2">
           {ALLE_KATEGORIEN.map((k) => (
             <li key={k.id} className="flex items-center gap-2 text-sm">
@@ -146,10 +157,124 @@ export function Darstellung() {
           ))}
         </ul>
       </div>
+      <div className="space-y-3 rounded-xl border bg-card p-4">
+        <h3 className="font-medium">Symbole im Vorrat</h3>
+        <Umschalter
+          label="Symbole im Vorrat"
+          optionen={[
+            { id: "produkt", name: "Je Produkt" },
+            { id: "kategorie", name: "Je Kategorie" },
+          ]}
+          wert={e.produktsymbole ? "produkt" : "kategorie"}
+          waehlen={(w) =>
+            einstellungenAendern({ produktsymbole: w === "produkt" })
+          }
+        />
+        <ul
+          aria-label="Beispiele"
+          className="flex justify-between gap-2 px-1 text-xs text-muted-foreground"
+        >
+          {BEISPIELE.map((b) => (
+            <li key={b.name} className="flex flex-col items-center gap-1">
+              <KategorieSymbol
+                kategorie={b.kategorie}
+                name={b.name}
+                className="size-6"
+              />
+              {b.name}
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          Unbekanntes zeigt das Symbol seiner Kategorie.
+        </p>
+      </div>
       <p className="px-1 text-xs text-muted-foreground">
         Gilt nur für dieses Gerät.
       </p>
     </section>
+  );
+}
+
+const BEISPIELE = [
+  { name: "Käse", kategorie: "milch_kaese" },
+  { name: "Baguette", kategorie: "brot_backwaren" },
+  { name: "Würstchen", kategorie: "fleisch_fisch" },
+  { name: "Pilze", kategorie: "obst_gemuese" },
+  { name: "Klopapier", kategorie: "drogerie" },
+  { name: "Waschmittel", kategorie: "haushalt" },
+];
+
+/**
+ * Farbschemata als Kacheln mit Vorschau: Hintergrund, Karte mit Akzent und ein paar
+ * Kategoriefarben. Die Vorschau folgt dem Gerät (hell oder dunkel).
+ */
+function ThemaWahl({
+  wert,
+  waehlen,
+}: {
+  wert: AppThema;
+  waehlen: (id: AppThema) => void;
+}) {
+  return (
+    <fieldset className="grid grid-cols-3 gap-2">
+      <legend className="sr-only">Farbschema der App</legend>
+      {THEMEN.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          aria-pressed={wert === t.id}
+          onClick={() => waehlen(t.id)}
+          className={cn(
+            "flex flex-col gap-1.5 rounded-xl border-2 border-transparent p-1 pb-1.5 text-xs font-medium text-muted-foreground",
+            wert === t.id && "border-primary text-foreground",
+          )}
+        >
+          <ThemaVorschau farben={t.vorschau} className="dark:hidden" />
+          <ThemaVorschau
+            farben={t.vorschauDunkel}
+            className="hidden dark:flex"
+          />
+          {t.name}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+function ThemaVorschau({
+  farben,
+  className,
+}: {
+  farben: { akzent: string; hintergrund: string; flaeche: string };
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex h-14 flex-col justify-end gap-1 rounded-lg border p-1.5",
+        className,
+      )}
+      style={{ background: farben.hintergrund }}
+    >
+      <span
+        className="flex items-center gap-1 rounded-md p-1"
+        style={{ background: farben.flaeche }}
+      >
+        {passendeVorschau(farben.akzent).map((f) => (
+          <span
+            key={f}
+            className="size-2 rounded-full"
+            style={{ background: f }}
+          />
+        ))}
+      </span>
+      <span
+        className="h-2 w-3/5 rounded-full"
+        style={{ background: farben.akzent }}
+      />
+    </span>
   );
 }
 

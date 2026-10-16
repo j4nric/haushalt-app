@@ -148,7 +148,7 @@ export function AdminPanel({
                     {new Date(n.erstellt_am).toLocaleDateString("de-DE")}
                   </p>
                   {n.haushalte.length === 0 ? (
-                    <p className="pt-1 text-sm text-amber-700 dark:text-amber-300">
+                    <p className="pt-1 text-sm text-warning-foreground">
                       Kein Haushalt
                     </p>
                   ) : (

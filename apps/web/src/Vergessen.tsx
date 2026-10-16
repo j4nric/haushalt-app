@@ -54,8 +54,8 @@ export function Vergessen({
       aria-label="Vielleicht vergessen"
       className="mt-2 rounded-2xl border p-3"
       style={{
-        background: "color-mix(in oklab, var(--card), #f59e0b 12%)",
-        borderColor: "color-mix(in oklab, var(--border), #f59e0b 35%)",
+        background: "color-mix(in oklab, var(--card), var(--favorit) 12%)",
+        borderColor: "color-mix(in oklab, var(--border), var(--favorit) 35%)",
       }}
     >
       <h3 className="px-1 pb-2 text-sm font-semibold">

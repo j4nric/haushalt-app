@@ -425,7 +425,7 @@ function VorratsEintrag({
           : {
               text: rest ? "Aufgegessen" : "Aufgebraucht",
               symbol: <PackageX className="size-5" />,
-              farbe: "bg-destructive",
+              farbe: "bg-destructive text-white",
               ausfuehren: aufgebraucht,
             }
       }
@@ -435,7 +435,7 @@ function VorratsEintrag({
           : {
               text: "Auf die Liste",
               symbol: <ShoppingCart className="size-5" />,
-              farbe: "bg-primary",
+              farbe: "bg-primary text-primary-foreground",
               ausfuehren: aufDieListe,
             }
       }
@@ -454,7 +454,7 @@ function VorratsEintrag({
         >
           {zeile.gericht ? (
             zeile.lagerort === "tk" ? (
-              <Snowflake className="size-6 shrink-0 text-sky-500" aria-hidden />
+              <Snowflake className="size-6 shrink-0 text-frost" aria-hidden />
             ) : (
               <Refrigerator
                 className="size-6 shrink-0 text-muted-foreground"
@@ -462,7 +462,7 @@ function VorratsEintrag({
               />
             )
           ) : (
-            <KategorieSymbol kategorie={zeile.kategorie} />
+            <KategorieSymbol kategorie={zeile.kategorie} name={zeile.name} />
           )}
           <span className="flex-1">
             <span

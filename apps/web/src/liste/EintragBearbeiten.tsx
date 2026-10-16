@@ -51,7 +51,10 @@ export function EintragBearbeiten({
           >
             <DrawerHeader>
               <DrawerTitle className="flex items-center justify-center gap-2">
-                <KategorieSymbol kategorie={eintrag.kategorie} />
+                <KategorieSymbol
+                  kategorie={eintrag.kategorie}
+                  name={eintrag.name}
+                />
                 {eintrag.name}
               </DrawerTitle>
               <DrawerDescription>

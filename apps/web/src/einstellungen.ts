@@ -1,6 +1,11 @@
 import type { Kategorie } from "@haushalt/db/kategorien";
 import { useSyncExternalStore } from "react";
-import { istDunkel, istHexFarbe, textFarbeAuf } from "@/lib/farben";
+import {
+  harmonisieren,
+  istDunkel,
+  istHexFarbe,
+  textFarbeAuf,
+} from "@/lib/farben";
 
 /**
  * Darstellungs-Einstellungen dieses Geräts (nicht des Haushalts): Farbschema der App
@@ -10,8 +15,25 @@ import { istDunkel, istHexFarbe, textFarbeAuf } from "@/lib/farben";
 
 export type KategorieSchluessel = Kategorie | "sonstiges";
 
-export type AppThema = "system" | "frisch" | "ozean" | "eigen";
-export type KategoriePalette = "kraeftig" | "gedeckt" | "schlicht" | "eigen";
+export type AppThema =
+  | "system"
+  | "frisch"
+  | "ozean"
+  | "petrol"
+  | "salbei"
+  | "senf"
+  | "terrakotta"
+  | "beere"
+  | "lavendel"
+  | "schiefer"
+  | "mitternacht"
+  | "eigen";
+export type KategoriePalette =
+  | "passend"
+  | "kraeftig"
+  | "gedeckt"
+  | "schlicht"
+  | "eigen";
 
 export type Einstellungen = {
   thema: AppThema;
@@ -22,6 +44,8 @@ export type Einstellungen = {
   spalten: Spalten;
   /** Überschriften der Kategorien in der Einkaufsliste zeigen (sonst nur Symbol). */
   ueberschriften: boolean;
+  /** Im Vorrat ein Symbol je Produkt („Käse“) statt nur je Kategorie. */
+  produktsymbole: boolean;
 };
 
 export type Spalten = 1 | 2 | 3;
@@ -34,7 +58,11 @@ export const SPALTEN: { id: Spalten; name: string }[] = [
 
 type Farben = { akzent: string; hintergrund: string; flaeche: string };
 
-/** Vorgegebene Farbschemata, jeweils für hell und dunkel (folgt dem Gerät). */
+/**
+ * Vorgegebene Farbschemata, jeweils für hell und dunkel (folgt dem Gerät).
+ * Akzent, Hintergrund und Karten stammen aus derselben Farbfamilie; der Akzent
+ * erreicht auf dem Hintergrund mindestens 4,5 : 1 (lesbarer Text und Symbole).
+ */
 const VORGABEN: Record<
   Exclude<AppThema, "eigen">,
   { hell: Farben; dunkel: Farben }
@@ -51,42 +79,127 @@ const VORGABEN: Record<
     hell: { akzent: "#2563eb", hintergrund: "#eaf2fd", flaeche: "#ffffff" },
     dunkel: { akzent: "#60a5fa", hintergrund: "#0a1426", flaeche: "#101e38" },
   },
+  petrol: {
+    hell: { akzent: "#0f766e", hintergrund: "#ecf6f5", flaeche: "#ffffff" },
+    dunkel: { akzent: "#2dd4bf", hintergrund: "#071a19", flaeche: "#0e2725" },
+  },
+  salbei: {
+    hell: { akzent: "#4d6b47", hintergrund: "#f3f2ea", flaeche: "#fcfbf7" },
+    dunkel: { akzent: "#a3bf9b", hintergrund: "#141712", flaeche: "#1f241c" },
+  },
+  senf: {
+    hell: { akzent: "#9a5b00", hintergrund: "#fbf6e6", flaeche: "#fffdf6" },
+    dunkel: { akzent: "#f5c04a", hintergrund: "#18140a", flaeche: "#251f10" },
+  },
+  terrakotta: {
+    hell: { akzent: "#b4441c", hintergrund: "#faf1ea", flaeche: "#fffaf6" },
+    dunkel: { akzent: "#f4895a", hintergrund: "#1b110c", flaeche: "#2a1a12" },
+  },
+  beere: {
+    hell: { akzent: "#be185d", hintergrund: "#fcf0f5", flaeche: "#ffffff" },
+    dunkel: { akzent: "#f472b6", hintergrund: "#1d0c15", flaeche: "#2b1420" },
+  },
+  lavendel: {
+    hell: { akzent: "#6d3fd0", hintergrund: "#f4f2fd", flaeche: "#ffffff" },
+    dunkel: { akzent: "#b39dfa", hintergrund: "#120f22", flaeche: "#1d1833" },
+  },
+  schiefer: {
+    hell: { akzent: "#3f5873", hintergrund: "#eff2f5", flaeche: "#ffffff" },
+    dunkel: { akzent: "#9fb6cf", hintergrund: "#0e1319", flaeche: "#18202a" },
+  },
+  // Immer dunkel: Nachtblau mit warmem Gold.
+  mitternacht: {
+    hell: { akzent: "#f2b84b", hintergrund: "#0b1020", flaeche: "#151c33" },
+    dunkel: { akzent: "#f2b84b", hintergrund: "#0b1020", flaeche: "#151c33" },
+  },
 };
 
-export const THEMEN: {
-  id: AppThema;
-  name: string;
-  beschreibung: string;
-  vorschau: Farben;
-}[] = [
+const THEMEN_TEXTE: { id: AppThema; name: string; beschreibung: string }[] = [
   {
     id: "system",
     name: "System",
     beschreibung: "Neutral in Schwarz und Weiß, hell oder dunkel wie das Gerät",
-    vorschau: VORGABEN.system.hell,
   },
   {
     id: "frisch",
     name: "Frisch",
     beschreibung: "Grün auf zartem Mint, hell oder dunkel wie das Gerät",
-    vorschau: VORGABEN.frisch.hell,
   },
   {
     id: "ozean",
     name: "Ozean",
     beschreibung: "Blau auf hellem Himmelblau, hell oder dunkel wie das Gerät",
-    vorschau: VORGABEN.ozean.hell,
+  },
+  {
+    id: "petrol",
+    name: "Petrol",
+    beschreibung:
+      "Tiefes Blaugrün auf kühlem Weiß, hell oder dunkel wie das Gerät",
+  },
+  {
+    id: "salbei",
+    name: "Salbei",
+    beschreibung: "Gedecktes Kräutergrün auf Leinen, ruhig und natürlich",
+  },
+  {
+    id: "senf",
+    name: "Senf",
+    beschreibung: "Warmes Senfgelb auf Creme, hell oder dunkel wie das Gerät",
+  },
+  {
+    id: "terrakotta",
+    name: "Terrakotta",
+    beschreibung: "Gebrannte Erde auf Sand – warm wie eine Landküche",
+  },
+  {
+    id: "beere",
+    name: "Beere",
+    beschreibung: "Himbeerrot auf zartem Rosé, hell oder dunkel wie das Gerät",
+  },
+  {
+    id: "lavendel",
+    name: "Lavendel",
+    beschreibung: "Violett auf hellem Flieder, hell oder dunkel wie das Gerät",
+  },
+  {
+    id: "schiefer",
+    name: "Schiefer",
+    beschreibung: "Kühles Blaugrau, schlicht und sachlich",
+  },
+  {
+    id: "mitternacht",
+    name: "Mitternacht",
+    beschreibung: "Immer dunkel: Nachtblau mit warmem Gold",
   },
   {
     id: "eigen",
     name: "Eigene",
     beschreibung:
       "Akzent, Hintergrund und Karten selbst wählen – gilt immer, auch im Dunkelmodus",
-    vorschau: { akzent: "#c2410c", hintergrund: "#1c1917", flaeche: "#292524" },
   },
 ];
 
+export const THEMEN: {
+  id: AppThema;
+  name: string;
+  beschreibung: string;
+  vorschau: Farben;
+  vorschauDunkel: Farben;
+}[] = THEMEN_TEXTE.map((t) => {
+  const eigen = {
+    akzent: "#c2410c",
+    hintergrund: "#1c1917",
+    flaeche: "#292524",
+  };
+  return {
+    ...t,
+    vorschau: t.id === "eigen" ? eigen : VORGABEN[t.id].hell,
+    vorschauDunkel: t.id === "eigen" ? eigen : VORGABEN[t.id].dunkel,
+  };
+});
+
 export const PALETTEN: { id: KategoriePalette; name: string }[] = [
+  { id: "passend", name: "Passend" },
   { id: "kraeftig", name: "Kräftig" },
   { id: "gedeckt", name: "Gedeckt" },
   { id: "schlicht", name: "Schlicht" },
@@ -126,18 +239,40 @@ const STANDARD: Einstellungen = {
   thema: "frisch",
   spalten: 2,
   ueberschriften: true,
+  produktsymbole: true,
   eigenesThema: {
     akzent: "#15803d",
     hintergrund: "#f7f7f5",
     flaeche: "#ffffff",
   },
-  palette: "kraeftig",
+  palette: "passend",
   eigenePalette: { ...KRAEFTIG },
 };
 
 const SCHLUESSEL = "haushalt-einstellungen";
 
-/** CSS-Farbe einer Kategorie; „Schlicht“ nutzt die Akzentfarbe der App. */
+/** Akzent des gewählten Schemas (helle Variante), Bezugspunkt fürs Angleichen. */
+function themaAkzent(e: Einstellungen): string {
+  return e.thema === "eigen"
+    ? e.eigenesThema.akzent
+    : VORGABEN[e.thema].hell.akzent;
+}
+
+const angeglichen = new Map<string, string>();
+function passend(farbe: string, akzent: string, anteil = 0.16): string {
+  const schluessel = `${farbe}${akzent}${anteil}`;
+  let wert = angeglichen.get(schluessel);
+  if (!wert) {
+    wert = harmonisieren(farbe, akzent, anteil);
+    angeglichen.set(schluessel, wert);
+  }
+  return wert;
+}
+
+/**
+ * CSS-Farbe einer Kategorie. „Passend“ rückt die kräftigen Farben zum Akzent des
+ * Farbschemas hin; „Schlicht“ nutzt die Akzentfarbe selbst.
+ */
 export function kategorieFarbe(
   e: Einstellungen,
   kategorie: string | null | undefined,
@@ -152,9 +287,18 @@ export function kategorieFarbe(
       return GEDECKT[k];
     case "eigen":
       return e.eigenePalette[k];
+    case "passend":
+      return passend(KRAEFTIG[k], themaAkzent(e));
     default:
       return KRAEFTIG[k];
   }
+}
+
+/** Ein paar Kategoriefarben, wie „Passend“ sie zum Akzent zeigt (Vorschau). */
+export function passendeVorschau(akzent: string): string[] {
+  return (
+    ["obst_gemuese", "milch_kaese", "suesses_snacks", "brot_backwaren"] as const
+  ).map((k) => passend(KRAEFTIG[k], akzent));
 }
 
 /** Startwerte für „Eigene“: die gerade sichtbaren Farben übernehmen. */
@@ -166,6 +310,12 @@ export function paletteAlsEigene(
   }
   if (e.palette === "eigen") {
     return { ...e.eigenePalette };
+  }
+  if (e.palette === "passend") {
+    const akzent = themaAkzent(e);
+    return Object.fromEntries(
+      Object.entries(KRAEFTIG).map(([k, f]) => [k, passend(f, akzent)]),
+    ) as Record<KategorieSchluessel, string>;
   }
   return { ...KRAEFTIG };
 }
@@ -208,6 +358,10 @@ function laden(): Einstellungen {
       typeof roh.ueberschriften === "boolean"
         ? roh.ueberschriften
         : STANDARD.ueberschriften;
+    const produktsymbole =
+      typeof roh.produktsymbole === "boolean"
+        ? roh.produktsymbole
+        : STANDARD.produktsymbole;
     return {
       thema,
       palette,
@@ -215,6 +369,7 @@ function laden(): Einstellungen {
       eigenePalette,
       spalten,
       ueberschriften,
+      produktsymbole,
     };
   } catch {
     return STANDARD;
@@ -286,11 +441,46 @@ function themaCss(e: Einstellungen): string {
 @media (prefers-color-scheme: dark) { :root:root {${farbenCss(dunkel)}} }`;
 }
 
+/**
+ * Signalfarben (erledigt, knapp, löschen, tiefgekühlt, Favorit), je für hellen und
+ * dunklen Hintergrund. Sie bleiben erkennbar, rücken aber leicht zum Akzent hin.
+ */
+const SIGNALE = {
+  hell: {
+    erfolg: "#15803d",
+    warnung: "#c26a00",
+    warnungText: "#7a3f00",
+    gefahr: "#dc2626",
+    frost: "#0369a1",
+    favorit: "#d98a00",
+  },
+  dunkel: {
+    erfolg: "#4ade80",
+    warnung: "#f5b544",
+    warnungText: "#fbe2b0",
+    gefahr: "#f87171",
+    frost: "#38bdf8",
+    favorit: "#fbbf24",
+  },
+};
+
+function signaleCss(akzent: string, dunkel: boolean) {
+  const s = SIGNALE[dunkel ? "dunkel" : "hell"];
+  const p = (farbe: string) => passend(farbe, akzent, 0.1);
+  return `
+    --erfolg: ${p(s.erfolg)};
+    --warning: ${p(s.warnung)};
+    --warning-foreground: ${p(s.warnungText)};
+    --destructive: ${p(s.gefahr)};
+    --frost: ${p(s.frost)};
+    --favorit: ${p(s.favorit)};`;
+}
+
 /** Alle Farbvariablen aus drei Grundfarben; Text nach Kontrast, Zwischentöne per color-mix. */
 function farbenCss({ akzent, hintergrund, flaeche }: Farben) {
   const text = textFarbeAuf(hintergrund);
   const textFlaeche = textFarbeAuf(flaeche);
-  return `
+  return `${signaleCss(akzent, istDunkel(hintergrund))}
     color-scheme: ${istDunkel(hintergrund) ? "dark" : "light"};
     --background: ${hintergrund};
     --foreground: ${text};

@@ -208,7 +208,7 @@ export function RezeptDetail({
               className={cn(
                 "size-6 transition-transform active:scale-125",
                 rezept.favorit
-                  ? "fill-amber-400 text-amber-500"
+                  ? "fill-favorit text-favorit"
                   : "text-muted-foreground",
               )}
             />

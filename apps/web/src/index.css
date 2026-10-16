@@ -27,6 +27,9 @@
   --destructive: oklch(0.577 0.245 27.33);
   --warning: oklch(0.67 0.16 60);
   --warning-foreground: oklch(0.3 0.08 60);
+  --erfolg: oklch(0.52 0.14 150);
+  --frost: oklch(0.5 0.12 237);
+  --favorit: oklch(0.7 0.16 70);
   --border: oklch(0.91 0.006 145);
   --input: oklch(0.88 0.008 145);
   --ring: oklch(0.6 0.15 150);
@@ -51,6 +54,9 @@
     --destructive: oklch(0.65 0.2 25);
     --warning: oklch(0.78 0.15 70);
     --warning-foreground: oklch(0.92 0.06 70);
+    --erfolg: oklch(0.8 0.18 150);
+    --frost: oklch(0.75 0.14 230);
+    --favorit: oklch(0.83 0.16 85);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.6 0.15 150);
@@ -79,6 +85,11 @@
   --color-destructive: var(--destructive);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-erfolg: var(--erfolg);
+  /* Auf dem schwarzen Kamerabild (Scanner) heller, damit es leuchtet. */
+  --color-erfolg-leuchtend: color-mix(in oklab, var(--erfolg), white 35%);
+  --color-frost: var(--frost);
+  --color-favorit: var(--favorit);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

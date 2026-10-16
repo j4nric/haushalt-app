@@ -17,6 +17,7 @@ import {
   kategorieFarbe,
   useEinstellungen,
 } from "@/einstellungen";
+import { produktSymbol } from "@/lib/produktsymbole";
 import { cn } from "@/lib/utils";
 
 const SYMBOLE: Record<KategorieSchluessel, LucideIcon> = {
@@ -33,15 +34,31 @@ const SYMBOLE: Record<KategorieSchluessel, LucideIcon> = {
   sonstiges: Tag,
 };
 
-/** Schlichtes Symbol der Kategorie in ihrer Farbe (dekorativ, für Screenreader stumm). */
+/**
+ * Schlichtes Symbol in der Farbe der Kategorie (dekorativ, für Screenreader stumm).
+ * Mit `name` das Symbol des Produkts („Käse“), sonst das der Kategorie.
+ */
 export function KategorieSymbol({
   kategorie,
+  name,
   className,
 }: {
   kategorie: string | null;
+  name?: string;
   className?: string;
 }) {
   const einstellungen = useEinstellungen();
+  const Produkt =
+    name && einstellungen.produktsymbole ? produktSymbol(name) : null;
+  if (Produkt) {
+    return (
+      <Produkt
+        aria-hidden
+        className={cn("size-5 shrink-0", className)}
+        style={{ color: kategorieFarbe(einstellungen, kategorie) }}
+      />
+    );
+  }
   const Icon =
     SYMBOLE[
       (kategorie && kategorie in SYMBOLE

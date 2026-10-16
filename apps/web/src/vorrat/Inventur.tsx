@@ -146,7 +146,11 @@ function Runde({
         key={zeile.id}
         className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center"
       >
-        <KategorieSymbol kategorie={zeile.kategorie} />
+        <KategorieSymbol
+          kategorie={zeile.kategorie}
+          name={zeile.name}
+          className="size-10"
+        />
         <div>
           <p className="text-xs tracking-wide text-muted-foreground uppercase">
             {kategorieName(zeile.kategorie)}
