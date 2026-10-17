@@ -2,7 +2,12 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { testApp } from "../test/hilfen";
-import { istInterneAdresse, rezeptAusHtml, seiteHolen } from "./rezept-import";
+import {
+  istInterneAdresse,
+  ohneTracking,
+  rezeptAusHtml,
+  seiteHolen,
+} from "./rezept-import";
 
 const SEITE = `<!doctype html><html><head>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[
@@ -42,6 +47,51 @@ describe("rezeptAusHtml", () => {
       bild_url: null,
       schritte: ["Alles verrühren.", "In der Pfanne backen."],
     });
+  });
+
+  it("löst Verweise per @id auf und nimmt den Autor aus dem Titel (Chefkoch)", () => {
+    const basis = "https://www.chefkoch.de/rezepte/1/Eier.html";
+    const html = `<html><head>
+<meta property="og:image" content="https://img.example/og.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+  {"@type":"Recipe","@id":"${basis}#recipe","name":"Eier in Senfsauce von koch-anna",
+   "image":{"@id":"${basis}#primaryimage"},
+   "author":{"@id":"https://www.chefkoch.de/user/profil/x#author"},
+   "recipeYield":["4","4 Portionen"],
+   "recipeIngredient":["6 Eier","2 EL Senf"],
+   "recipeInstructions":[{"@type":"HowToStep","text":"Eier kochen."}]},
+  {"@type":"ImageObject","@id":"${basis}#primaryimage","url":"https://img.example/eier.jpg"},
+  {"@type":"Person","@id":"https://www.chefkoch.de/user/profil/x#author","name":"koch-anna"}
+]}</script></head></html>`;
+    const r = rezeptAusHtml(
+      html,
+      `${basis}?utm_source=teilen&utm_medium=x&id=7`,
+    );
+    expect(r).toMatchObject({
+      titel: "Eier in Senfsauce",
+      portionen: 4,
+      bild_url: "https://img.example/eier.jpg",
+      quelle_url: `${basis}?id=7`,
+      zutaten: ["6 Eier", "2 EL Senf"],
+      schritte: ["Eier kochen."],
+    });
+  });
+
+  it("nimmt das Vorschaubild, wenn das Rezept keins nennt", () => {
+    const html = `<meta content="/og.jpg" property="og:image">
+<script type="application/ld+json">{"@type":"Recipe","name":"Suppe","recipeIngredient":["Wasser"]}</script>`;
+    expect(rezeptAusHtml(html, "https://beispiel.de/suppe")?.bild_url).toBe(
+      "https://beispiel.de/og.jpg",
+    );
+  });
+
+  it("entfernt Tracking-Zusätze aus Links", () => {
+    expect(
+      ohneTracking("https://a.de/r.html?utm_source=x&utm_campaign=y&fbclid=1"),
+    ).toBe("https://a.de/r.html");
+    expect(ohneTracking("https://a.de/r.html?seite=2")).toBe(
+      "https://a.de/r.html?seite=2",
+    );
   });
 
   it("findet nichts, wo kein Rezept ist", () => {

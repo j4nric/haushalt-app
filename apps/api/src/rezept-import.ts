@@ -99,8 +99,8 @@ export async function seiteHolen(
         accept: "text/html,application/xhtml+xml",
         "user-agent": "Mozilla/5.0 (compatible; Haushalt-App Rezeptimport)",
       },
-    }).catch(() => {
-      throw new ImportFehler("Die Seite ist nicht erreichbar", 502);
+    }).catch((fehler: unknown) => {
+      throw nichtErreichbar(url, fehler);
     });
     const weiter = antwort.headers.get("location");
     if (antwort.status >= 300 && antwort.status < 400 && weiter) {
@@ -116,6 +116,27 @@ export async function seiteHolen(
     return { html: await lesenBegrenzt(antwort.body), url: url.toString() };
   }
   throw new ImportFehler("Zu viele Weiterleitungen", 502);
+}
+
+/**
+ * Warum der Abruf scheiterte – im Protokoll mit Ursache (DNS, abgelehnt, Zeit),
+ * in der App kurz und verständlich.
+ */
+function nichtErreichbar(url: URL, fehler: unknown): ImportFehler {
+  const e = fehler as {
+    name?: string;
+    cause?: { code?: string; message?: string };
+  };
+  const ursache =
+    e?.cause?.code ?? e?.cause?.message ?? e?.name ?? String(fehler);
+  console.warn(`Rezept-Import: ${url.host} nicht erreichbar (${ursache})`);
+  if (e?.name === "TimeoutError" || ursache === "UND_ERR_CONNECT_TIMEOUT") {
+    return new ImportFehler(
+      `${url.host} antwortet nicht – die Seite lässt den Abruf vom Server vielleicht nicht zu`,
+      502,
+    );
+  }
+  return new ImportFehler(`${url.host} ist nicht erreichbar (${ursache})`, 502);
 }
 
 async function lesenBegrenzt(body: ReadableStream<Uint8Array>) {
@@ -220,14 +241,75 @@ function texte(wert: unknown): string[] {
   return [];
 }
 
+/** Alle Objekte mit `@id` – Seiten wie Chefkoch verweisen auf Bild und Autor nur per Id. */
+function idVerzeichnis(
+  wert: unknown,
+  ziel = new Map<string, Record<string, unknown>>(),
+  tiefe = 0,
+) {
+  if (tiefe > 6 || !wert || typeof wert !== "object") {
+    return ziel;
+  }
+  const o = wert as Record<string, unknown>;
+  if (
+    !Array.isArray(wert) &&
+    typeof o["@id"] === "string" &&
+    Object.keys(o).length > 1
+  ) {
+    ziel.set(o["@id"], o);
+  }
+  for (const kind of Array.isArray(wert) ? wert : Object.values(o)) {
+    idVerzeichnis(kind, ziel, tiefe + 1);
+  }
+  return ziel;
+}
+
+/** `{ "@id": … }` durch das gemeinte Objekt ersetzen. */
+function aufloesen(
+  wert: unknown,
+  ids: Map<string, Record<string, unknown>>,
+): unknown {
+  if (Array.isArray(wert)) {
+    return wert.map((w) => aufloesen(w, ids));
+  }
+  if (wert && typeof wert === "object") {
+    const id = (wert as Record<string, unknown>)["@id"];
+    if (typeof id === "string" && Object.keys(wert).length === 1) {
+      return ids.get(id) ?? wert;
+    }
+  }
+  return wert;
+}
+
+/** „Eier in Senfsauce von manuela-one“ → „Eier in Senfsauce“ (Autor steht im Titel). */
+function ohneAutor(titel: string, autor: unknown): string {
+  const namen = (Array.isArray(autor) ? autor : [autor])
+    .map((a) =>
+      typeof a === "string"
+        ? a
+        : a && typeof a === "object"
+          ? (a as Record<string, unknown>).name
+          : null,
+    )
+    .filter((n): n is string => typeof n === "string" && n.trim() !== "");
+  for (const name of namen) {
+    const endung = ` von ${name.trim()}`;
+    if (
+      titel.toLowerCase().endsWith(endung.toLowerCase()) &&
+      titel.length > endung.length
+    ) {
+      return titel.slice(0, -endung.length).trim();
+    }
+  }
+  return titel;
+}
+
 function bild(wert: unknown, basis: string): string | null {
   const roh = Array.isArray(wert) ? wert[0] : wert;
+  const o =
+    roh && typeof roh === "object" ? (roh as Record<string, unknown>) : null;
   const adresse =
-    typeof roh === "string"
-      ? roh
-      : roh && typeof roh === "object"
-        ? (roh as Record<string, unknown>).url
-        : null;
+    typeof roh === "string" ? roh : (o?.url ?? o?.contentUrl ?? null);
   if (typeof adresse !== "string") {
     return null;
   }
@@ -248,6 +330,33 @@ function portionen(wert: unknown): number | null {
   return Number.isInteger(zahl) && zahl > 0 && zahl < 1000 ? zahl : null;
 }
 
+/** Tracking-Zusätze („?utm_source=…“ beim Teilen) gehören nicht in die Quelle. */
+export function ohneTracking(adresse: string): string {
+  try {
+    const url = new URL(adresse);
+    for (const name of [...url.searchParams.keys()]) {
+      if (/^(utm_|fbclid$|gclid$|mc_[ce]id$|igshid$|si$)/i.test(name)) {
+        url.searchParams.delete(name);
+      }
+    }
+    return url.toString();
+  } catch {
+    return adresse;
+  }
+}
+
+/** Vorschaubild für soziale Netze – Ersatz, wenn das Rezept selbst keins nennt. */
+function ogBild(html: string, basis: string): string | null {
+  const treffer =
+    html.match(
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+    ) ??
+    html.match(
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+    );
+  return treffer?.[1] ? bild(reinerText(treffer[1]), basis) : null;
+}
+
 /** Liest das Rezept aus einer HTML-Seite; `null`, wenn keins drinsteht. */
 export function rezeptAusHtml(html: string, url: string): RezeptImport | null {
   const bloecke = html.matchAll(
@@ -261,15 +370,18 @@ export function rezeptAusHtml(html: string, url: string): RezeptImport | null {
       continue;
     }
     const r = findeRezept(daten);
-    const titel = r && typeof r.name === "string" ? reinerText(r.name) : "";
-    if (!r || !titel) {
+    const roherTitel =
+      r && typeof r.name === "string" ? reinerText(r.name) : "";
+    if (!r || !roherTitel) {
       continue;
     }
+    const ids = idVerzeichnis(daten);
+    const titel = ohneAutor(roherTitel, aufloesen(r.author, ids));
     return {
       titel,
       portionen: portionen(r.recipeYield),
-      bild_url: bild(r.image, url),
-      quelle_url: url,
+      bild_url: bild(aufloesen(r.image, ids), url) ?? ogBild(html, url),
+      quelle_url: ohneTracking(url),
       zutaten: texte(r.recipeIngredient ?? r.ingredients),
       schritte: texte(r.recipeInstructions),
     };

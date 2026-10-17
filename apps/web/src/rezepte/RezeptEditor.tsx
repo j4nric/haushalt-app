@@ -314,7 +314,12 @@ function LinkImport({ uebernehmen }: { uebernehmen: (r: Import) => void }) {
     setLaeuft(false);
     const inhalt = await antwort?.json().catch(() => ({}));
     if (!antwort?.ok) {
-      toast.error(inhalt?.fehler ?? "Import fehlgeschlagen – bist du online?");
+      toast.error(
+        inhalt?.fehler ??
+          (antwort
+            ? `Import fehlgeschlagen (Fehler ${antwort.status})`
+            : "Import fehlgeschlagen – bist du online?"),
+      );
       return;
     }
     uebernehmen(inhalt as Import);
