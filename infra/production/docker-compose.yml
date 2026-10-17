@@ -5,6 +5,11 @@
 #   powersync → Sync-Dienst (nur über Caddy erreichbar)
 #
 # Start auf dem Server: docker compose up -d   (Werte in .env, Vorlage: .env.example)
+#
+# Eigenes Netz „intern“ mit eindeutigen Namen (haushalt-app, haushalt-postgres …):
+# Hängt ein anderes Projekt auf demselben Server einen Container in unser Netz, der
+# ebenfalls „app“ heißt, verteilte Docker die Anfragen sonst zufällig auf beide –
+# die API lieferte dann die fremde Seite (Oktober 2026).
 
 name: haushalt-prod
 
@@ -22,6 +27,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks: [intern]
     depends_on:
       - app
       - powersync
@@ -29,8 +35,11 @@ services:
   app:
     image: ${APP_IMAGE:-ghcr.io/j4nric/haushalt-app:latest}
     restart: unless-stopped
+    networks:
+      intern:
+        aliases: [haushalt-app]
     environment:
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: haushalt-postgres
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -49,6 +58,9 @@ services:
   postgres:
     image: postgres:18
     restart: unless-stopped
+    networks:
+      intern:
+        aliases: [haushalt-postgres]
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -67,13 +79,16 @@ services:
     image: journeyapps/powersync-service:1.27.0
     restart: unless-stopped
     command: ["start", "-r", "unified"]
+    networks:
+      intern:
+        aliases: [haushalt-powersync]
     environment:
       POWERSYNC_CONFIG_PATH: /config/service.yaml
       NODE_OPTIONS: --max-old-space-size=1000
       PS_PORT: "8080"
-      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/powersync_storage
-      PS_JWKS_URL: http://app:3000/api/auth/jwks
+      PS_DATA_SOURCE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@haushalt-postgres:5432/${POSTGRES_DB}
+      PS_STORAGE_SOURCE_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@haushalt-postgres:5432/powersync_storage
+      PS_JWKS_URL: http://haushalt-app:3000/api/auth/jwks
       PS_ADMIN_TOKEN: ${POWERSYNC_ADMIN_TOKEN}
     volumes:
       - ../powersync:/config:ro
@@ -82,6 +97,10 @@ services:
         condition: service_healthy
       app:
         condition: service_healthy
+
+networks:
+  intern:
+    name: haushalt-prod-intern
 
 volumes:
   postgres_data:

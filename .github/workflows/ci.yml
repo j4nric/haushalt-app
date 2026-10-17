@@ -155,8 +155,10 @@ jobs:
           # Stand der PowerSync-Konfiguration vorher merken: Sie ist als Datei eingebunden,
           # Änderungen (z. B. neue Sync-Tabellen) greifen erst nach einem Neustart.
           SYNC_VORHER=$(git rev-parse HEAD:infra/powersync 2>/dev/null || true)
+          CADDY_VORHER=$(git rev-parse HEAD:infra/production/Caddyfile 2>/dev/null || true)
           git fetch --quiet origin main && git reset --quiet --hard origin/main
           SYNC_NACHHER=$(git rev-parse HEAD:infra/powersync)
+          CADDY_NACHHER=$(git rev-parse HEAD:infra/production/Caddyfile)
           cd infra/production
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           APP_IMAGE="$IMAGE" docker compose pull app
@@ -166,6 +168,17 @@ jobs:
             echo "PowerSync-Konfiguration geändert – Neustart"
             APP_IMAGE="$IMAGE" docker compose restart powersync
           fi
+          # Das Caddyfile ist ebenfalls eingebunden – nach Änderungen neu einlesen.
+          if [ "$CADDY_VORHER" != "$CADDY_NACHHER" ]; then
+            echo "Caddyfile geändert – Neustart"
+            APP_IMAGE="$IMAGE" docker compose restart caddy
+          fi
+          # Antwortet wirklich unsere App? (Nicht nur „Container läuft“.)
+          for i in $(seq 1 10); do
+            curl -fsS -m 5 "https://$(grep -E '^DOMAIN=' .env | cut -d= -f2 | tr -d '"')/api/health" | grep -q '"ok":true' && break
+            [ "$i" = 10 ] && { echo "Health-Check fehlgeschlagen"; exit 1; }
+            sleep 3
+          done
           docker logout ghcr.io
           docker image prune -f
           SKRIPT
