@@ -6,13 +6,13 @@
 	# Sync-Dienst unter /powersync (Präfix wird entfernt). flush_interval -1:
 	# Der Sync-Stream muss sofort weitergereicht werden, nicht gepuffert.
 	handle_path /powersync/* {
-		reverse_proxy powersync:8080 {
+		reverse_proxy haushalt-powersync:8080 {
 			flush_interval -1
 		}
 	}
 
 	# Alles andere: API und Frontend
 	handle {
-		reverse_proxy app:3000
+		reverse_proxy haushalt-app:3000
 	}
 }
