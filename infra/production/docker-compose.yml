@@ -31,7 +31,7 @@ services:
     # („Vom Samen zum Wald“, Container vszw-sync). Der Sync-Server sieht so weder
     # Postgres noch die App. Das Netz legt dessen deploy/setup.sh an – es muss
     # existieren, bevor dieser Stand ausgerollt wird.
-    networks: [intern, vszw-proxy]
+    networks: [intern, vszw-proxy, tee-proxy]
     depends_on:
       - app
       - powersync
@@ -107,6 +107,11 @@ networks:
     name: haushalt-prod-intern
   vszw-proxy:
     name: vszw-proxy
+    external: true
+  # Netz der Tee-Etiketten-App (sticker-plot); nur Caddy hängt zusätzlich darin.
+  # Muss vor dem Deploy existieren: docker network create tee-proxy
+  tee-proxy:
+    name: tee-proxy
     external: true
 
 volumes:

@@ -1,5 +1,10 @@
 # HTTPS-Zertifikat holt Caddy automatisch (Let's Encrypt), sobald DOMAIN per DNS
 # auf diesen Server zeigt.
+#
+# WICHTIG: Diese Datei ist die einzige Caddy-Konfiguration des Servers und wird bei jedem
+# Deploy aus dem Repo überschrieben (git reset --hard). Blöcke anderer Apps auf demselben
+# Server gehören deshalb HIER ins Repo – von Hand angehängte Blöcke gehen verloren.
+# Jeder Name darf nur einmal vorkommen, sonst startet Caddy nicht.
 {$DOMAIN} {
 	encode zstd gzip
 
@@ -26,4 +31,14 @@ sync.62-83-23-90.sslip.io {
 	reverse_proxy vszw-sync:8787 {
 		flush_interval -1
 	}
+}
+
+# Tee-Etiketten (Repo j4nric/sticker-plot): Container sticker-plot-app-1 im eigenen
+# Netzwerk tee-proxy mit dem Alias tee-etiketten (/opt/sticker-plot/docker-compose.override.yml).
+tee-62-83-23-90.sslip.io {
+	encode gzip
+	request_body {
+		max_size 64MB
+	}
+	reverse_proxy tee-etiketten:3000
 }
