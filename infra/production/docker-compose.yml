@@ -27,7 +27,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    networks: [intern]
+    # vszw-proxy: nur Caddy hängt zusätzlich im Netz des Spiel-Sync-Servers
+    # („Vom Samen zum Wald“, Container vszw-sync). Der Sync-Server sieht so weder
+    # Postgres noch die App. Das Netz legt dessen deploy/setup.sh an – es muss
+    # existieren, bevor dieser Stand ausgerollt wird.
+    networks: [intern, vszw-proxy]
     depends_on:
       - app
       - powersync
@@ -101,6 +105,9 @@ services:
 networks:
   intern:
     name: haushalt-prod-intern
+  vszw-proxy:
+    name: vszw-proxy
+    external: true
 
 volumes:
   postgres_data:
