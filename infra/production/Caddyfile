@@ -18,10 +18,11 @@
 }
 
 # Sync-Server des Spiels „Vom Samen zum Wald“ (Repo j4nric/tree-grow-app, Container
-# vszw-sync im Netzwerk haushalt-prod-intern). Eigene Adresse, berührt die Haushalt-App
-# nicht. sslip.io löst den Namen auf die Server-IP auf; Caddy holt das Zertifikat selbst.
+# vszw-sync im eigenen Netzwerk vszw-proxy). Eigene Subdomain – die Haushalt-App selbst
+# läuft unter {$DOMAIN} = 62-83-23-90.sslip.io, ein zweiter Block dafür ließe Caddy nicht
+# starten. sslip.io löst auch Subdomains auf die Server-IP auf; Caddy holt das Zertifikat.
 # flush_interval -1: Live-Sync (Server-Sent Events) sofort weiterreichen.
-62-83-23-90.sslip.io {
+sync.62-83-23-90.sslip.io {
 	reverse_proxy vszw-sync:8787 {
 		flush_interval -1
 	}
