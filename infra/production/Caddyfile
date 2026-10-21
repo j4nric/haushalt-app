@@ -16,3 +16,13 @@
 		reverse_proxy haushalt-app:3000
 	}
 }
+
+# Sync-Server des Spiels „Vom Samen zum Wald“ (Repo j4nric/tree-grow-app, Container
+# vszw-sync im Netzwerk haushalt-prod-intern). Eigene Adresse, berührt die Haushalt-App
+# nicht. sslip.io löst den Namen auf die Server-IP auf; Caddy holt das Zertifikat selbst.
+# flush_interval -1: Live-Sync (Server-Sent Events) sofort weiterreichen.
+62-83-23-90.sslip.io {
+	reverse_proxy vszw-sync:8787 {
+		flush_interval -1
+	}
+}
