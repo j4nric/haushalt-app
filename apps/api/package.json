@@ -10,10 +10,10 @@
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/index.mjs --banner:js=\"import{createRequire}from'node:module';const require=createRequire(import.meta.url);\""
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.7.7",
+    "@better-auth/drizzle-adapter": "^1.7.12",
     "@haushalt/db": "workspace:*",
     "@hono/node-server": "^2.1.5",
-    "better-auth": "^1.7.7",
+    "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
     "postgres": "^3.4.9",
