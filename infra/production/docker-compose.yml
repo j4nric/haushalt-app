@@ -80,7 +80,7 @@ services:
       retries: 10
 
   powersync:
-    image: journeyapps/powersync-service:1.27.0
+    image: journeyapps/powersync-service:1.27.2
     restart: unless-stopped
     command: ["start", "-r", "unified"]
     networks:
