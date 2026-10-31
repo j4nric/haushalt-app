@@ -42,3 +42,10 @@ tee-62-83-23-90.sslip.io {
 	}
 	reverse_proxy tee-etiketten:3000
 }
+
+# Stammtisch (Repo j4nric/skat-roguelite): Container im eigenen Netzwerk
+# stammtisch-proxy mit dem Alias stammtisch-web.
+stammtisch-62-83-23-90.sslip.io {
+	encode zstd gzip
+	reverse_proxy stammtisch-web:80
+}

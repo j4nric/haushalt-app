@@ -31,7 +31,7 @@ services:
     # („Vom Samen zum Wald“, Container vszw-sync). Der Sync-Server sieht so weder
     # Postgres noch die App. Das Netz legt dessen deploy/setup.sh an – es muss
     # existieren, bevor dieser Stand ausgerollt wird.
-    networks: [intern, vszw-proxy, tee-proxy]
+    networks: [intern, vszw-proxy, tee-proxy, stammtisch-proxy]
     depends_on:
       - app
       - powersync
@@ -112,6 +112,11 @@ networks:
   # Muss vor dem Deploy existieren: docker network create tee-proxy
   tee-proxy:
     name: tee-proxy
+    external: true
+  # Netz des Spiels Stammtisch (j4nric/skat-roguelite); nur Caddy hängt zusätzlich darin.
+  # Muss vor dem Deploy existieren: docker network create stammtisch-proxy
+  stammtisch-proxy:
+    name: stammtisch-proxy
     external: true
 
 volumes:
