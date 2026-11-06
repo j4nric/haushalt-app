@@ -49,3 +49,10 @@ stammtisch-62-83-23-90.sslip.io {
 	encode zstd gzip
 	reverse_proxy stammtisch-web:80
 }
+
+# Uhrturm (Repo j4nric/auto-battle): Container im eigenen Netzwerk uhrturm-proxy
+# mit dem Alias uhrturm-web.
+uhrturm-62-83-23-90.sslip.io {
+	encode zstd gzip
+	reverse_proxy uhrturm-web:80
+}
