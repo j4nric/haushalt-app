@@ -43,24 +43,6 @@ tee-62-83-23-90.sslip.io {
 	reverse_proxy tee-etiketten:3000
 }
 
-# Stammtisch (Repo j4nric/skat-roguelite): Container im eigenen Netzwerk
-# stammtisch-proxy mit dem Alias stammtisch-web.
-stammtisch-62-83-23-90.sslip.io {
-	encode zstd gzip
-	reverse_proxy stammtisch-web:80
-}
-
-# Eigene Domain des Spiels (für die iOS-App: Passkeys brauchen eine feste Domain).
-# Die sslip-Adresse oben bleibt vorerst, bis die Spielstände umgezogen sind.
-one-more-skat.de {
-	encode zstd gzip
-	reverse_proxy stammtisch-web:80
-}
-
-www.one-more-skat.de {
-	redir https://one-more-skat.de{uri} permanent
-}
-
 # Uhrturm (Repo j4nric/auto-battle): Container im eigenen Netzwerk uhrturm-proxy
 # mit dem Alias uhrturm-web.
 uhrturm-62-83-23-90.sslip.io {
@@ -74,3 +56,12 @@ beinggod-62-83-23-90.sslip.io {
 	encode zstd gzip
 	reverse_proxy beinggod-web:80
 }
+
+# Einträge anderer Apps aus dem gemeinsamen Volume caddy-sites (Stammtisch-ADR 0024).
+# Jede App legt beim eigenen Deploy ihre Datei <app>.caddy hinein, lässt diesen Caddy
+# die ganze Konfiguration prüfen (caddy validate) und lädt ihn ohne Neustart neu
+# (caddy reload). Erreichbar sind die Apps über das gemeinsame Netzwerk edge. Neue
+# Apps brauchen deshalb keine Änderung mehr in diesem Repo. Heute: stammtisch.caddy
+# (Repo j4nric/skat-roguelite, deploy/site.caddy). Jeder Name darf auf dem Server nur
+# einmal vorkommen – auch nicht hier und in einer Datei zugleich.
+import /etc/caddy/sites/*.caddy

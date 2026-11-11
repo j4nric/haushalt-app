@@ -25,13 +25,18 @@ services:
       DOMAIN: ${DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Einträge anderer Apps (siehe Caddyfile, letzte Zeile). Die Apps finden
+      # diesen Container über das Label edge.caddy und laden ihn neu.
+      - caddy-sites:/etc/caddy/sites:ro
       - caddy_data:/data
       - caddy_config:/config
     # vszw-proxy: nur Caddy hängt zusätzlich im Netz des Spiel-Sync-Servers
     # („Vom Samen zum Wald“, Container vszw-sync). Der Sync-Server sieht so weder
     # Postgres noch die App. Das Netz legt dessen deploy/setup.sh an – es muss
     # existieren, bevor dieser Stand ausgerollt wird.
-    networks: [intern, vszw-proxy, tee-proxy, stammtisch-proxy, uhrturm-proxy, beinggod-proxy]
+    networks: [intern, edge, vszw-proxy, tee-proxy, stammtisch-proxy, uhrturm-proxy, beinggod-proxy]
+    labels:
+      edge.caddy: "true"
     depends_on:
       - app
       - powersync
@@ -113,6 +118,11 @@ networks:
   tee-proxy:
     name: tee-proxy
     external: true
+  # Gemeinsames Netz aller Apps hinter diesem Caddy (Stammtisch-ADR 0024). Legt der
+  # Deploy an, falls es fehlt; jede App hängt sich mit eigenem Alias hinein.
+  edge:
+    name: edge
+    external: true
   # Netz des Spiels Stammtisch (j4nric/skat-roguelite); nur Caddy hängt zusätzlich darin.
   # Muss vor dem Deploy existieren: docker network create stammtisch-proxy
   stammtisch-proxy:
@@ -133,3 +143,7 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  # Einträge anderer Apps für Caddy (Stammtisch-ADR 0024); legt der Deploy an, falls es fehlt.
+  caddy-sites:
+    name: caddy-sites
+    external: true

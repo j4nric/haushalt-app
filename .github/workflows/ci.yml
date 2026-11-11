@@ -52,6 +52,21 @@ jobs:
       - name: Tests
         run: pnpm test
 
+      # Caddy prüfen: ohne Einträge anderer Apps (leeres Volume) und mit einem
+      # Beispiel-Eintrag, wie ihn eine App ins Volume caddy-sites legt.
+      - name: Caddyfile prüfen
+        run: |
+          sites=$(mktemp -d)
+          pruefen() {
+            docker run --rm -e DOMAIN=example.org \
+              -v "$PWD/infra/production/Caddyfile:/etc/caddy/Caddyfile:ro" \
+              -v "$sites:/etc/caddy/sites:ro" \
+              caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          }
+          pruefen
+          printf 'beispiel.example.org {\n\treverse_proxy beispiel-web:80\n}\n' > "$sites/beispiel.caddy"
+          pruefen
+
   e2e:
     name: E2E (Offline-Sync)
     runs-on: ubuntu-latest
@@ -160,6 +175,9 @@ jobs:
           SYNC_NACHHER=$(git rev-parse HEAD:infra/powersync)
           CADDY_NACHHER=$(git rev-parse HEAD:infra/production/Caddyfile)
           cd infra/production
+          # Gemeinsames Netz und Volume für die Einträge anderer Apps (Stammtisch-ADR 0024).
+          docker network inspect edge >/dev/null 2>&1 || docker network create edge
+          docker volume inspect caddy-sites >/dev/null 2>&1 || docker volume create caddy-sites >/dev/null
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           APP_IMAGE="$IMAGE" docker compose pull app
           APP_IMAGE="$IMAGE" docker compose up -d --wait
