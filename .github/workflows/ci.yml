@@ -52,9 +52,26 @@ jobs:
       - name: Tests
         run: pnpm test
 
+      # Caddy prüfen: ohne Einträge anderer Apps (leeres Volume) und mit einem
+      # Beispiel-Eintrag, wie ihn eine App ins Volume caddy-sites legt.
+      - name: Caddyfile prüfen
+        run: |
+          sites=$(mktemp -d)
+          pruefen() {
+            docker run --rm -e DOMAIN=example.org \
+              -v "$PWD/infra/production/Caddyfile:/etc/caddy/Caddyfile:ro" \
+              -v "$sites:/etc/caddy/sites:ro" \
+              caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          }
+          pruefen
+          printf 'beispiel.example.org {\n\treverse_proxy beispiel-web:80\n}\n' > "$sites/beispiel.caddy"
+          pruefen
+
   e2e:
     name: E2E (Offline-Sync)
-    runs-on: ubuntu-latest
+    # ubuntu-latest ist seit 11.11.2026 Ubuntu 26.04; die Playwright-Version
+    # hier kennt es noch nicht. Bis zum Update fest auf 24.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -70,8 +87,10 @@ jobs:
       - name: Postgres und PowerSync starten
         run: docker compose up -d --wait
 
+      # Ohne --with-deps: Das Runner-Image hat die Bibliotheken schon, und apt
+      # hängt so nicht an den Ubuntu-Spiegeln (am 11.11.2026 stundenlang nicht auflösbar).
       - name: Playwright-Browser installieren
-        run: pnpm --filter @haushalt/web exec playwright install --with-deps chromium
+        run: pnpm --filter @haushalt/web exec playwright install chromium
 
       - name: E2E-Tests
         run: pnpm --filter @haushalt/web test:e2e
@@ -160,6 +179,15 @@ jobs:
           SYNC_NACHHER=$(git rev-parse HEAD:infra/powersync)
           CADDY_NACHHER=$(git rev-parse HEAD:infra/production/Caddyfile)
           cd infra/production
+          # Gemeinsames Netz und Volume für die Einträge anderer Apps (Stammtisch-ADR 0024).
+          docker network inspect edge >/dev/null 2>&1 || docker network create edge
+          docker volume inspect caddy-sites >/dev/null 2>&1 || docker volume create caddy-sites >/dev/null
+          # Neues Caddyfile samt Einträgen der Apps prüfen, bevor Caddy neu startet: Eine
+          # doppelte Domain oder ein kaputter Eintrag ließe sonst alle Seiten ausfallen.
+          # Schlägt das fehl, läuft der alte Caddy unverändert weiter.
+          docker run --rm -e DOMAIN="$(grep -E '^DOMAIN=' .env | cut -d= -f2 | tr -d '"')" \
+            -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -v caddy-sites:/etc/caddy/sites:ro \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           APP_IMAGE="$IMAGE" docker compose pull app
           APP_IMAGE="$IMAGE" docker compose up -d --wait
