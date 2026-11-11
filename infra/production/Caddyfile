@@ -50,6 +50,17 @@ stammtisch-62-83-23-90.sslip.io {
 	reverse_proxy stammtisch-web:80
 }
 
+# Eigene Domain des Spiels (für die iOS-App: Passkeys brauchen eine feste Domain).
+# Die sslip-Adresse oben bleibt vorerst, bis die Spielstände umgezogen sind.
+one-more-skat.de {
+	encode zstd gzip
+	reverse_proxy stammtisch-web:80
+}
+
+www.one-more-skat.de {
+	redir https://one-more-skat.de{uri} permanent
+}
+
 # Uhrturm (Repo j4nric/auto-battle): Container im eigenen Netzwerk uhrturm-proxy
 # mit dem Alias uhrturm-web.
 uhrturm-62-83-23-90.sslip.io {
