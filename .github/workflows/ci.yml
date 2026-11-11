@@ -178,6 +178,12 @@ jobs:
           # Gemeinsames Netz und Volume für die Einträge anderer Apps (Stammtisch-ADR 0024).
           docker network inspect edge >/dev/null 2>&1 || docker network create edge
           docker volume inspect caddy-sites >/dev/null 2>&1 || docker volume create caddy-sites >/dev/null
+          # Neues Caddyfile samt Einträgen der Apps prüfen, bevor Caddy neu startet: Eine
+          # doppelte Domain oder ein kaputter Eintrag ließe sonst alle Seiten ausfallen.
+          # Schlägt das fehl, läuft der alte Caddy unverändert weiter.
+          docker run --rm -e DOMAIN="$(grep -E '^DOMAIN=' .env | cut -d= -f2 | tr -d '"')" \
+            -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -v caddy-sites:/etc/caddy/sites:ro \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           APP_IMAGE="$IMAGE" docker compose pull app
           APP_IMAGE="$IMAGE" docker compose up -d --wait

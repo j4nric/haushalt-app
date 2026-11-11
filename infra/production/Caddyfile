@@ -22,46 +22,13 @@
 	}
 }
 
-# Sync-Server des Spiels „Vom Samen zum Wald“ (Repo j4nric/tree-grow-app, Container
-# vszw-sync im eigenen Netzwerk vszw-proxy). Eigene Subdomain – die Haushalt-App selbst
-# läuft unter {$DOMAIN} = 62-83-23-90.sslip.io, ein zweiter Block dafür ließe Caddy nicht
-# starten. sslip.io löst auch Subdomains auf die Server-IP auf; Caddy holt das Zertifikat.
-# flush_interval -1: Live-Sync (Server-Sent Events) sofort weiterreichen.
-sync.62-83-23-90.sslip.io {
-	reverse_proxy vszw-sync:8787 {
-		flush_interval -1
-	}
-}
-
-# Tee-Etiketten (Repo j4nric/sticker-plot): Container sticker-plot-app-1 im eigenen
-# Netzwerk tee-proxy mit dem Alias tee-etiketten (/opt/sticker-plot/docker-compose.override.yml).
-tee-62-83-23-90.sslip.io {
-	encode gzip
-	request_body {
-		max_size 64MB
-	}
-	reverse_proxy tee-etiketten:3000
-}
-
-# Uhrturm (Repo j4nric/auto-battle): Container im eigenen Netzwerk uhrturm-proxy
-# mit dem Alias uhrturm-web.
-uhrturm-62-83-23-90.sslip.io {
-	encode zstd gzip
-	reverse_proxy uhrturm-web:80
-}
-
-# Being God (Repo j4nric/ecosystem-loop): Container im eigenen Netzwerk beinggod-proxy
-# mit dem Alias beinggod-web.
-beinggod-62-83-23-90.sslip.io {
-	encode zstd gzip
-	reverse_proxy beinggod-web:80
-}
-
 # Einträge anderer Apps aus dem gemeinsamen Volume caddy-sites (Stammtisch-ADR 0024).
 # Jede App legt beim eigenen Deploy ihre Datei <app>.caddy hinein, lässt diesen Caddy
 # die ganze Konfiguration prüfen (caddy validate) und lädt ihn ohne Neustart neu
 # (caddy reload). Erreichbar sind die Apps über das gemeinsame Netzwerk edge. Neue
 # Apps brauchen deshalb keine Änderung mehr in diesem Repo. Heute: stammtisch.caddy
-# (Repo j4nric/skat-roguelite, deploy/site.caddy). Jeder Name darf auf dem Server nur
+# (j4nric/skat-roguelite), vszw.caddy (j4nric/tree-grow-app, sync.…), tee.caddy
+# (j4nric/sticker-plot), uhrturm.caddy (j4nric/auto-battle), beinggod.caddy
+# (j4nric/ecosystem-loop), jeweils aus deren Repo. Jeder Name darf auf dem Server nur
 # einmal vorkommen – auch nicht hier und in einer Datei zugleich.
 import /etc/caddy/sites/*.caddy
