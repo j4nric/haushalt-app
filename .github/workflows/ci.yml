@@ -69,8 +69,8 @@ jobs:
 
   e2e:
     name: E2E (Offline-Sync)
-    # ubuntu-latest ist seit 11.11.2026 Ubuntu 26.04; dort lädt apt die
-    # Playwright-Abhängigkeiten nicht. Bis das geht, fest auf 24.04.
+    # ubuntu-latest ist seit 11.11.2026 Ubuntu 26.04; die Playwright-Version
+    # hier kennt es noch nicht. Bis zum Update fest auf 24.04.
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -87,8 +87,10 @@ jobs:
       - name: Postgres und PowerSync starten
         run: docker compose up -d --wait
 
+      # Ohne --with-deps: Das Runner-Image hat die Bibliotheken schon, und apt
+      # hängt so nicht an den Ubuntu-Spiegeln (am 11.11.2026 stundenlang nicht auflösbar).
       - name: Playwright-Browser installieren
-        run: pnpm --filter @haushalt/web exec playwright install --with-deps chromium
+        run: pnpm --filter @haushalt/web exec playwright install chromium
 
       - name: E2E-Tests
         run: pnpm --filter @haushalt/web test:e2e
